@@ -239,6 +239,18 @@ def build_lens_file(
 
     logger.info("畸变数据写入完成: %d/%d 组成功", success_count, len(groups))
 
+    if success_count == 0 and len(groups) > 0:
+        raise RuntimeError(
+            f"LensFile 畸变数据写入全部失败（{len(groups)} 个焦距组）。"
+            "请检查当前 UE 版本的 LensFile Python API 是否兼容。"
+        )
+
+    if success_count < len(groups):
+        logger.warning(
+            "部分焦距组写入失败: %d/%d 成功。LensFile 数据可能不完整。",
+            success_count, len(groups),
+        )
+
     # ------------------------------------------------------------------
     # 4. 保存资产
     # ------------------------------------------------------------------

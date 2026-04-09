@@ -131,38 +131,38 @@ def build_camera(
     )
 
     if lens_component is None:
-        logger.warning(
-            "LensComponent 添加失败，跳过 LensFile 关联。"
-            "请检查 Camera Calibration 插件版本兼容性。"
+        raise RuntimeError(
+            "LensComponent 添加失败。"
+            "请检查 Camera Calibration 插件是否正确启用。"
         )
-    else:
-        # 尝试通过 set_editor_property 关联 LensFile
-        try:
-            lens_component.set_editor_property("lens_file", lens_file)
-            logger.info("LensFile 已关联到 LensComponent (方式A: set_editor_property)")
-        except (AttributeError, TypeError, Exception) as exc_a:  # noqa: BLE001
-            logger.warning("LensFile 关联失败 (方式A): %s", exc_a)
-            # 尝试备用属性名
-            try:
-                lens_component.set_editor_property("LensFile", lens_file)
-                logger.info("LensFile 已关联到 LensComponent (方式B: 大写属性名)")
-            except (AttributeError, TypeError, Exception) as exc_b:  # noqa: BLE001
-                logger.warning(
-                    "LensFile 关联失败 (方式B): %s — 请手动在编辑器中指定 LensFile。",
-                    exc_b,
-                )
 
-        # ------------------------------------------------------------------
-        # 6. 启用畸变应用
-        # ------------------------------------------------------------------
+    # 尝试通过 set_editor_property 关联 LensFile
+    lens_linked = False
+    for prop_name in ("lens_file", "LensFile"):
         try:
-            lens_component.set_editor_property("apply_distortion", True)
-            logger.info("LensComponent apply_distortion 已启用")
-        except (AttributeError, TypeError, Exception) as exc:  # noqa: BLE001
-            logger.warning(
-                "apply_distortion 设置失败: %s — 请手动在编辑器中勾选该选项。",
-                exc,
-            )
+            lens_component.set_editor_property(prop_name, lens_file)
+            logger.info("LensFile 已关联到 LensComponent (属性名: %s)", prop_name)
+            lens_linked = True
+            break
+        except (AttributeError, TypeError, Exception):  # noqa: BLE001
+            continue
+
+    if not lens_linked:
+        raise RuntimeError(
+            "LensFile 关联到 LensComponent 失败。"
+            "请检查 UE 5.7 LensComponent 的属性名是否变更。"
+        )
+
+    # ------------------------------------------------------------------
+    # 6. 启用畸变应用
+    # ------------------------------------------------------------------
+    try:
+        lens_component.set_editor_property("apply_distortion", True)
+        logger.info("LensComponent apply_distortion 已启用")
+    except (AttributeError, TypeError, Exception) as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"apply_distortion 启用失败: {exc}"
+        ) from exc
 
     logger.info(
         "CineCameraActor 构建完成: label='%s', sensor_width=%.3f mm, lens_file=%s",

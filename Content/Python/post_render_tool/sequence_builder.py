@@ -95,10 +95,12 @@ def build_sequence(
     )
 
     # ------------------------------------------------------------------
-    # Step 3: Set playback range
+    # Step 3: Set playback range (preserve original frame cadence)
     # ------------------------------------------------------------------
-    total_frames = csv_result.frame_count
-    movie_scene.set_playback_range(0, total_frames)
+    first_frame_num = csv_result.frames[0].frame_number
+    last_frame_num = csv_result.frames[-1].frame_number
+    frame_span = last_frame_num - first_frame_num + 1
+    movie_scene.set_playback_range(0, frame_span)
 
     # ------------------------------------------------------------------
     # Step 4: Bind camera actor and CineCameraComponent as possessables
@@ -121,7 +123,7 @@ def build_sequence(
     transform_section: unreal.MovieScene3DTransformSection = (
         transform_track.add_section()
     )
-    transform_section.set_range(0, total_frames)
+    transform_section.set_range(0, frame_span)
 
     # --- Float tracks on CineCameraComponent ---
     def _add_float_track(
@@ -134,7 +136,7 @@ def build_sequence(
         )
         track.set_property_name_and_path(prop_name, prop_path)
         section: unreal.MovieSceneFloatSection = track.add_section()
-        section.set_range(0, total_frames)
+        section.set_range(0, frame_span)
         return section
 
     focal_section = _add_float_track(
@@ -178,7 +180,9 @@ def build_sequence(
 
     interp = unreal.MovieSceneKeyInterpolation.LINEAR
 
-    for seq_frame_idx, frame in enumerate(csv_result.frames):
+    for frame in csv_result.frames:
+        # Use original frame number offset from first frame to preserve cadence
+        seq_frame_idx = frame.frame_number - first_frame_num
         frame_number = unreal.FrameNumber(seq_frame_idx)
 
         # Position: Designer (m) → UE (cm), axis remapped
@@ -215,7 +219,8 @@ def build_sequence(
 
     unreal.log(
         f"[post_render_tool] LevelSequence 创建完成：{asset_full_path}  "
-        f"共 {total_frames} 帧，帧率 {fps} fps（{numerator}/{denominator}）"
+        f"共 {csv_result.frame_count} 关键帧，帧跨度 {frame_span}，"
+        f"帧率 {fps} fps（{numerator}/{denominator}）"
     )
 
     return level_sequence
