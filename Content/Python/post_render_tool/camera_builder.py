@@ -21,25 +21,19 @@ logger = logging.getLogger(__name__)
 def _check_camera_calibration_plugin() -> None:
     """验证 Camera Calibration 插件已加载。
 
-    依次检查 "CameraCalibrationCore" 和 "CameraCalibration" 两个插件名称。
-    若两者均未加载则抛出 RuntimeError。
+    通过检查 unreal.LensFile 类是否存在来判断插件状态。
 
     Raises
     ------
     RuntimeError
         Camera Calibration 插件未启用时抛出。
     """
-    plugin_names = ["CameraCalibrationCore", "CameraCalibration"]
-
-    for name in plugin_names:
-        if unreal.PluginBlueprintLibrary.is_plugin_loaded(name):
-            logger.info("Camera Calibration 插件已加载: %s", name)
-            return
-
-    raise RuntimeError(
-        "Camera Calibration 插件未启用，请在 UE 插件管理器中启用 "
-        "'Camera Calibration' 或 'CameraCalibrationCore' 后重启编辑器。"
-    )
+    if not hasattr(unreal, "LensFile"):
+        raise RuntimeError(
+            "Camera Calibration 插件未启用。\n"
+            "请在 Edit → Plugins 中搜索 'Camera Calibration' 并启用后重启编辑器。"
+        )
+    logger.info("Camera Calibration 插件已加载 (LensFile available)")
 
 
 # ---------------------------------------------------------------------------
