@@ -1,0 +1,47 @@
+{
+  "base": "/Users/bip.lan/Documents/KnowledgeBase",
+  "include": [
+    {
+      "source": "processed/code/_global/developer-disguise-one",
+      "alias": "developer-disguise-one"
+    },
+    {
+      "source": "processed/code/_global/help-disguise-one",
+      "alias": "help-disguise-one"
+    },
+    {
+      "source": "processed/code/_global/ue50-docs",
+      "alias": "ue50-docs"
+    },
+    {
+      "source": "processed/code/_global/ue51-docs",
+      "alias": "ue51-docs"
+    },
+    {
+      "source": "processed/code/_global/ue52-docs",
+      "alias": "ue52-docs"
+    },
+    {
+      "source": "processed/code/_global/ue53-docs",
+      "alias": "ue53-docs"
+    },
+    {
+      "source": "processed/code/_global/ue54-docs",
+      "alias": "ue54-docs"
+    },
+    {
+      "source": "processed/code/_global/ue55-docs",
+      "alias": "ue55-docs"
+    },
+    {
+      "source": "processed/code/_global/ue56-docs",
+      "alias": "ue56-docs"
+    },
+    {
+      "source": "processed/code/_global/ue57-docs",
+      "alias": "ue57-docs"
+    }
+  ],
+  "link_mode": "symlink",
+  "target": ".claude/knowledge"
+}
