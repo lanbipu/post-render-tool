@@ -1,5 +1,59 @@
 # CLAUDE.md
 
+## Project Overview
+
+VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor + LensFile + LevelSequence.
+Python scripts for UE Editor, no external dependencies.
+
+## Commands
+
+```bash
+# Unit tests (pure Python, no UE needed)
+cd Content/Python && python -m unittest discover -s post_render_tool/tests -p "test_c*.py" -p "test_v*.py" -v
+
+# Syntax check for UE-dependent modules
+for f in post_render_tool/{lens_file_builder,camera_builder,sequence_builder,pipeline,ui_interface}.py; do
+  python3 -c "import ast; ast.parse(open('$f').read()); print('OK: $f')"
+done
+
+# UE Python console — prerequisite check
+import init_post_render_tool
+
+# UE Python console — full import
+from post_render_tool.pipeline import run_import
+result = run_import(r"path/to/csv", fps=24.0)
+```
+
+## Architecture
+
+```
+Content/Python/post_render_tool/
+├── config.py                  # Configurable constants (axis mapping, thresholds)
+├── csv_parser.py              # F1: CSV Dense parser (pure Python)
+├── coordinate_transform.py    # F2: Coord transform (pure Python, configurable)
+├── validator.py               # F6: FOV check + anomaly detection (pure Python)
+├── lens_file_builder.py       # F3: .ulens generation (requires unreal)
+├── camera_builder.py          # F4: CineCameraActor (requires unreal)
+├── sequence_builder.py        # F5: LevelSequence + animation (requires unreal)
+├── pipeline.py                # Orchestrator (requires unreal)
+└── ui_interface.py            # Blueprint UI interface (requires unreal)
+```
+
+Pure Python modules (csv_parser, coordinate_transform, validator) have no `unreal` import — testable outside UE.
+UE-dependent modules can only run inside UE Editor.
+
+## Gotchas
+
+- **Coordinate transform defaults are UNVERIFIED.** `config.py` POSITION_MAPPING / ROTATION_MAPPING
+  are initial guesses. Must test with real data in UE viewport before production use.
+- **LensFile API varies across UE versions.** `lens_file_builder.py` has dual try/except paths.
+  If both fail, it raises RuntimeError (not silent).
+- **Frame cadence preserved.** sequence_builder uses `frame_number - first_frame_number` as keyframe
+  time, NOT consecutive indices. Gaps in CSV frame column create gaps in LevelSequence.
+- **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.
+  Use `hasattr(unreal, "ClassName")` to detect plugin availability instead.
+- **UE Python module reload:** After editing config.py, use `importlib.reload()` — no UE restart needed.
+
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->
 ## Knowledge Base (Managed by Docsmith)
 
