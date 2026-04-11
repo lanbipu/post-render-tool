@@ -6,8 +6,6 @@ Only usable inside UE Editor Python environment.
 
 from __future__ import annotations
 
-import json
-import logging
 from typing import Optional
 
 import unreal
@@ -15,8 +13,6 @@ import unreal
 from .csv_parser import CsvParseError, parse_csv_dense
 from .pipeline import PipelineResult, run_import
 from .ui_interface import browse_csv_file, open_sequencer, open_movie_render_queue
-
-logger = logging.getLogger(__name__)
 
 
 @unreal.uclass()
@@ -279,6 +275,9 @@ class OPostRenderToolWidget(unreal.EditorUtilityWidget):
     def _on_open_sequencer_clicked(self):
         """Handle Open Sequencer button."""
         if self._last_result is None or self._last_result.level_sequence is None:
+            self._txt_results.set_text(
+                unreal.Text("No LevelSequence available. Run Import first.")
+            )
             unreal.log_warning("[widget] No LevelSequence available. Run Import first.")
             return
         open_sequencer()
