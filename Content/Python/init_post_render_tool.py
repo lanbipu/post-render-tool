@@ -1,6 +1,7 @@
-"""VP Post-Render Tool prerequisite check.
+"""VP Post-Render Tool — Init and launch.
 
-Usage in UE Python console: import init_post_render_tool
+Usage in UE Python console:
+    import init_post_render_tool
 """
 import unreal
 
@@ -11,6 +12,7 @@ def _class_exists(class_name: str) -> bool:
 
 
 def check_prerequisites() -> bool:
+    """Verify all required plugins are loaded."""
     all_ok = True
 
     # Python Editor Script Plugin — if we're running this, it's loaded
@@ -46,11 +48,39 @@ def check_prerequisites() -> bool:
         unreal.log_error("  MISSING: LevelSequence — enable 'Level Sequence Editor' plugin")
         all_ok = False
 
-    if all_ok:
-        unreal.log("All prerequisites met. VP Post-Render Tool ready.")
+    # EditorUtilitySubsystem — needed for widget tab
+    if _class_exists("EditorUtilitySubsystem"):
+        unreal.log("  OK: EditorUtilitySubsystem")
     else:
-        unreal.log_error("Please enable missing plugins and restart the editor.")
+        unreal.log_error("  MISSING: EditorUtilitySubsystem")
+        unreal.log_error("  -> Edit > Plugins > search 'Editor Utility' > Enable > Restart")
+        all_ok = False
+
     return all_ok
 
 
-check_prerequisites()
+def launch_tool():
+    """Check prerequisites, create widget if needed, and open the UI."""
+    unreal.log("=" * 50)
+    unreal.log("VP Post-Render Tool — Initializing...")
+    unreal.log("=" * 50)
+
+    if not check_prerequisites():
+        unreal.log_error("Please enable missing plugins and restart the editor.")
+        return
+
+    unreal.log("All prerequisites met.")
+    unreal.log("-" * 50)
+
+    # Build and open the widget
+    from post_render_tool.widget_builder import open_widget
+    unreal.log("Opening VP Post-Render Tool UI...")
+    open_widget()
+
+    unreal.log("=" * 50)
+    unreal.log("VP Post-Render Tool ready.")
+    unreal.log("=" * 50)
+
+
+# Auto-launch on import
+launch_tool()
