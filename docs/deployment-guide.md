@@ -49,6 +49,8 @@ MyVPProject/
 │   │       ├── validator.py
 │   │       ├── pipeline.py
 │   │       ├── ui_interface.py
+│   │       ├── widget.py
+│   │       ├── widget_builder.py
 │   │       └── tests/
 │   │           ├── test_csv_parser.py
 │   │           ├── test_coordinate_transform.py
@@ -89,20 +91,33 @@ cp "/path/to/post-render-tool/reference/shot 1_take_5_dense.csv" /path/to/MyVPPr
 2. 在 Output Log 底部的输入框中，确认左侧下拉选择的是 `Cmd`，将其切换为 `Python`
 3. 输入以下命令并回车：
 
-```
-init_post_render_tool
+```python
+import init_post_render_tool
 ```
 
 4. 检查输出，预期结果：
 
 ```
-  OK: Python Editor Script Plugin
+==================================================
+VP Post-Render Tool — Initializing...
+==================================================
+  OK: Python Editor Script Plugin (running Python now)
   OK: Editor Scripting Utilities
-  OK: Camera Calibration
-All prerequisites met. VP Post-Render Tool ready.
+  OK: Camera Calibration (LensFile available)
+  OK: CineCameraActor
+  OK: LevelSequence
+  OK: EditorUtilitySubsystem
+All prerequisites met.
+--------------------------------------------------
+Opening VP Post-Render Tool UI...
+[widget_builder] Widget Blueprint created: /Game/PostRenderTool/EUW_PostRenderTool
+[widget_builder] Widget tab opened.
+==================================================
+VP Post-Render Tool ready.
+==================================================
 ```
 
-如果看到 `MISSING`，回到 2.1 启用对应插件。
+**工具 UI 面板会自动弹出。** 如果看到 `MISSING`，回到 2.1 启用对应插件。
 
 ---
 
@@ -253,75 +268,45 @@ print(result.report.format_report())
 
 ---
 
-## Step 5: 创建 Blueprint UI（可选）
+## Step 5: Blueprint UI 使用说明
 
-如果你想要 GUI 操作面板而不是每次手打 Python 命令，按以下步骤创建。
+Blueprint UI 在 Step 2.2 运行 `import init_post_render_tool` 时已自动创建并打开，无需手动搭建。
 
-### 5.1 创建 Editor Utility Widget
+### 5.1 UI 功能
 
-1. 在 Content Browser 中，导航到 `Content/` 目录
-2. 右键 → **Editor Utilities → Editor Utility Widget**
-3. 命名为 `EUW_PostRenderTool`
-4. 双击打开 Widget Editor
+| 控件 | 功能 |
+|------|------|
+| **Browse...** | 打开文件选择器，选取 Disguise Designer CSV Dense 文件 |
+| **CSV Preview** | 显示帧数、焦距范围、时码、传感器宽度 |
+| **FPS SpinBox** | 设置帧率（0 = 从 CSV 自动检测，建议保持默认） |
+| **Import** | 执行完整导入流水线（LensFile + CineCameraActor + LevelSequence） |
+| **Open Sequencer** | 在 Sequencer 编辑器中打开导入的 LevelSequence |
+| **Open Movie Render Queue** | 打开 MRQ 窗口进行渲染 |
 
-### 5.2 搭建 UI 布局
+### 5.2 日常使用
 
-在 Designer 面板中，从 Palette 拖入以下控件：
+每次打开 UE 项目后，在 Python 控制台运行：
 
-**文件选择区域：**
-- `Horizontal Box`
-  - `Text Block` → Text: "CSV File:"
-  - `Text Block` (命名 `txt_FilePath`) → Text: "No file selected"（灰色）
-  - `Button` (命名 `btn_Browse`) → 子 Text: "Browse..."
+```python
+import init_post_render_tool
+```
 
-**帧率设置：**
-- `Horizontal Box`
-  - `Text Block` → Text: "FPS:"
-  - `Spin Box` (命名 `spn_FPS`) → Min: 1, Max: 120, Value: 24
-  - `Text Block` (命名 `txt_DetectedFPS`) → Text: "Auto: --"
+如果 widget 已存在，会直接打开而不会重复创建。
 
-**CSV 预览区域：**
-- `Vertical Box`（加背景 Border）
-  - `Text Block` → "── CSV Preview ──"
-  - `Text Block` (命名 `txt_FrameCount`)
-  - `Text Block` (命名 `txt_FocalRange`)
-  - `Text Block` (命名 `txt_Timecode`)
-  - `Text Block` (命名 `txt_SensorWidth`)
+### 5.3 Widget 管理命令
 
-**操作按钮：**
-- `Button` (命名 `btn_Import`) → 子 Text: "Import"（大号，强调色）
+```python
+from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
 
-**结果显示：**
-- `Multi Line Editable Text` (命名 `txt_Results`) → Is Read Only: true
+open_widget()      # 创建（如不存在）并打开
+rebuild_widget()   # 删除 + 重建 + 打开（修复异常时使用）
+delete_widget()    # 仅删除 widget 资产
+```
 
-**快捷按钮：**
-- `Horizontal Box`
-  - `Button` (命名 `btn_OpenSequencer`) → "Open Sequencer"
-  - `Button` (命名 `btn_OpenMRQ`) → "Open Movie Render Queue"
+### 5.4 手动打开 Widget
 
-### 5.3 连接 Blueprint 事件
+如果 UI 面板意外关闭：
+1. Content Browser → 导航到 `Content/PostRenderTool/`
+2. 右键 `EUW_PostRenderTool` → **Run Editor Utility Widget**
 
-切换到 Graph 面板，为每个按钮创建 OnClicked 事件：
-
-**btn_Browse:**
-1. 添加 `Execute Python Command` 节点
-2. Command: `from post_render_tool.ui_interface import cmd_browse; cmd_browse()`
-
-**btn_Import:**
-1. 添加 `Execute Python Command` 节点
-2. Command: 需要拼接 csv_path 和 fps 变量
-3. 格式: `from post_render_tool.ui_interface import cmd_import; cmd_import(r'<path>', <fps>)`
-
-**btn_OpenSequencer:**
-1. `Execute Python Command` → `from post_render_tool.ui_interface import open_sequencer; open_sequencer()`
-
-**btn_OpenMRQ:**
-1. `Execute Python Command` → `from post_render_tool.ui_interface import open_movie_render_queue; open_movie_render_queue()`
-
-### 5.4 运行 Widget
-
-1. 在 Content Browser 中右键 `EUW_PostRenderTool`
-2. 选择 **Run Editor Utility Widget**
-3. Widget 面板出现，可以开始使用
-
-> **Tip:** 可以将 Widget 添加到工具栏。在 Level Editor 中：菜单 **Tools → Run Editor Utility Widget** → 选择 `EUW_PostRenderTool`。
+> **Tip:** 可以将 Widget 添加到工具栏。菜单 **Tools → Run Editor Utility Widget** → 选择 `EUW_PostRenderTool`。
