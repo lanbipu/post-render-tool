@@ -1,97 +1,53 @@
-# Editor Utility Widget Blueprint Setup Guide
+# VP Post-Render Tool — Blueprint UI
 
-This Blueprint UI must be created manually in UE 5.7 Editor.
+The tool's Blueprint UI is generated and opened automatically via Python.
 
-## Step 1: Create the Widget
+## Quick Start
 
-1. Content Browser → right-click → **Editor Utilities → Editor Utility Widget**
-2. Name: `EUW_PostRenderTool`
-3. Save to: `Content/PostRenderTool/`
-
-## Step 2: Widget Layout (UMG)
-
-```
-VerticalBox (root, padding 16)
-├── TextBlock "VP Post-Render Tool" (font 18, bold)
-├── Spacer (8px)
-├── HorizontalBox
-│   ├── TextBlock "CSV File:"
-│   ├── TextBlock [txt_FilePath] (flex, gray text "No file selected")
-│   └── Button [btn_Browse] → "Browse..."
-├── HorizontalBox
-│   ├── TextBlock "FPS:"
-│   ├── SpinBox [spn_FPS] (min=1, max=120, default=24)
-│   └── TextBlock [txt_DetectedFPS] (gray, "Auto: --")
-├── Spacer (8px)
-├── Border (background gray)
-│   └── VerticalBox
-│       ├── TextBlock "── CSV Preview ──"
-│       ├── TextBlock [txt_FrameCount] "Frames: —"
-│       ├── TextBlock [txt_FocalRange] "Focal Length: —"
-│       ├── TextBlock [txt_Timecode] "Timecode: —"
-│       └── TextBlock [txt_SensorWidth] "Sensor Width: —"
-├── Spacer (8px)
-├── Button [btn_Import] → "Import" (accent color, large)
-├── Spacer (8px)
-├── Border (results area)
-│   └── MultiLineEditableText [txt_Results] (read-only, monospace)
-├── Spacer (8px)
-├── HorizontalBox
-│   ├── Button [btn_OpenSequencer] → "Open Sequencer"
-│   └── Button [btn_OpenMRQ] → "Open Movie Render Queue"
-```
-
-## Step 3: Blueprint Event Graph
-
-### btn_Browse → OnClicked
-
-```
-Execute Python Command:
-  "from post_render_tool.ui_interface import cmd_browse; cmd_browse()"
-```
-
-Then read the JSON result from Python to update preview text blocks.
-
-Alternatively, use a simpler approach:
-
-```
-Python Command → "from post_render_tool import ui_interface; ui_interface._state.csv_path"
-→ Set txt_FilePath text
-```
-
-### btn_Import → OnClicked
-
-```
-Execute Python Command:
-  "from post_render_tool.ui_interface import cmd_import; cmd_import('{csv_path}', {fps})"
-```
-
-Parse the JSON result and update txt_Results.
-
-### btn_OpenSequencer → OnClicked
-
-```
-Execute Python Command:
-  "from post_render_tool.ui_interface import open_sequencer; open_sequencer()"
-```
-
-### btn_OpenMRQ → OnClicked
-
-```
-Execute Python Command:
-  "from post_render_tool.ui_interface import open_movie_render_queue; open_movie_render_queue()"
-```
-
-## Step 4: Run the Widget
-
-Right-click `EUW_PostRenderTool` → **Run Editor Utility Widget**
-
-## Alternative: Quick Start Without Blueprint
-
-If you prefer to skip the Blueprint UI for now, you can use the tool directly from UE's Python console:
+In UE Python console:
 
 ```python
-from post_render_tool.pipeline import run_import
-result = run_import(r"C:\path\to\shot1_take5_dense.csv", fps=24.0)
-print(result.report.format_report())
+import init_post_render_tool
 ```
+
+This will:
+1. Check all required plugins are loaded
+2. Create the `EUW_PostRenderTool` Editor Utility Widget in `Content/PostRenderTool/`
+3. Open the tool UI as an editor tab
+
+## Manual Widget Management
+
+```python
+from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
+
+# Open (creates if not exists)
+open_widget()
+
+# Force rebuild (delete + create + open)
+rebuild_widget()
+
+# Delete the widget asset
+delete_widget()
+```
+
+## UI Features
+
+- **Browse**: Open file picker for Disguise Designer CSV Dense file
+- **CSV Preview**: Shows frame count, focal length range, timecode, sensor width
+- **FPS**: Manual FPS setting (1–120) or auto-detect from CSV
+- **Import**: Run the full pipeline (LensFile + CineCameraActor + LevelSequence)
+- **Open Sequencer**: Open the imported LevelSequence in Sequencer editor
+- **Open Movie Render Queue**: Open MRQ for rendering
+
+## Troubleshooting
+
+### Widget not opening
+If `open_widget()` fails, try:
+1. Check Output Log for errors
+2. Verify plugins: `import init_post_render_tool`
+3. Rebuild: `from post_render_tool.widget_builder import rebuild_widget; rebuild_widget()`
+4. Manual: Right-click `Content/PostRenderTool/EUW_PostRenderTool` → Run Editor Utility Widget
+
+### Widget layout not rendering
+If the widget opens but shows a blank panel, the Python @uclass registration may have failed.
+Try restarting the UE Editor and running `import init_post_render_tool` again.

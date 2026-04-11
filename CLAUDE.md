@@ -22,6 +22,14 @@ import init_post_render_tool
 # UE Python console — full import
 from post_render_tool.pipeline import run_import
 result = run_import(r"path/to/csv", fps=24.0)
+
+# UE Python console — launch tool (creates + opens widget)
+import init_post_render_tool
+
+# UE Python console — widget management
+from post_render_tool.widget_builder import open_widget, rebuild_widget
+open_widget()      # create if needed + open
+rebuild_widget()   # delete + recreate + open
 ```
 
 ## Architecture
@@ -36,7 +44,9 @@ Content/Python/post_render_tool/
 ├── camera_builder.py          # F4: CineCameraActor (requires unreal)
 ├── sequence_builder.py        # F5: LevelSequence + animation (requires unreal)
 ├── pipeline.py                # Orchestrator (requires unreal)
-└── ui_interface.py            # Blueprint UI interface (requires unreal)
+├── ui_interface.py            # Utility functions: file dialog, sequencer, MRQ (requires unreal)
+├── widget.py                  # F7: Python @uclass EditorUtilityWidget (requires unreal)
+└── widget_builder.py          # F7: EUW Blueprint asset builder (requires unreal)
 ```
 
 Pure Python modules (csv_parser, coordinate_transform, validator) have no `unreal` import — testable outside UE.
@@ -53,6 +63,13 @@ UE-dependent modules can only run inside UE Editor.
 - **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.
   Use `hasattr(unreal, "ClassName")` to detect plugin availability instead.
 - **UE Python module reload:** After editing config.py, use `importlib.reload()` — no UE restart needed.
+- **Widget @uclass registration:** `widget.py` uses `@unreal.uclass()` to register
+  `OPostRenderToolWidget` with the UE reflection system. The class MUST be imported
+  before `widget_builder.create_widget()` creates the Blueprint asset. `widget_builder.py`
+  handles this import automatically.
+- **Widget runtime UI construction:** `widget.py` builds the UMG layout in `construct()` at
+  runtime. If the UE Python API for `create_widget()` or `add_child()` behaves differently
+  across UE versions, the layout may need adjustment.
 
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->
 ## Knowledge Base (Managed by Docsmith)
