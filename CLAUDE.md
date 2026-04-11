@@ -45,8 +45,8 @@ Content/Python/post_render_tool/
 ├── sequence_builder.py        # F5: LevelSequence + animation (requires unreal)
 ├── pipeline.py                # Orchestrator (requires unreal)
 ├── ui_interface.py            # Utility functions: file dialog, sequencer, MRQ (requires unreal)
-├── widget.py                  # F7: Python @uclass EditorUtilityWidget (requires unreal)
-└── widget_builder.py          # F7: EUW Blueprint asset builder (requires unreal)
+├── widget.py                  # F7: Plain Python UI builder (requires unreal)
+└── widget_builder.py          # F7: EUW Blueprint + UI injection (requires unreal)
 ```
 
 Pure Python modules (csv_parser, coordinate_transform, validator) have no `unreal` import — testable outside UE.
@@ -63,12 +63,12 @@ UE-dependent modules can only run inside UE Editor.
 - **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.
   Use `hasattr(unreal, "ClassName")` to detect plugin availability instead.
 - **UE Python module reload:** After editing config.py, use `importlib.reload()` — no UE restart needed.
-- **Widget @uclass registration:** `widget.py` uses `@unreal.uclass()` to register
-  `OPostRenderToolWidget` with the UE reflection system. The class MUST be imported
-  before `widget_builder.create_widget()` creates the Blueprint asset. `widget_builder.py`
-  handles this import automatically.
-- **Widget runtime UI construction:** `widget.py` builds the UMG layout in `construct()` at
-  runtime. If the UE Python API for `create_widget()` or `add_child()` behaves differently
+- **Widget is plain Python, NOT @uclass:** `widget.py` is a plain Python class
+  (`PostRenderToolUI`) that builds UMG layout into a provided `EditorUtilityWidget`.
+  The Blueprint uses native `EditorUtilityWidget` parent (safe to serialize).
+  UI is injected after spawn via `find_utility_widget_from_blueprint`.
+- **Widget runtime UI construction:** `widget.py` builds the UMG layout in `__init__()`.
+  If the UE Python API for `create_widget()` or `add_child()` behaves differently
   across UE versions, the layout may need adjustment.
 
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->

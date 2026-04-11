@@ -1,13 +1,10 @@
 """Widget Builder — VP Post-Render Tool.
 
-Creates and opens the EditorUtilityWidget Blueprint asset.
-Only usable inside UE Editor Python environment.
+Creates and opens the EditorUtilityWidget Blueprint asset, then injects
+the Python-built UI into the spawned widget instance.
 
-NOTE: The Blueprint is kept IN-MEMORY ONLY (never saved to disk).
-PythonGeneratedClass cannot be serialized by UE's SavePackage2 —
-calling save_asset() on a Blueprint whose parent is a @uclass Python
-class triggers an assertion failure (SuperIndex mapping).
-The widget is recreated each session via ``import init_post_render_tool``.
+The Blueprint uses the native EditorUtilityWidget as parent (safe to save).
+UI is constructed at runtime by ``PostRenderToolUI`` from ``widget.py``.
 """
 
 from __future__ import annotations
@@ -22,8 +19,10 @@ WIDGET_ASSET_NAME = "EUW_PostRenderTool"
 WIDGET_FULL_PATH = f"{WIDGET_PACKAGE_PATH}/{WIDGET_ASSET_NAME}"
 WIDGET_ASSET_PATH = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
 
-# Disk-relative path segment derived from WIDGET_PACKAGE_PATH
 _CONTENT_REL_DIR = WIDGET_PACKAGE_PATH.removeprefix("/Game/")
+
+# Module-level reference — prevents GC of the UI builder and its callbacks.
+_active_ui = None
 
 
 def _cleanup_disk_asset() -> None:
@@ -41,35 +40,16 @@ def _cleanup_disk_asset() -> None:
         unreal.log_warning(f"[widget_builder] Disk cleanup failed: {exc}")
 
 
-def _try_prevent_save(obj) -> None:
-    """Best-effort: mark the object so UE won't try to save it on exit."""
-    try:
-        obj.set_flags(0x00000040)  # RF_Transient
-    except Exception:
-        pass
-    try:
-        obj.get_outermost().clear_dirty_flag()
-    except Exception:
-        pass
-
-
 def create_widget() -> object:
-    """Create the EditorUtilityWidgetBlueprint asset (in-memory only).
+    """Create or load the EditorUtilityWidgetBlueprint asset.
 
-    If the asset already exists in memory (created earlier this session),
-    returns the existing one.  The Blueprint is NEVER saved to disk because
-    PythonGeneratedClass parents cannot be serialized by SavePackage2.
+    Uses the native ``EditorUtilityWidget`` as parent (no PythonGeneratedClass),
+    so the Blueprint is safe to save to disk and persist across sessions.
 
     Returns
     -------
     unreal.EditorUtilityWidgetBlueprint
-        The created or existing widget Blueprint asset.
     """
-    # Import widget class FIRST — triggers @uclass registration so that
-    # any existing asset whose parent is this class can be resolved.
-    from .widget import OPostRenderToolWidget
-
-    # Reuse in-memory widget created earlier this session
     try:
         loaded = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
         if loaded is not None:
@@ -78,22 +58,13 @@ def create_widget() -> object:
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] load_asset failed, will recreate: {exc}")
 
-    # Remove any corrupt/stale files from a previous crash
     _cleanup_disk_asset()
-
     unreal.EditorAssetLibrary.make_directory(WIDGET_PACKAGE_PATH)
 
-    # Create the EditorUtilityWidgetBlueprint using factory
     factory = unreal.EditorUtilityWidgetBlueprintFactory()
-    try:
-        factory.set_editor_property("parent_class", OPostRenderToolWidget)
-    except Exception as exc:
-        unreal.log_warning(
-            f"[widget_builder] Could not set parent_class via factory: {exc}"
-        )
+    # Default parent = EditorUtilityWidget (native) — safe to serialize.
 
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-    widget_bp = asset_tools.create_asset(
+    widget_bp = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
         WIDGET_ASSET_NAME,
         WIDGET_PACKAGE_PATH,
         None,  # asset_class — None lets the factory decide
@@ -105,35 +76,68 @@ def create_widget() -> object:
             f"Failed to create EditorUtilityWidgetBlueprint at {WIDGET_FULL_PATH}"
         )
 
-    # ALWAYS verify actual parent — set_editor_property may succeed without
-    # exception yet the factory may still ignore the value.  Reparent if needed
-    # so OPostRenderToolWidget.construct() (and _build_ui) will be called.
-    try:
-        current_parent = widget_bp.get_editor_property("parent_class")
-        if current_parent != OPostRenderToolWidget:
-            unreal.BlueprintEditorLibrary.reparent_blueprint(
-                widget_bp, OPostRenderToolWidget
-            )
-            unreal.log("[widget_builder] Reparented to OPostRenderToolWidget.")
-    except Exception as exc:
-        unreal.log_error(
-            f"[widget_builder] Reparent failed: {exc}. "
-            "Widget will have no UI — try rebuild_widget()."
-        )
-
-    # ── DO NOT SAVE ──
-    # PythonGeneratedClass can't be serialized → SavePackage2 assertion crash.
-    _try_prevent_save(widget_bp)
-
-    unreal.log(f"[widget_builder] Widget created (in-memory): {WIDGET_FULL_PATH}")
+    unreal.EditorAssetLibrary.save_asset(
+        widget_bp.get_path_name(), only_if_is_dirty=False
+    )
+    unreal.log(f"[widget_builder] Widget Blueprint created: {WIDGET_FULL_PATH}")
 
     return widget_bp
+
+
+def _inject_ui(widget_bp) -> None:
+    """Find the spawned widget instance and build UI into it."""
+    global _active_ui
+
+    subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+
+    # Try to get widget instance immediately (synchronous after spawn)
+    widget = None
+    try:
+        widget = subsystem.find_utility_widget_from_blueprint(widget_bp)
+    except (AttributeError, Exception) as exc:
+        unreal.log_warning(
+            f"[widget_builder] find_utility_widget_from_blueprint: {exc}"
+        )
+
+    if widget is not None:
+        from .widget import PostRenderToolUI
+        _active_ui = PostRenderToolUI(widget)
+        unreal.log("[widget_builder] UI injected into widget.")
+        return
+
+    # Fallback: poll on next ticks until the widget is available.
+    attempts = [0]
+    handle_holder = [None]
+
+    def _try_inject(delta_time):
+        global _active_ui
+        attempts[0] += 1
+        try:
+            w = subsystem.find_utility_widget_from_blueprint(widget_bp)
+            if w is not None:
+                from .widget import PostRenderToolUI
+                _active_ui = PostRenderToolUI(w)
+                unreal.log("[widget_builder] UI injected (deferred).")
+                unreal.unregister_slate_post_tick_callback(handle_holder[0])
+                return
+        except Exception:
+            pass
+        if attempts[0] >= 30:
+            unreal.log_error(
+                "[widget_builder] Could not find widget instance after spawn. "
+                "Try: from post_render_tool.widget_builder import rebuild_widget; "
+                "rebuild_widget()"
+            )
+            unreal.unregister_slate_post_tick_callback(handle_holder[0])
+
+    handle_holder[0] = unreal.register_slate_post_tick_callback(_try_inject)
 
 
 def open_widget() -> None:
     """Open the PostRenderTool widget as an editor tab.
 
-    Creates the widget asset first if it doesn't exist.
+    Creates the widget asset first if it doesn't exist, then injects
+    the Python-built UI into the spawned widget instance.
     """
     widget_bp = create_widget()
 
@@ -152,6 +156,9 @@ def open_widget() -> None:
                 "Try: from post_render_tool.widget_builder import rebuild_widget; "
                 "rebuild_widget()"
             )
+            return
+
+    _inject_ui(widget_bp)
 
 
 def delete_widget() -> bool:
@@ -162,6 +169,8 @@ def delete_widget() -> bool:
     bool
         True if deleted, False if not found.
     """
+    global _active_ui
+    _active_ui = None
     deleted = False
     try:
         unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)

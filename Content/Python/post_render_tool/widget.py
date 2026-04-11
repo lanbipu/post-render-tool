@@ -1,6 +1,6 @@
 """Widget — VP Post-Render Tool.
 
-Python-based EditorUtilityWidget that builds the full UI at runtime.
+Plain Python UI builder that populates an EditorUtilityWidget at runtime.
 Sections: Prerequisites, CSV File, CSV Preview, Coordinate Verification,
 Axis Mapping, Actions, Results.
 
@@ -34,66 +34,65 @@ _AXIS_INDEX_MAP = {"X (0)": 0, "Y (1)": 1, "Z (2)": 2}
 _INDEX_AXIS_MAP = {0: "X (0)", 1: "Y (1)", 2: "Z (2)"}
 
 
-@unreal.uclass()
-class OPostRenderToolWidget(unreal.EditorUtilityWidget):
-    """VP Post-Render Tool Editor Utility Widget."""
+class PostRenderToolUI:
+    """VP Post-Render Tool — builds and manages the UI."""
 
-    # ---------------------------------------------------------------
-    # State
-    # ---------------------------------------------------------------
-    _csv_path: str = ""
-    _fps: float = 0.0
-    _csv_result: Optional[CsvDenseResult] = None
-    _last_result: Optional[PipelineResult] = None
-    _test_camera_actor = None
+    def __init__(self, host_widget):
+        """Build the full UI into *host_widget* (an EditorUtilityWidget).
 
-    # Widget refs — populated in _build_ui
-    # Prerequisites
-    _prereq_labels: list = []
-    # CSV File
-    _txt_file_path: Optional[unreal.TextBlock] = None
-    # CSV Preview
-    _txt_detected_fps: Optional[unreal.TextBlock] = None
-    _txt_frame_count: Optional[unreal.TextBlock] = None
-    _txt_focal_range: Optional[unreal.TextBlock] = None
-    _txt_timecode: Optional[unreal.TextBlock] = None
-    _txt_sensor_width: Optional[unreal.TextBlock] = None
-    _spn_fps: Optional[unreal.SpinBox] = None
-    # Coordinate Verification
-    _spn_frame: Optional[unreal.SpinBox] = None
-    _txt_designer_pos: Optional[unreal.TextBlock] = None
-    _txt_designer_rot: Optional[unreal.TextBlock] = None
-    _txt_ue_pos: Optional[unreal.TextBlock] = None
-    _txt_ue_rot: Optional[unreal.TextBlock] = None
-    _btn_spawn_cam: Optional[unreal.Button] = None
-    # Axis Mapping — position
-    _cmb_pos_x_src: Optional[unreal.ComboBoxString] = None
-    _cmb_pos_y_src: Optional[unreal.ComboBoxString] = None
-    _cmb_pos_z_src: Optional[unreal.ComboBoxString] = None
-    _spn_pos_x_scale: Optional[unreal.SpinBox] = None
-    _spn_pos_y_scale: Optional[unreal.SpinBox] = None
-    _spn_pos_z_scale: Optional[unreal.SpinBox] = None
-    # Axis Mapping — rotation
-    _cmb_rot_pitch_src: Optional[unreal.ComboBoxString] = None
-    _cmb_rot_yaw_src: Optional[unreal.ComboBoxString] = None
-    _cmb_rot_roll_src: Optional[unreal.ComboBoxString] = None
-    _spn_rot_pitch_scale: Optional[unreal.SpinBox] = None
-    _spn_rot_yaw_scale: Optional[unreal.SpinBox] = None
-    _spn_rot_roll_scale: Optional[unreal.SpinBox] = None
-    # Actions & Results
-    _btn_import: Optional[unreal.Button] = None
-    _btn_open_seq: Optional[unreal.Button] = None
-    _btn_open_mrq: Optional[unreal.Button] = None
-    _txt_results: Optional[unreal.MultiLineEditableText] = None
+        Parameters
+        ----------
+        host_widget : unreal.EditorUtilityWidget
+            The spawned widget instance to populate.
+        """
+        self._host = host_widget
 
-    # ---------------------------------------------------------------
-    # Lifecycle
-    # ---------------------------------------------------------------
+        # State
+        self._csv_path: str = ""
+        self._fps: float = 0.0
+        self._csv_result: Optional[CsvDenseResult] = None
+        self._last_result: Optional[PipelineResult] = None
+        self._test_camera_actor = None
 
-    @unreal.ufunction(override=True)
-    def construct(self):
-        """Called when the widget is initialized. Builds the full UI."""
-        self._prereq_labels = []
+        # Widget refs — populated in _build_ui
+        # Prerequisites
+        self._prereq_labels: list = []
+        # CSV File
+        self._txt_file_path: Optional[unreal.TextBlock] = None
+        # CSV Preview
+        self._txt_detected_fps: Optional[unreal.TextBlock] = None
+        self._txt_frame_count: Optional[unreal.TextBlock] = None
+        self._txt_focal_range: Optional[unreal.TextBlock] = None
+        self._txt_timecode: Optional[unreal.TextBlock] = None
+        self._txt_sensor_width: Optional[unreal.TextBlock] = None
+        self._spn_fps: Optional[unreal.SpinBox] = None
+        # Coordinate Verification
+        self._spn_frame: Optional[unreal.SpinBox] = None
+        self._txt_designer_pos: Optional[unreal.TextBlock] = None
+        self._txt_designer_rot: Optional[unreal.TextBlock] = None
+        self._txt_ue_pos: Optional[unreal.TextBlock] = None
+        self._txt_ue_rot: Optional[unreal.TextBlock] = None
+        self._btn_spawn_cam: Optional[unreal.Button] = None
+        # Axis Mapping — position
+        self._cmb_pos_x_src: Optional[unreal.ComboBoxString] = None
+        self._cmb_pos_y_src: Optional[unreal.ComboBoxString] = None
+        self._cmb_pos_z_src: Optional[unreal.ComboBoxString] = None
+        self._spn_pos_x_scale: Optional[unreal.SpinBox] = None
+        self._spn_pos_y_scale: Optional[unreal.SpinBox] = None
+        self._spn_pos_z_scale: Optional[unreal.SpinBox] = None
+        # Axis Mapping — rotation
+        self._cmb_rot_pitch_src: Optional[unreal.ComboBoxString] = None
+        self._cmb_rot_yaw_src: Optional[unreal.ComboBoxString] = None
+        self._cmb_rot_roll_src: Optional[unreal.ComboBoxString] = None
+        self._spn_rot_pitch_scale: Optional[unreal.SpinBox] = None
+        self._spn_rot_yaw_scale: Optional[unreal.SpinBox] = None
+        self._spn_rot_roll_scale: Optional[unreal.SpinBox] = None
+        # Actions & Results
+        self._btn_import: Optional[unreal.Button] = None
+        self._btn_open_seq: Optional[unreal.Button] = None
+        self._btn_open_mrq: Optional[unreal.Button] = None
+        self._txt_results: Optional[unreal.MultiLineEditableText] = None
+
         self._build_ui()
 
     # ---------------------------------------------------------------
@@ -103,7 +102,7 @@ class OPostRenderToolWidget(unreal.EditorUtilityWidget):
     def _build_ui(self):
         """Build the entire UMG widget tree dynamically."""
         root = self._make_widget(unreal.VerticalBox)
-        self.set_content(root)
+        self._host.set_content(root)
 
         # --- Title ---
         title = self._make_text("VP Post-Render Tool", size=18, is_bold=True)
@@ -333,9 +332,9 @@ class OPostRenderToolWidget(unreal.EditorUtilityWidget):
     # ---------------------------------------------------------------
 
     def _make_widget(self, widget_class):
-        """Create a UMG widget owned by this widget's outer."""
+        """Create a UMG widget owned by the host widget."""
         try:
-            return unreal.create_widget(self, widget_class)
+            return unreal.create_widget(self._host, widget_class)
         except Exception:
             return widget_class()
 
