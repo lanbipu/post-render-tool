@@ -280,7 +280,7 @@ class OPostRenderToolWidget(unreal.EditorUtilityWidget):
             )
             unreal.log_warning("[widget] No LevelSequence available. Run Import first.")
             return
-        open_sequencer()
+        open_sequencer(self._last_result.level_sequence)
 
     def _on_open_mrq_clicked(self):
         """Handle Open Movie Render Queue button."""
