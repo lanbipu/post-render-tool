@@ -20,44 +20,37 @@ import unreal
 WIDGET_PACKAGE_PATH = "/Game/PostRenderTool"
 WIDGET_ASSET_NAME = "EUW_PostRenderTool"
 WIDGET_FULL_PATH = f"{WIDGET_PACKAGE_PATH}/{WIDGET_ASSET_NAME}"
+WIDGET_ASSET_PATH = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
+
+# Disk-relative path segment derived from WIDGET_PACKAGE_PATH
+_CONTENT_REL_DIR = WIDGET_PACKAGE_PATH.removeprefix("/Game/")
 
 
 def _cleanup_disk_asset() -> None:
     """Remove any .uasset/.uexp left on disk from a previous crashed save."""
     try:
         content_dir = unreal.Paths.project_content_dir()
-        base = os.path.join(content_dir, "PostRenderTool", "EUW_PostRenderTool")
+        base = os.path.join(content_dir, _CONTENT_REL_DIR, WIDGET_ASSET_NAME)
         for ext in (".uasset", ".uexp"):
-            path = base + ext
-            if os.path.exists(path):
-                os.remove(path)
-                unreal.log(f"[widget_builder] Removed stale file: {path}")
+            try:
+                os.remove(base + ext)
+                unreal.log(f"[widget_builder] Removed stale file: {base}{ext}")
+            except FileNotFoundError:
+                pass
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] Disk cleanup failed: {exc}")
 
 
 def _try_prevent_save(obj) -> None:
     """Best-effort: mark the object so UE won't try to save it on exit."""
-    # Try setting RF_Transient flag (prevents serialization).
-    # RF_Transient = 0x00000040 in EObjectFlags.
     try:
         obj.set_flags(0x00000040)  # RF_Transient
-    except (AttributeError, Exception):
+    except Exception:
         pass
-
-    # Also try clearing the dirty flag on the owning package —
-    # complementary protection even if RF_Transient succeeded.
     try:
         obj.get_outermost().clear_dirty_flag()
-    except (AttributeError, Exception):
+    except Exception:
         pass
-
-
-def widget_exists() -> bool:
-    """Check if the EUW Blueprint asset already exists in Content Browser."""
-    return unreal.EditorAssetLibrary.does_asset_exist(
-        f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
-    )
 
 
 def create_widget() -> object:
@@ -76,25 +69,19 @@ def create_widget() -> object:
     # any existing asset whose parent is this class can be resolved.
     from .widget import OPostRenderToolWidget
 
-    asset_path = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
-
     # Reuse in-memory widget created earlier this session
-    if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
-        try:
-            loaded = unreal.EditorAssetLibrary.load_asset(asset_path)
-            if loaded is not None:
-                unreal.log(f"[widget_builder] Reusing existing widget: {asset_path}")
-                return loaded
-        except Exception:
-            # Asset entry exists but load failed (corrupt file) — fall through
-            pass
+    try:
+        loaded = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
+        if loaded is not None:
+            unreal.log(f"[widget_builder] Reusing existing widget: {WIDGET_ASSET_PATH}")
+            return loaded
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] load_asset failed, will recreate: {exc}")
 
     # Remove any corrupt/stale files from a previous crash
     _cleanup_disk_asset()
 
-    # Ensure directory
-    if not unreal.EditorAssetLibrary.does_directory_exist(WIDGET_PACKAGE_PATH):
-        unreal.EditorAssetLibrary.make_directory(WIDGET_PACKAGE_PATH)
+    unreal.EditorAssetLibrary.make_directory(WIDGET_PACKAGE_PATH)
 
     # Create the EditorUtilityWidgetBlueprint using factory
     factory = unreal.EditorUtilityWidgetBlueprintFactory()
@@ -136,7 +123,6 @@ def create_widget() -> object:
 
     # ── DO NOT SAVE ──
     # PythonGeneratedClass can't be serialized → SavePackage2 assertion crash.
-    # Mark as transient / non-dirty so UE skips it on auto-save and exit.
     _try_prevent_save(widget_bp)
 
     unreal.log(f"[widget_builder] Widget created (in-memory): {WIDGET_FULL_PATH}")
@@ -157,7 +143,6 @@ def open_widget() -> None:
         unreal.log("[widget_builder] Widget tab opened.")
     except Exception as exc:
         unreal.log_error(f"[widget_builder] Failed to open widget tab: {exc}")
-        # Fallback: try running as Editor Utility Widget directly
         try:
             unreal.EditorUtilityLibrary.run_editor_utility_widget(widget_bp)
             unreal.log("[widget_builder] Widget opened via EditorUtilityLibrary fallback.")
@@ -177,16 +162,13 @@ def delete_widget() -> bool:
     bool
         True if deleted, False if not found.
     """
-    asset_path = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
     deleted = False
-    if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
-        try:
-            unreal.EditorAssetLibrary.delete_asset(asset_path)
-            unreal.log(f"[widget_builder] Widget deleted: {asset_path}")
-            deleted = True
-        except Exception as exc:
-            unreal.log_warning(f"[widget_builder] delete_asset failed: {exc}")
-    # Also clean up any files on disk
+    try:
+        unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)
+        unreal.log(f"[widget_builder] Widget deleted: {WIDGET_ASSET_PATH}")
+        deleted = True
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] delete_asset failed: {exc}")
     _cleanup_disk_asset()
     return deleted
 
