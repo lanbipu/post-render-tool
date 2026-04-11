@@ -98,14 +98,11 @@ def create_widget() -> object:
 
     # Create the EditorUtilityWidgetBlueprint using factory
     factory = unreal.EditorUtilityWidgetBlueprintFactory()
-    parent_set_via_factory = False
     try:
         factory.set_editor_property("parent_class", OPostRenderToolWidget)
-        parent_set_via_factory = True
     except Exception as exc:
         unreal.log_warning(
-            f"[widget_builder] Could not set parent_class via factory: {exc}. "
-            "Will reparent after creation."
+            f"[widget_builder] Could not set parent_class via factory: {exc}"
         )
 
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -121,21 +118,21 @@ def create_widget() -> object:
             f"Failed to create EditorUtilityWidgetBlueprint at {WIDGET_FULL_PATH}"
         )
 
-    # If the factory couldn't set the parent, reparent the Blueprint so that
-    # OPostRenderToolWidget.construct() (and _build_ui) will be called.
-    if not parent_set_via_factory:
-        try:
-            current_parent = widget_bp.get_editor_property("parent_class")
-            if current_parent != OPostRenderToolWidget:
-                unreal.BlueprintEditorLibrary.reparent_blueprint(
-                    widget_bp, OPostRenderToolWidget
-                )
-                unreal.log("[widget_builder] Reparented to OPostRenderToolWidget.")
-        except Exception as exc:
-            unreal.log_error(
-                f"[widget_builder] Reparent failed: {exc}. "
-                "Widget will have no UI — try rebuild_widget()."
+    # ALWAYS verify actual parent — set_editor_property may succeed without
+    # exception yet the factory may still ignore the value.  Reparent if needed
+    # so OPostRenderToolWidget.construct() (and _build_ui) will be called.
+    try:
+        current_parent = widget_bp.get_editor_property("parent_class")
+        if current_parent != OPostRenderToolWidget:
+            unreal.BlueprintEditorLibrary.reparent_blueprint(
+                widget_bp, OPostRenderToolWidget
             )
+            unreal.log("[widget_builder] Reparented to OPostRenderToolWidget.")
+    except Exception as exc:
+        unreal.log_error(
+            f"[widget_builder] Reparent failed: {exc}. "
+            "Widget will have no UI — try rebuild_widget()."
+        )
 
     # ── DO NOT SAVE ──
     # PythonGeneratedClass can't be serialized → SavePackage2 assertion crash.
