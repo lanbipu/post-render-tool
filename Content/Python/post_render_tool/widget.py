@@ -102,7 +102,11 @@ class PostRenderToolUI:
     def _build_ui(self):
         """Build the entire UMG widget tree dynamically."""
         root = self._make_widget(unreal.VerticalBox)
-        self._host.set_content(root)
+
+        # set_content() is not a UFUNCTION, so it's inaccessible on plain
+        # Python object references.  Set the WidgetTree's RootWidget directly.
+        widget_tree = self._host.get_editor_property("widget_tree")
+        widget_tree.set_editor_property("root_widget", root)
 
         # --- Title ---
         title = self._make_text("VP Post-Render Tool", size=18, is_bold=True)
