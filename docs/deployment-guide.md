@@ -103,7 +103,10 @@ import init_post_render_tool
 
 Widget 已存在时直接打开，不会重复创建。
 
-**面板意外关闭时：** Content Browser → `Content/PostRenderTool/` → 右键 `EUW_PostRenderTool` → **Run Editor Utility Widget**
+**面板意外关闭时：** 再次执行 `import init_post_render_tool` 即可重新打开。
+
+> **注意：** Widget 仅存在于内存中（PythonGeneratedClass 无法被 UE 序列化到磁盘）。
+> 关闭编辑器时如果弹出"保存更改"对话框，对 PostRenderTool 相关资产选择 **Don't Save**。
 
 ---
 
