@@ -31,6 +31,11 @@ def create_widget() -> object:
     unreal.EditorUtilityWidgetBlueprint
         The created or existing widget Blueprint asset.
     """
+    # Import our widget class FIRST — triggers @uclass registration.
+    # This must happen before loading an existing asset whose parent class
+    # is the Python @uclass, otherwise UE can't resolve the parent.
+    from .widget import OPostRenderToolWidget
+
     # Check if already exists
     asset_path = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
     if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
@@ -43,10 +48,6 @@ def create_widget() -> object:
 
     # Create the EditorUtilityWidgetBlueprint using factory
     factory = unreal.EditorUtilityWidgetBlueprintFactory()
-
-    # Set parent class to our Python @uclass
-    # Import our widget class — this triggers @uclass registration
-    from .widget import OPostRenderToolWidget
     try:
         factory.set_editor_property("parent_class", OPostRenderToolWidget)
     except Exception as exc:
@@ -136,13 +137,7 @@ def delete_widget() -> bool:
     return False
 
 
-def rebuild_widget() -> object:
-    """Delete and recreate the widget Blueprint asset.
-
-    Returns
-    -------
-    unreal.EditorUtilityWidgetBlueprint
-        The newly created widget Blueprint asset.
-    """
+def rebuild_widget() -> None:
+    """Delete, recreate, and open the widget Blueprint asset."""
     delete_widget()
-    return create_widget()
+    open_widget()

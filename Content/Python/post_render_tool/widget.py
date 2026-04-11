@@ -27,7 +27,7 @@ class OPostRenderToolWidget(unreal.EditorUtilityWidget):
     # State
     # ---------------------------------------------------------------
     _csv_path: str = ""
-    _fps: float = 24.0
+    _fps: float = 0.0
     _last_result: Optional[PipelineResult] = None
 
     # Widget references (populated in _build_ui)
@@ -97,13 +97,13 @@ class OPostRenderToolWidget(unreal.EditorUtilityWidget):
         fps_row.add_child(lbl_fps)
 
         self._spn_fps = self._make_widget(unreal.SpinBox)
-        self._spn_fps.set_editor_property("min_value", 1.0)
+        self._spn_fps.set_editor_property("min_value", 0.0)
         self._spn_fps.set_editor_property("max_value", 120.0)
-        self._spn_fps.set_editor_property("value", 24.0)
+        self._spn_fps.set_editor_property("value", 0.0)
         self._spn_fps.on_value_changed.add_callable(self._on_fps_changed)
         fps_row.add_child(self._spn_fps)
 
-        self._txt_detected_fps = self._make_text("Auto: --", color=unreal.SlateColor(
+        self._txt_detected_fps = self._make_text("0 = Auto-detect", color=unreal.SlateColor(
             unreal.LinearColor(0.5, 0.5, 0.5, 1.0)
         ))
         fps_row.add_child(self._txt_detected_fps)
