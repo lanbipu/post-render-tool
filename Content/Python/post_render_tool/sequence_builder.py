@@ -180,6 +180,10 @@ def build_sequence(
 
     interp = unreal.MovieSceneKeyInterpolation.LINEAR
 
+    # Pre-allocate once to avoid 2N TransformConfig instantiations in the loop
+    from .coordinate_transform import TransformConfig
+    xform_cfg = TransformConfig()
+
     for frame in csv_result.frames:
         # Use original frame number offset from first frame to preserve cadence
         seq_frame_idx = frame.frame_number - first_frame_num
@@ -187,7 +191,7 @@ def build_sequence(
 
         # Position: Designer (m) → UE (cm), axis remapped
         ue_x, ue_y, ue_z = transform_position(
-            frame.offset_x, frame.offset_y, frame.offset_z
+            frame.offset_x, frame.offset_y, frame.offset_z, cfg=xform_cfg
         )
         ch_loc_x.add_key(frame_number, ue_x, interp)
         ch_loc_y.add_key(frame_number, ue_y, interp)
@@ -195,7 +199,7 @@ def build_sequence(
 
         # Rotation: Designer → UE (pitch, yaw, roll)
         pitch, yaw, roll = transform_rotation(
-            frame.rotation_x, frame.rotation_y, frame.rotation_z
+            frame.rotation_x, frame.rotation_y, frame.rotation_z, cfg=xform_cfg
         )
         ch_roll.add_key(frame_number, roll, interp)
         ch_pitch.add_key(frame_number, pitch, interp)
