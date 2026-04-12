@@ -101,29 +101,16 @@ class PostRenderToolUI:
 
     def _build_ui(self):
         """Build the entire UMG widget tree dynamically."""
-        # GetRootWidget() is NOT a UFUNCTION — not callable from Python.
-        # Use EditorUtilityWidget.FindChildWidgetByName() (a UFUNCTION)
-        # to locate the CanvasPanel root created by the factory.
-        root_panel = self._find_root_panel()
-        if root_panel is None:
+        # GetRootWidget() is NOT a UFUNCTION — Python cannot call it.
+        # Use EditorUtilityWidget.FindChildWidgetByName() (UFUNCTION) to
+        # locate the root panel widget created by the factory.
+        root = self._acquire_root_vbox()
+        if root is None:
             raise RuntimeError(
-                "Cannot find root CanvasPanel in widget tree. "
+                "Cannot find root panel in widget tree. "
                 "Fix: from post_render_tool.widget_builder import "
                 "rebuild_widget; rebuild_widget()"
             )
-
-        root_panel.clear_children()
-        root = self._make_widget(unreal.VerticalBox)
-        root_panel.add_child(root)
-
-        # CanvasPanel children default to zero size — anchor to fill.
-        slot = root.slot
-        if slot is not None and isinstance(slot, unreal.CanvasPanelSlot):
-            slot.set_editor_property("anchors", unreal.Anchors(
-                minimum=unreal.Vector2D(0.0, 0.0),
-                maximum=unreal.Vector2D(1.0, 1.0),
-            ))
-            slot.set_editor_property("offsets", unreal.Margin(0.0, 0.0, 0.0, 0.0))
 
         # --- Title ---
         title = self._make_text("VP Post-Render Tool", size=18, is_bold=True)
@@ -352,12 +339,20 @@ class PostRenderToolUI:
     # Widget Factory Helpers
     # ---------------------------------------------------------------
 
-    def _find_root_panel(self):
-        """Locate the root CanvasPanel created by the factory.
+    def _acquire_root_vbox(self):
+        """Find the factory root widget and return a usable VerticalBox.
 
         ``UserWidget.GetRootWidget()`` is NOT a UFUNCTION, so Python cannot
-        call it.  ``EditorUtilityWidget.FindChildWidgetByName()`` IS a
-        UFUNCTION — use it to find the CanvasPanel by its auto-generated name.
+        call it.  ``EditorUtilityWidget.FindChildWidgetByName(FName)`` IS a
+        UFUNCTION — we use it to locate the root widget.
+
+        The factory creates the root via ``WidgetTree->ConstructWidget`` with
+        ``NAME_None``; UE's ``MakeUniqueObjectName`` produces
+        ``<ClassName>_<N>``.  We try all plausible root-widget class names
+        so this works regardless of project settings (CanvasPanel default,
+        or user-selected Overlay / VerticalBox / etc.).
+
+        Returns a VerticalBox ready for child population, or None.
         """
         if not hasattr(self._host, "find_child_widget_by_name"):
             unreal.log_warning(
@@ -366,21 +361,56 @@ class PostRenderToolUI:
             )
             return None
 
-        # The factory's ConstructWidget uses MakeUniqueObjectName, which
-        # typically produces "CanvasPanel_0" for the first CanvasPanel.
-        for name in ("CanvasPanel_0", "CanvasPanel0", "CanvasPanel"):
+        # Class basenames the factory may use, with _0 suffix from
+        # MakeUniqueObjectName.  Order: most-likely first.
+        _CANDIDATE_NAMES = [
+            "CanvasPanel_0",
+            "Overlay_0",
+            "VerticalBox_0",
+            "HorizontalBox_0",
+            "SizeBox_0",
+            "Border_0",
+            "ScaleBox_0",
+            "GridPanel_0",
+        ]
+
+        root_widget = None
+        for name in _CANDIDATE_NAMES:
             try:
                 w = self._host.find_child_widget_by_name(name)
                 if w is not None:
-                    return w
+                    root_widget = w
+                    break
             except Exception:
                 pass
 
-        unreal.log_warning(
-            "[widget] Could not find root CanvasPanel by name. "
-            "The factory may have used a different name."
-        )
-        return None
+        if root_widget is None:
+            unreal.log_warning(
+                "[widget] No root widget found.  Tried: "
+                + ", ".join(_CANDIDATE_NAMES)
+            )
+            return None
+
+        # If the root IS a VerticalBox already, use it directly.
+        if isinstance(root_widget, unreal.VerticalBox):
+            root_widget.clear_children()
+            return root_widget
+
+        # Otherwise (CanvasPanel, Overlay, etc.) nest a VerticalBox inside.
+        root_widget.clear_children()
+        vbox = self._make_widget(unreal.VerticalBox)
+        root_widget.add_child(vbox)
+
+        # CanvasPanel children default to zero-size slot — anchor to fill.
+        slot = vbox.slot
+        if slot is not None and isinstance(slot, unreal.CanvasPanelSlot):
+            slot.set_editor_property("anchors", unreal.Anchors(
+                minimum=unreal.Vector2D(0.0, 0.0),
+                maximum=unreal.Vector2D(1.0, 1.0),
+            ))
+            slot.set_editor_property("offsets", unreal.Margin(0.0, 0.0, 0.0, 0.0))
+
+        return vbox
 
     def _make_widget(self, widget_class):
         """Create a UMG widget owned by the host widget."""
