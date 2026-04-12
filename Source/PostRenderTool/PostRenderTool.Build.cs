@@ -15,6 +15,7 @@ public class PostRenderTool : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "UMG",
+                "Blutility",
             }
         );
 
@@ -25,7 +26,6 @@ public class PostRenderTool : ModuleRules
                 "SlateCore",
                 "InputCore",
                 "UnrealEd",
-                "Blutility",
                 "UMGEditor",
                 "EditorSubsystem",
                 "ToolMenus",
