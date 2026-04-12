@@ -3,7 +3,8 @@
 ## Project Overview
 
 VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor + LensFile + LevelSequence.
-Python scripts for UE Editor, no external dependencies.
+
+Packaged as a **self-contained UE 5.7 plugin** (`PostRenderTool.uplugin` at repo root). Drops into any `<UEProject>/Plugins/` directory. C++ module provides a `UEditorUtilityWidget` subclass with a `meta=(BindWidget)` UPROPERTY contract; child Blueprint authored in the UMG Designer satisfies the contract; Python binds callbacks and drives the CSV → UE import pipeline.
 
 ## Commands
 
@@ -12,70 +13,93 @@ Python scripts for UE Editor, no external dependencies.
 cd Content/Python && python -m unittest discover -s post_render_tool/tests -p "test_c*.py" -p "test_v*.py" -v
 
 # Syntax check for UE-dependent modules
-for f in post_render_tool/{lens_file_builder,camera_builder,sequence_builder,pipeline,ui_interface}.py; do
+for f in post_render_tool/{lens_file_builder,camera_builder,sequence_builder,pipeline,ui_interface,widget,widget_builder}.py; do
   python3 -c "import ast; ast.parse(open('$f').read()); print('OK: $f')"
 done
 
-# UE Python console — prerequisite check
+# UE Python console — launch tool
 import init_post_render_tool
 
-# UE Python console — full import
+# UE Python console — full pipeline (bypass UI)
 from post_render_tool.pipeline import run_import
 result = run_import(r"path/to/csv", fps=24.0)
 
-# UE Python console — launch tool (loads template + opens widget)
-import init_post_render_tool
-
 # UE Python console — widget management
 from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
-open_widget()      # load template + spawn tab + inject UI
-rebuild_widget()   # reopen (drops cached UI, does NOT delete the template)
-delete_widget()    # destructive: delete template asset; must recreate manually
+open_widget()      # load BP_PostRenderToolWidget + spawn tab + bind callbacks
+rebuild_widget()   # reopen (drops cached UI, does NOT delete the Blueprint asset)
+delete_widget()    # destructive: delete the plugin-shipped asset (normally unneeded)
 
 # UE Python console — hot reload after editing .py files (no UE restart)
 import importlib
 import post_render_tool.widget_builder as wb
 import post_render_tool.widget as w
 importlib.reload(wb); importlib.reload(w)
-wb.open_widget()
+wb.rebuild_widget()
 ```
 
-## One-time template setup (UE Editor)
+## Git / P4 Workflow
 
-The widget Blueprint must be created **manually once** in the UE Editor.
-Programmatic factory creation is not viable in UE 5.7 because the
-auto-generated root widget is created with `bIsVariable = false`,
-producing a UPROPERTY without `CPF_BlueprintVisible` that Python cannot
-access (see `widget_builder.TEMPLATE_SETUP_INSTRUCTIONS`).
+- **Post-commit hook pushes the CURRENT branch to the Helix4Git depot** on every commit (`scripts/git-hooks/post-commit`, `core.hooksPath = scripts/git-hooks`, installed via commits `0581b3c` → `a46045f`). `main` and feature branches both push; hook exits 0 on failure so it never blocks commits. Output: `[p4-sync] ✓ <branch> pushed to p4` on stderr; rolling log at `.git/p4-push.log`.
+- **P4 workspace mirror**: `/Users/bip.lan/AIWorkspace/vp/p4-workspace/ue/post-render-tool/` is a parallel clone of the same depot, pinned to `main` for UE Editor consumption. Feature-branch commits land in the depot but don't advance this mirror. `P4CLIENT = claude-workspace` (set via `P4CLIENT=claude-workspace p4 ...` or `~/.p4config`).
+- **Worktree convention**: For multi-commit refactors, create a worktree outside the repo: `git worktree add ~/.config/superpowers/worktrees/post_render_tool/<branch> -b feature/<name>`. Keeps the main working tree and the p4 workspace mirror clean. Each commit still pushes the feature branch to the depot (safe — `main` doesn't move until merge).
+- **Main repo vs worktree**: Edits in a worktree on a non-main branch are invisible to the main repo's working tree until you `git checkout <branch>` in main or merge. If someone says "I don't see the new files", that's usually why.
 
-Steps:
-1. Content Browser → `/Game/PostRenderTool/`
-2. Right-click → Editor Utilities → Editor Utility Widget
-3. Pick parent class: `EditorUtilityWidget` (native)
-4. Name: `EUW_PostRenderTool`
-5. Open the Designer, drag a `Vertical Box` as the root
-6. Rename it to `RootPanel`, **check "Is Variable"** in the Details panel
-7. Compile + Save
+## First-time setup
+
+See `docs/plugin-setup.md` for first-time plugin installation, UBT build, and Blueprint authoring instructions.
 
 ## Architecture
 
+VP Post-Render Tool is a self-contained UE 5.7 plugin. The repo root IS the plugin root:
+
 ```
-Content/Python/post_render_tool/
-├── config.py                  # Configurable constants (axis mapping, thresholds)
-├── csv_parser.py              # F1: CSV Dense parser (pure Python)
-├── coordinate_transform.py    # F2: Coord transform (pure Python, configurable)
-├── validator.py               # F6: FOV check + anomaly detection (pure Python)
-├── lens_file_builder.py       # F3: .ulens generation (requires unreal)
-├── camera_builder.py          # F4: CineCameraActor (requires unreal)
-├── sequence_builder.py        # F5: LevelSequence + animation (requires unreal)
-├── pipeline.py                # Orchestrator (requires unreal)
-├── ui_interface.py            # Utility functions: file dialog, sequencer, MRQ (requires unreal)
-├── widget.py                  # F7: Plain Python UI builder (requires unreal)
-└── widget_builder.py          # F7: EUW Blueprint + UI injection (requires unreal)
+post_render_tool/                               ← plugin root
+├── PostRenderTool.uplugin                      ← plugin manifest
+├── Source/
+│   └── PostRenderTool/
+│       ├── PostRenderTool.Build.cs             ← module descriptor (UMG, Blutility, UnrealEd, …)
+│       ├── Public/
+│       │   ├── PostRenderToolModule.h          ← empty module entry point
+│       │   └── PostRenderToolWidget.h          ← C++ BindWidget contract (41 UPROPERTYs)
+│       └── Private/
+│           ├── PostRenderToolModule.cpp
+│           └── PostRenderToolWidget.cpp        ← empty NativeConstruct stub
+├── Content/
+│   ├── Blueprints/
+│   │   └── BP_PostRenderToolWidget.uasset     ← Designer-authored UMG layout (Phase C)
+│   └── Python/
+│       ├── init_post_render_tool.py            ← entry point, calls widget_builder.open_widget()
+│       └── post_render_tool/
+│           ├── config.py                       # Configurable constants (axis mapping, thresholds)
+│           ├── csv_parser.py                   # CSV Dense parser (pure Python)
+│           ├── coordinate_transform.py         # Coord transform (pure Python, configurable)
+│           ├── validator.py                    # FOV check + anomaly detection (pure Python)
+│           ├── lens_file_builder.py            # .ulens generation (requires unreal)
+│           ├── camera_builder.py               # CineCameraActor (requires unreal)
+│           ├── sequence_builder.py             # LevelSequence + animation (requires unreal)
+│           ├── pipeline.py                     # Orchestrator (requires unreal)
+│           ├── ui_interface.py                 # File dialog, sequencer, MRQ (requires unreal)
+│           ├── widget.py                       # BindWidget binder + callbacks
+│           ├── widget_builder.py               # Asset loader + tab spawner
+│           └── widget_programmatic.py.bak      # archival (pre-plugin builder, unused)
+└── docs/
+    ├── plugin-setup.md                         ← first-time install guide
+    └── bindwidget-contract.md                  ← 41 widget name/type reference
 ```
 
-Pure Python modules (csv_parser, coordinate_transform, validator) have no `unreal` import — testable outside UE.
-UE-dependent modules can only run inside UE Editor.
+UE loads the plugin from `<UEProject>/Plugins/PostRenderTool/`, mounts `Content/` at the virtual path `/PostRenderTool/`, and adds `Content/Python/` to `sys.path`.
+
+**BindWidget contract:** `UPostRenderToolWidget` (C++) declares 33 required + 8 optional widget pointers via `UPROPERTY(BlueprintReadOnly, meta=(BindWidget))` / `meta=(BindWidgetOptional)`. The child Blueprint `BP_PostRenderToolWidget` must contain widgets with matching names and types, or the UMG compiler fails the Blueprint build with `A required widget binding "X" of type Y was not found.`
+
+**Runtime flow:**
+1. User runs `import init_post_render_tool` in the UE Python console
+2. `widget_builder.open_widget()` loads `/PostRenderTool/Blueprints/BP_PostRenderToolWidget`
+3. `EditorUtilitySubsystem.spawn_and_register_tab()` spawns the widget instance
+4. `PostRenderToolUI(widget)` acquires every bound widget via `host.get_editor_property("btn_browse")` (etc.) and wires callbacks
+5. Button clicks drive the existing pure-Python business logic (`parse_csv_dense`, `transform_position`, `run_import`, `spawn_test_camera`, …)
+
+Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`) have no `unreal` import and are testable outside UE Editor.
 
 ## Gotchas
 
@@ -92,26 +116,22 @@ UE-dependent modules can only run inside UE Editor.
   UPROPERTYs with `CPF_BlueprintVisible | CPF_BlueprintAssignable`, or editor-only
   UPROPERTYs with `CPF_Edit` (see `PyGenUtil.cpp` `IsScriptExposedProperty` /
   `ShouldExportEditorOnlyProperty`). Bare `UPROPERTY()` is invisible from Python.
-- **UE Python UFUNCTION requirement:** plain C++ methods are NOT Python-callable.
-  Known gotchas: `UserWidget::GetRootWidget()` (not UFUNCTION — use
-  `EditorUtilityWidget::FindChildWidgetByName` or a named Blueprint variable),
-  `FKismetEditorUtilities::CompileBlueprint` (non-UObject static — use
-  `unreal.BlueprintEditorLibrary.compile_blueprint` instead).
-- **Widget is plain Python, NOT @uclass:** `widget.py` is a plain Python class
-  (`PostRenderToolUI`) that builds UMG layout into a provided `EditorUtilityWidget`.
-  The Blueprint is a **user-created template** with a VerticalBox named `RootPanel`
-  marked as variable.  UI is injected after spawn via `find_utility_widget_from_blueprint`.
-  See "One-time template setup" above for the manual creation steps.
-- **Why manual template?** UE 5.7's `EditorUtilityWidgetBlueprintFactory` auto-creates
-  the root panel with `bIsVariable = false`, so the compiler emits a UPROPERTY
-  without `CPF_BlueprintVisible`.  Python's `get_editor_property` and `dir()`
-  cannot see the widget at all.  `find_child_widget_by_name` also returned None
-  on the spawned instance, suggesting the WidgetTree archetype is not propagated
-  for factory-created widgets in this build.  Manual template creation in the
-  Designer marks the widget as a variable, producing a script-visible UPROPERTY.
-- **Widget runtime UI construction:** `widget.py` builds the UMG layout in `__init__()`.
-  If the UE Python API for `create_widget()` or `add_child()` behaves differently
-  across UE versions, the layout may need adjustment.
+- **BindWidget requires explicit `BlueprintReadOnly`.** `UPROPERTY(meta=(BindWidget))`
+  alone is NOT Python-visible. You must write
+  `UPROPERTY(BlueprintReadOnly, meta=(BindWidget)) UButton* btn_foo;`
+  to make `host.get_editor_property("btn_foo")` work from Python. `BlueprintReadOnly`
+  is what sets `CPF_BlueprintVisible`; `meta=(BindWidget)` is the UMG compiler hint
+  that auto-binds the pointer to a same-named widget in the child Blueprint.
+- **Live Coding does NOT support UPROPERTY changes.** Adding, removing, or renaming
+  a BindWidget UPROPERTY in `PostRenderToolWidget.h` requires a full Editor restart
+  and a full plugin rebuild (UHT must re-run to regenerate reflection metadata).
+  Live Coding only works for method body edits. Child Blueprints must be recompiled
+  after parent UPROPERTY changes.
+- **Python-vs-Designer name drift is a silent bug.** A mismatch between
+  `_REQUIRED_CONTROLS` in `widget.py` and the UPROPERTY names in
+  `PostRenderToolWidget.h` causes `get_editor_property()` to return None, and the
+  binder logs a warning but keeps going. Keep the two sides in sync; see
+  `docs/bindwidget-contract.md` for the authoritative list.
 
 ## UE Source Code Reference
 
@@ -121,8 +141,11 @@ For uncertain UE Python API behavior, read the source directly instead of guessi
 - `Engine/Plugins/Experimental/PythonScriptPlugin/Source/PythonScriptPlugin/Private/PyGenUtil.cpp`
   — property/function script-exposure rules (`IsScriptExposedProperty`, `ShouldExportEditorOnlyProperty`)
 - `Engine/Source/Runtime/UMG/` — UMG runtime (`UserWidget`, `WidgetTree`, `PanelWidget`)
-- `Engine/Source/Editor/UMGEditor/` — `WidgetBlueprint`, `WidgetBlueprintCompiler`
+- `Engine/Source/Editor/UMGEditor/` — `WidgetBlueprint`, `WidgetBlueprintCompiler` (BindWidget validation lives here)
 - `Engine/Source/Editor/Blutility/` — `EditorUtilityWidget`, `EditorUtilityWidgetBlueprintFactory`, `EditorUtilitySubsystem`
+- `Engine/Source/Editor/BlueprintEditorLibrary/Public/BlueprintEditorLibrary.h` — `CompileBlueprint` UFUNCTION
+
+For API edge cases, dispatch an `Explore` subagent with a concrete question (e.g. "verify X is a UFUNCTION in UE 5.7") and require `file:line` citations. Faster than grepping the engine source yourself and keeps the main context clean.
 
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->
 ## Knowledge Base (Managed by Docsmith)

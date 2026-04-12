@@ -2,49 +2,51 @@
 
 ## 1. 安装
 
-### 1.1 复制文件到 UE 项目
+VP Post-Render Tool 打包成**自包含的 UE 5.7 plugin**。把整个仓库目录复制（或 symlink）进宿主 UE 项目的 `Plugins/` 子目录即可：
 
-将本仓库的 `Content/Python/` 目录复制到 UE 项目中：
+### 1.1 安装 plugin
 
 ```bash
-# macOS / Linux
-cp -r /path/to/post-render-tool/Content/Python/ /path/to/MyVPProject/Content/Python/
+# macOS / Linux (symlink — 开发推荐，改动双向同步)
+ln -sfn /path/to/post_render_tool /path/to/MyVPProject/Plugins/PostRenderTool
+
+# macOS / Linux (copy — 分发推荐)
+cp -R /path/to/post_render_tool /path/to/MyVPProject/Plugins/PostRenderTool
 
 # Windows PowerShell
-Copy-Item -Recurse "C:\path\to\post-render-tool\Content\Python\" "C:\path\to\MyVPProject\Content\Python\"
+Copy-Item -Recurse "C:\path\to\post_render_tool" "C:\path\to\MyVPProject\Plugins\PostRenderTool"
 ```
 
-最终结构：`MyVPProject/Content/Python/init_post_render_tool.py` + `post_render_tool/` 包。
+最终结构：`MyVPProject/Plugins/PostRenderTool/PostRenderTool.uplugin` + `Source/` + `Content/`。
 
-### 1.2 启用插件
+### 1.2 首次编译 plugin
 
-打开 UE 5.7 Editor → **Edit → Plugins**，搜索并启用：
+1. 关闭宿主 UE Editor（如果正在运行）
+2. 右键 `.uproject` → **Services → Generate Xcode Project**（macOS）或 **Generate Visual Studio project files**（Windows）
+3. 双击 `.uproject` 打开项目
+4. UE 检测到新的 C++ plugin 会弹出：
+   > *"The following modules are missing or built with a different engine version: PostRenderTool. Would you like to rebuild them now?"*
+5. 点击 **Yes**，等待 UBT 编译（30 秒 – 5 分钟）
+6. 成功后：**Edit → Plugins** → 搜 "Post-Render" → 看到 "VP Post-Render Tool" 绿色启用
 
-| 插件 | 搜索关键词 |
-|------|-----------|
-| Python Editor Script Plugin | `Python` |
-| Editor Scripting Utilities | `Editor Scripting` |
-| Camera Calibration | `Camera Calibration` |
+**编译失败时**：检查 `Saved/Logs/` 下的 UBT 日志，或确认系统已装 Xcode（macOS）/ Visual Studio 2022（Windows）。
 
-启用后重启编辑器。
+### 1.3 创建 Blueprint 资产（仅首次）
 
-### 1.3 创建 Widget 模板（一次性）
+plugin 随仓库附带 `Content/Blueprints/BP_PostRenderToolWidget.uasset`——如果这个资产存在，跳到 1.4。如果是全新仓库或资产被删除，需手动创建一次：
 
-UE 5.7 的 `EditorUtilityWidgetBlueprintFactory` 自动创建的根 widget `bIsVariable=false`，编译后的 UPROPERTY 不带 `CPF_BlueprintVisible`，Python 完全无法访问。所以必须**手动创建一次**模板：
-
-1. **Content Browser** → 进入 `/Game/PostRenderTool/`（不存在就先建文件夹）
-2. 右键 → **Editor Utilities** → **Editor Utility Widget**
-3. 父类选 **`EditorUtilityWidget`**（native，不是自定义子类）
-4. 命名 **`EUW_PostRenderTool`**
+1. **Content Browser** → 左侧 "Plugins" → **VP Post-Render Tool Content** → `Blueprints/`
+2. 右键 → **Blueprint Class** → 搜索 `PostRenderToolWidget`
+3. 选中 `UPostRenderToolWidget` → **Select**
+4. 命名 **`BP_PostRenderToolWidget`**
 5. 双击打开 Widget Designer
-6. Palette 拖一个 **Vertical Box** 到 Hierarchy 作为根
-7. 选中 Vertical Box，在 Details 面板顶部：
-   - 重命名为 **`RootPanel`**
-   - **勾选 "Is Variable"**
-8. **Compile** (Ctrl+B) → **Save** (Ctrl+S)
-9. 关闭 Widget Designer
+6. 删除默认 `CanvasPanel_0` 根节点，从 Palette 拖一个 **Vertical Box** 作为新根，命名 `RootPanel`
+7. 按 `docs/bindwidget-contract.md` 里的 33 个必需控件名/类型清单，往 Hierarchy 里拖控件，每个控件的名字必须与 C++ UPROPERTY 严格对应
+8. **Compile**（Ctrl+B）— 如果 Compiler Results 报 `A required widget binding "X" of type Y was not found`，按提示补齐缺失的控件再次编译
+9. **Save**（Ctrl+S）
+10. 提交资产到 git / p4
 
-完整说明见 `docs/blueprint-ui-setup.md`。
+完整步骤和排错见 `docs/plugin-setup.md`。
 
 ### 1.4 启动工具
 
@@ -54,9 +56,7 @@ Output Log 切换到 **Python** 模式，输入：
 import init_post_render_tool
 ```
 
-UI 面板自动弹出，Prerequisites 区域显示所有插件状态。如有 MISSING，回到 1.2 启用对应插件。
-
-如果出现 `Template Blueprint not found` 错误，回到 1.3 创建模板。
+UI 面板自动弹出，Prerequisites 区域显示所有插件状态。如有 MISSING（Python Editor Script Plugin / Editor Scripting Utilities / Camera Calibration），去 **Edit → Plugins** 启用，然后重启编辑器。
 
 ---
 
@@ -121,11 +121,22 @@ Results 区域显示验证报告（FOV 误差、异常帧检测等）。
 import init_post_render_tool
 ```
 
-加载 1.3 创建的模板 Blueprint，spawn 编辑器 tab，注入 Python UI。
+这会加载 plugin 里的 `BP_PostRenderToolWidget`，spawn 编辑器 tab，绑定 Python callback。
 
 **面板意外关闭时：** 再次执行 `import init_post_render_tool` 即可重新打开。
 
-> **注意：** 模板 Blueprint (`EUW_PostRenderTool`) 是用户手动创建的真实 asset，会和项目一起持久化。不要在 Content Browser 里删除它，否则需要按 1.3 重新创建。
+**修改 Python 代码后热重载（无需重启 UE）：**
+```python
+import importlib
+import post_render_tool.widget as w
+import post_render_tool.widget_builder as wb
+importlib.reload(w); importlib.reload(wb)
+wb.rebuild_widget()
+```
+
+> **注意：** Blueprint 资产 `BP_PostRenderToolWidget` 随 plugin 一起提交到版本控制，团队成员 `git pull` / `p4 sync` 就能拿到同一份。不要在 Content Browser 里随便删除，否则要按 1.3 重新创建。
+>
+> **C++ UPROPERTY 变更**（在 `PostRenderToolWidget.h` 里增/删/改 BindWidget 属性）**不支持 Live Coding**，必须关闭 Editor 完整重编 plugin，然后重新 compile Blueprint。
 
 ---
 
@@ -142,19 +153,22 @@ import init_post_render_tool
 ```python
 from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
 
-open_widget()      # 加载模板 + spawn tab + 注入 UI
-rebuild_widget()   # 重新打开（释放缓存 UI 引用，不删模板）
-delete_widget()    # 销毁性：删除模板 asset，下次 open_widget() 前需按 1.3 重建
+open_widget()      # 加载 BP_PostRenderToolWidget + spawn tab + 绑定 callback
+rebuild_widget()   # 重新打开（释放缓存 UI 引用，不删 Blueprint 资产）
+delete_widget()    # 销毁性：删除 plugin-shipped Blueprint 资产——正常情况下不应调用
 ```
 
 ### 故障排查
 
 | 错误 | 原因 | 解决 |
 |------|------|------|
-| Prerequisites 显示 MISSING | 插件未启用 | Edit → Plugins 启用对应插件，重启编辑器 |
-| `ModuleNotFoundError: post_render_tool` | 文件位置不对 | 确认文件在 `Content/Python/post_render_tool/` 下 |
-| `Template Blueprint not found` | 模板未创建或被删除 | 按 1.3 步骤手动创建 `EUW_PostRenderTool` |
-| `Template is missing the 'RootPanel' variable` | 根 widget 未命名为 `RootPanel` 或未勾选 Is Variable | 在 Widget Designer 中修正后 Compile + Save |
-| `'RootPanel' is a CanvasPanel, expected VerticalBox` | 模板根 widget 类型错误 | 替换为 Vertical Box，重命名 + 勾选 Is Variable |
+| Plugins 窗口里看不到 "VP Post-Render Tool" | plugin 目录没放在 `<UEProject>/Plugins/` 下 | 检查路径，确认 `PostRenderTool.uplugin` 存在 |
+| UE 启动时提示 "module missing / rebuild?" | 首次编译未完成 | 点 Yes，等 UBT 编译 |
+| UBT 编译失败 | 缺 C++ 工具链 | 装 Xcode（macOS）或 Visual Studio 2022（Windows），重试 |
+| Prerequisites 显示 MISSING | 插件未启用 | Edit → Plugins 启用 Python / Editor Scripting / Camera Calibration，重启编辑器 |
+| `ModuleNotFoundError: post_render_tool` | plugin 未启用或 Python path 未挂载 | 确认 plugin 在 Plugins 窗口里是绿色的，重启编辑器 |
+| Blueprint compile 报 `A required widget binding "X" of type Y was not found` | Blueprint 里缺少对应控件或类型不符 | 在 Designer 里添加/改类型，按 `docs/bindwidget-contract.md` 对照 |
+| `'btn_browse' UPROPERTY is None` | Blueprint 没有用当前 C++ class 重新 compile | 打开 `BP_PostRenderToolWidget`，Compile，然后重启工具 |
+| UI 打开但按钮点击没反应 | callback 未绑定（热重载副作用）| `wb.rebuild_widget()` 或重启 tab |
 | Import 后摄影机位置/朝向不对 | 轴映射未校准 | 回到 2.2 验证坐标映射 |
 | `RuntimeError: LensFile` | Camera Calibration 插件未启用 | 启用插件并重启 |

@@ -49,7 +49,7 @@ print(result.report.format_report())
 
 **方式 2：Blueprint UI**
 
-需要先在 UE Editor 中**手动创建一次** Editor Utility Widget 模板，然后用 Python 启动并注入 UI。完整步骤见 `docs/blueprint-ui-setup.md`。
+plugin 随仓库附带 `Content/Blueprints/BP_PostRenderToolWidget.uasset`，首次安装后直接启动工具即可。如需手动重建 Blueprint 资产，完整步骤见 `docs/plugin-setup.md`。
 
 ## Project Structure
 
