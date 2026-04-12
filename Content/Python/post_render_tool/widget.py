@@ -15,7 +15,6 @@ Only usable inside UE Editor Python environment.
 
 from __future__ import annotations
 
-import importlib
 from typing import Optional
 
 import unreal
@@ -406,6 +405,30 @@ class PostRenderToolUI:
     # Axis Mapping
     # ------------------------------------------------------------------
 
+    _MAPPING_CONTROLS = (
+        "cmb_pos_x_src", "spn_pos_x_scale",
+        "cmb_pos_y_src", "spn_pos_y_scale",
+        "cmb_pos_z_src", "spn_pos_z_scale",
+        "cmb_rot_pitch_src", "spn_rot_pitch_scale",
+        "cmb_rot_yaw_src", "spn_rot_yaw_scale",
+        "cmb_rot_roll_src", "spn_rot_roll_scale",
+    )
+
+    def _missing_mapping_controls(self) -> bool:
+        """Return True if any axis-mapping widget reference is None.
+
+        Guards against silent data corruption in ``_on_apply_mapping`` and
+        ``_on_save_mapping`` — if a SpinBox is missing, ``_read_mapping_from_ui``
+        returns ``0.0`` for that axis, which would zero out the scale factor
+        and break coordinate transforms.
+        """
+        missing = [name for name in self._MAPPING_CONTROLS if self._get(name) is None]
+        if missing:
+            unreal.log_warning(
+                f"[widget] Missing axis mapping controls: {', '.join(missing)}"
+            )
+        return bool(missing)
+
     def _read_mapping_from_ui(self) -> tuple:
         def axis_index(combo_name: str) -> int:
             combo = self._get(combo_name)
@@ -433,16 +456,20 @@ class PostRenderToolUI:
         )
 
     def _on_apply_mapping(self):
+        if self._missing_mapping_controls():
+            self._set_results(
+                "Cannot apply mapping: one or more axis controls are missing "
+                "from the Blueprint. Check the Output Log for details."
+            )
+            return
+
         pos_mapping, rot_mapping = self._read_mapping_from_ui()
 
+        # coordinate_transform reads config.POSITION_MAPPING / ROTATION_MAPPING
+        # on every call, so mutating the config dicts is enough — no reload or
+        # global rebind needed.
         config.POSITION_MAPPING = pos_mapping
         config.ROTATION_MAPPING = rot_mapping
-
-        from . import coordinate_transform
-        importlib.reload(coordinate_transform)
-        global transform_position, transform_rotation
-        transform_position = coordinate_transform.transform_position
-        transform_rotation = coordinate_transform.transform_rotation
 
         self._refresh_coord_preview()
         self._set_results(
@@ -451,6 +478,13 @@ class PostRenderToolUI:
         unreal.log("[widget] Axis mapping applied in memory.")
 
     def _on_save_mapping(self):
+        if self._missing_mapping_controls():
+            self._set_results(
+                "Cannot save mapping: one or more axis controls are missing "
+                "from the Blueprint. Check the Output Log for details."
+            )
+            return
+
         pos_mapping, rot_mapping = self._read_mapping_from_ui()
         try:
             save_axis_mapping(pos_mapping, rot_mapping)
