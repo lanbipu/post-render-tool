@@ -1,0 +1,45 @@
+#!/bin/bash
+# Auto-push to P4 Git Connector after every commit.
+#
+# Prints status to stderr so failures are visible during `git commit`,
+# and writes a rolling log at .git/p4-push.log for history.
+#
+# Design decisions:
+# - Exit 0 always: never block commits on push failure (commit is already done).
+# - Push current branch (not hardcoded main), so feature branches work.
+# - Skip silently if no 'p4' remote exists (e.g. clones that don't need P4 sync).
+# - Synchronous push: hook waits for push to complete so the user sees the outcome.
+
+set -u
+
+REMOTE="p4"
+LOG_FILE="$(git rev-parse --git-dir)/p4-push.log"
+BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || echo "")"
+
+if [ -z "$BRANCH" ]; then
+    echo "[p4-sync] skipped: detached HEAD" >&2
+    exit 0
+fi
+
+if ! git remote get-url "$REMOTE" >/dev/null 2>&1; then
+    # No p4 remote configured — not an error, just not applicable here
+    exit 0
+fi
+
+TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+echo "=== $TIMESTAMP — post-commit push $BRANCH -> $REMOTE ===" >> "$LOG_FILE"
+
+PUSH_OUTPUT="$(git push "$REMOTE" "$BRANCH" 2>&1)"
+PUSH_STATUS=$?
+
+echo "$PUSH_OUTPUT" >> "$LOG_FILE"
+echo "--- exit: $PUSH_STATUS ---" >> "$LOG_FILE"
+
+if [ $PUSH_STATUS -eq 0 ]; then
+    echo "[p4-sync] ✓ $BRANCH pushed to $REMOTE" >&2
+else
+    echo "[p4-sync] ✗ push to $REMOTE failed (exit $PUSH_STATUS) — see $LOG_FILE" >&2
+    echo "$PUSH_OUTPUT" | tail -5 >&2
+fi
+
+exit 0
