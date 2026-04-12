@@ -5,10 +5,11 @@
 # and writes a rolling log at .git/p4-push.log for history.
 #
 # Design decisions:
-# - Exit 0 always: never block commits on push failure (commit is already done).
+# - Exit 0 always: never block commits on push failure.
 # - Push current branch (not hardcoded main), so feature branches work.
 # - Skip silently if no 'p4' remote exists (e.g. clones that don't need P4 sync).
-# - Synchronous push: hook waits for push to complete so the user sees the outcome.
+# - Bounded SSH: ConnectTimeout=5s so `git commit` never hangs when the
+#   Git Connector is unreachable (off-LAN, NAS down, etc.).
 
 set -u
 
@@ -22,12 +23,18 @@ if [ -z "$BRANCH" ]; then
 fi
 
 if ! git remote get-url "$REMOTE" >/dev/null 2>&1; then
-    # No p4 remote configured — not an error, just not applicable here
+    # No p4 remote configured — not an error, just not applicable here.
+    # Run `./scripts/git-hooks/install.sh <p4-remote-url>` to enable.
     exit 0
 fi
 
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
 echo "=== $TIMESTAMP — post-commit push $BRANCH -> $REMOTE ===" >> "$LOG_FILE"
+
+# Bounded SSH: fail fast if Git Connector unreachable.
+# ConnectTimeout=5 caps the TCP handshake; ServerAliveInterval=5 +
+# ServerAliveCountMax=2 caps an already-open session hanging.
+export GIT_SSH_COMMAND="ssh -o ConnectTimeout=5 -o ServerAliveInterval=5 -o ServerAliveCountMax=2 -o BatchMode=yes"
 
 PUSH_OUTPUT="$(git push "$REMOTE" "$BRANCH" 2>&1)"
 PUSH_STATUS=$?
