@@ -28,7 +28,25 @@ Copy-Item -Recurse "C:\path\to\post-render-tool\Content\Python\" "C:\path\to\MyV
 
 启用后重启编辑器。
 
-### 1.3 启动工具
+### 1.3 创建 Widget 模板（一次性）
+
+UE 5.7 的 `EditorUtilityWidgetBlueprintFactory` 自动创建的根 widget `bIsVariable=false`，编译后的 UPROPERTY 不带 `CPF_BlueprintVisible`，Python 完全无法访问。所以必须**手动创建一次**模板：
+
+1. **Content Browser** → 进入 `/Game/PostRenderTool/`（不存在就先建文件夹）
+2. 右键 → **Editor Utilities** → **Editor Utility Widget**
+3. 父类选 **`EditorUtilityWidget`**（native，不是自定义子类）
+4. 命名 **`EUW_PostRenderTool`**
+5. 双击打开 Widget Designer
+6. Palette 拖一个 **Vertical Box** 到 Hierarchy 作为根
+7. 选中 Vertical Box，在 Details 面板顶部：
+   - 重命名为 **`RootPanel`**
+   - **勾选 "Is Variable"**
+8. **Compile** (Ctrl+B) → **Save** (Ctrl+S)
+9. 关闭 Widget Designer
+
+完整说明见 `docs/blueprint-ui-setup.md`。
+
+### 1.4 启动工具
 
 Output Log 切换到 **Python** 模式，输入：
 
@@ -37,6 +55,8 @@ import init_post_render_tool
 ```
 
 UI 面板自动弹出，Prerequisites 区域显示所有插件状态。如有 MISSING，回到 1.2 启用对应插件。
+
+如果出现 `Template Blueprint not found` 错误，回到 1.3 创建模板。
 
 ---
 
@@ -101,12 +121,11 @@ Results 区域显示验证报告（FOV 误差、异常帧检测等）。
 import init_post_render_tool
 ```
 
-Widget 已存在时直接打开，不会重复创建。
+加载 1.3 创建的模板 Blueprint，spawn 编辑器 tab，注入 Python UI。
 
 **面板意外关闭时：** 再次执行 `import init_post_render_tool` 即可重新打开。
 
-> **注意：** Widget 仅存在于内存中（PythonGeneratedClass 无法被 UE 序列化到磁盘）。
-> 关闭编辑器时如果弹出"保存更改"对话框，对 PostRenderTool 相关资产选择 **Don't Save**。
+> **注意：** 模板 Blueprint (`EUW_PostRenderTool`) 是用户手动创建的真实 asset，会和项目一起持久化。不要在 Content Browser 里删除它，否则需要按 1.3 重新创建。
 
 ---
 
@@ -123,9 +142,9 @@ Widget 已存在时直接打开，不会重复创建。
 ```python
 from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
 
-open_widget()      # 创建（如不存在）并打开
-rebuild_widget()   # 删除 + 重建 + 打开（修复异常时使用）
-delete_widget()    # 仅删除 widget 资产
+open_widget()      # 加载模板 + spawn tab + 注入 UI
+rebuild_widget()   # 重新打开（释放缓存 UI 引用，不删模板）
+delete_widget()    # 销毁性：删除模板 asset，下次 open_widget() 前需按 1.3 重建
 ```
 
 ### 故障排查
@@ -134,5 +153,8 @@ delete_widget()    # 仅删除 widget 资产
 |------|------|------|
 | Prerequisites 显示 MISSING | 插件未启用 | Edit → Plugins 启用对应插件，重启编辑器 |
 | `ModuleNotFoundError: post_render_tool` | 文件位置不对 | 确认文件在 `Content/Python/post_render_tool/` 下 |
+| `Template Blueprint not found` | 模板未创建或被删除 | 按 1.3 步骤手动创建 `EUW_PostRenderTool` |
+| `Template is missing the 'RootPanel' variable` | 根 widget 未命名为 `RootPanel` 或未勾选 Is Variable | 在 Widget Designer 中修正后 Compile + Save |
+| `'RootPanel' is a CanvasPanel, expected VerticalBox` | 模板根 widget 类型错误 | 替换为 Vertical Box，重命名 + 勾选 Is Variable |
 | Import 后摄影机位置/朝向不对 | 轴映射未校准 | 回到 2.2 验证坐标映射 |
 | `RuntimeError: LensFile` | Camera Calibration 插件未启用 | 启用插件并重启 |

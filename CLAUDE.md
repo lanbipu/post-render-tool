@@ -27,9 +27,10 @@ result = run_import(r"path/to/csv", fps=24.0)
 import init_post_render_tool
 
 # UE Python console — widget management
-from post_render_tool.widget_builder import open_widget, rebuild_widget
+from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
 open_widget()      # load template + spawn tab + inject UI
-rebuild_widget()   # close tab + reopen
+rebuild_widget()   # reopen (drops cached UI, does NOT delete the template)
+delete_widget()    # destructive: delete template asset; must recreate manually
 ```
 
 ## One-time template setup (UE Editor)

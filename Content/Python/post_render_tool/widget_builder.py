@@ -154,22 +154,44 @@ def open_widget() -> None:
     _inject_ui(widget_bp)
 
 
-def close_widget() -> None:
-    """Close the currently spawned widget tab and release the UI reference."""
+def delete_widget() -> bool:
+    """Delete the template asset from disk.
+
+    .. warning::
+       This destroys the user-created template.  After calling this you
+       must recreate it manually before the next ``open_widget()`` call —
+       see ``TEMPLATE_SETUP_INSTRUCTIONS``.
+
+    Returns
+    -------
+    bool
+        True if an asset was deleted, False otherwise.
+    """
     global _active_ui
     _active_ui = None
     try:
-        widget_bp = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
-        if widget_bp is not None:
-            subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
-            subsystem.close_tab_by_id(widget_bp.get_path_name())
+        deleted = unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)
     except Exception as exc:
-        unreal.log_warning(f"[widget_builder] close_tab failed: {exc}")
+        unreal.log_warning(f"[widget_builder] delete_asset failed: {exc}")
+        return False
+    if deleted:
+        unreal.log_warning(
+            f"[widget_builder] Template deleted: {WIDGET_ASSET_PATH}.  "
+            f"Recreate it before next open_widget() call.\n\n"
+            + TEMPLATE_SETUP_INSTRUCTIONS
+        )
+    return bool(deleted)
 
 
 def rebuild_widget() -> None:
-    """Close the tab and reopen it (re-injects fresh UI)."""
-    close_widget()
+    """Reopen the widget — drops the cached UI and re-injects fresh UI.
+
+    Does NOT delete the template asset.  If you need to delete the template
+    (e.g. it is corrupt and must be recreated), call ``delete_widget()``
+    explicitly first.
+    """
+    global _active_ui
+    _active_ui = None
     open_widget()
 
 

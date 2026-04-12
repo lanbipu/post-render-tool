@@ -49,7 +49,7 @@ print(result.report.format_report())
 
 **方式 2：Blueprint UI**
 
-按 `docs/blueprint-ui-setup.md` 在 UE 中创建 Editor Utility Widget，实现 GUI 操作。
+需要先在 UE Editor 中**手动创建一次** Editor Utility Widget 模板，然后用 Python 启动并注入 UI。完整步骤见 `docs/blueprint-ui-setup.md`。
 
 ## Project Structure
 
