@@ -101,9 +101,6 @@ class PostRenderToolUI:
 
     def _build_ui(self):
         """Build the entire UMG widget tree dynamically."""
-        # The Blueprint's WidgetTree has a pre-configured root VerticalBox
-        # (set by widget_builder._ensure_root_widget).  Retrieve the
-        # instantiated copy via the UFUNCTION get_root_widget().
         root_widget = None
         try:
             root_widget = self._host.get_root_widget()
@@ -113,16 +110,16 @@ class PostRenderToolUI:
         if root_widget is not None and isinstance(root_widget, unreal.VerticalBox):
             root = root_widget
         elif root_widget is not None:
-            # Root is CanvasPanel or other container — clear previous injection,
-            # then nest a fresh VerticalBox inside.
+            # Root is CanvasPanel or other container — nest a VerticalBox inside.
             root_widget.clear_children()
             root = self._make_widget(unreal.VerticalBox)
             root_widget.add_child(root)
         else:
             raise RuntimeError(
                 "Host widget has no root widget — UI cannot attach. "
-                "Fix: from post_render_tool.widget_builder import rebuild_widget; "
-                "rebuild_widget()"
+                "Check UE Output Log for [widget_builder] diagnostics. "
+                "Fix: from post_render_tool.widget_builder import "
+                "rebuild_widget; rebuild_widget()"
             )
 
         # Clear any leftover children from a previous injection (re-entry).

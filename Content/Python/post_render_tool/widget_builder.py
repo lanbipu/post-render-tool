@@ -33,38 +33,72 @@ def _ensure_root_widget(widget_bp) -> bool:
 
     Returns True if the Blueprint was modified and needs saving.
     """
+    # Step 1: Get WidgetTree from Blueprint.
     try:
         wt = widget_bp.get_editor_property("widget_tree")
-    except Exception:
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] Cannot access widget_tree: {exc}")
         return False
     if wt is None:
+        unreal.log_warning("[widget_builder] WidgetTree is None on Blueprint.")
         return False
 
-    # Already a VerticalBox — nothing to do.
+    # Step 2: Check existing root — skip if already a VerticalBox.
     try:
         existing = wt.get_editor_property("root_widget")
         if existing is not None and isinstance(existing, unreal.VerticalBox):
             return False
-    except Exception:
-        pass
+        if existing is not None:
+            unreal.log(
+                f"[widget_builder] Current root is {type(existing).__name__}, "
+                "replacing with VerticalBox."
+            )
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] Cannot read root_widget: {exc}")
 
-    # Create a VerticalBox root (replaces any non-VerticalBox default).
+    # Step 3: Create a VerticalBox owned by the WidgetTree.
     root = None
-    try:
-        root = wt.construct_widget(unreal.VerticalBox, "RootVBox")
-    except (AttributeError, Exception):
+    # Method A — construct_widget (canonical WidgetTree API).
+    if hasattr(wt, "construct_widget"):
+        try:
+            root = wt.construct_widget(unreal.VerticalBox, "RootVBox")
+        except Exception as exc:
+            unreal.log_warning(f"[widget_builder] construct_widget failed: {exc}")
+    else:
+        unreal.log_warning("[widget_builder] WidgetTree has no construct_widget method.")
+
+    # Method B — manual construction with outer=WidgetTree.
+    if root is None:
+        try:
+            root = unreal.VerticalBox(outer=wt)
+        except Exception as exc:
+            unreal.log_warning(f"[widget_builder] VerticalBox(outer=wt) failed: {exc}")
+
+    # Method C — plain construction (last resort).
+    if root is None:
         try:
             root = unreal.VerticalBox()
-        except Exception:
+        except Exception as exc:
+            unreal.log_warning(f"[widget_builder] VerticalBox() failed: {exc}")
             return False
 
+    # Step 4: Set as root widget.
     try:
         wt.set_editor_property("root_widget", root)
         unreal.log("[widget_builder] Root VerticalBox set in Blueprint WidgetTree.")
         return True
     except Exception as exc:
-        unreal.log_warning(f"[widget_builder] Could not set root_widget: {exc}")
-        return False
+        unreal.log_warning(f"[widget_builder] set_editor_property root_widget failed: {exc}")
+
+    # Fallback: direct attribute assignment.
+    try:
+        wt.root_widget = root
+        unreal.log("[widget_builder] Root VerticalBox set via direct attribute.")
+        return True
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] direct root_widget assignment failed: {exc}")
+
+    return False
 
 
 def _cleanup_disk_asset() -> None:
@@ -124,6 +158,19 @@ def create_widget() -> object:
 
     _ensure_root_widget(widget_bp)
 
+    # Verify root was actually set.
+    try:
+        _wt = widget_bp.get_editor_property("widget_tree")
+        if _wt is not None:
+            _root = _wt.get_editor_property("root_widget")
+            if _root is None:
+                unreal.log_warning(
+                    "[widget_builder] WARNING: Blueprint still has no root widget "
+                    "after _ensure_root_widget. UI injection will use fallback."
+                )
+    except Exception:
+        pass
+
     unreal.EditorAssetLibrary.save_asset(
         widget_bp.get_path_name(), only_if_is_dirty=False
     )
@@ -148,10 +195,15 @@ def _inject_ui(widget_bp) -> None:
         )
 
     if widget is not None:
-        from .widget import PostRenderToolUI
-        _active_ui = PostRenderToolUI(widget)
-        unreal.log("[widget_builder] UI injected into widget.")
-        return
+        try:
+            from .widget import PostRenderToolUI
+            _active_ui = PostRenderToolUI(widget)
+            unreal.log("[widget_builder] UI injected into widget.")
+            return
+        except Exception as exc:
+            unreal.log_warning(
+                f"[widget_builder] Sync injection failed: {exc}  — deferring..."
+            )
 
     # Fallback: poll on next ticks until the widget is available.
     attempts = [0]
