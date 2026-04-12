@@ -37,15 +37,26 @@ _CONTENT_REL_DIR = WIDGET_PACKAGE_PATH.removeprefix("/Game/")
 _active_ui = None
 
 
-_ROOT_WIDGET_VAR_NAMES = (
-    "CanvasPanel_0",
-    "Overlay_0",
-    "VerticalBox_0",
-    "HorizontalBox_0",
-    "SizeBox_0",
-    "Border_0",
-    "ScaleBox_0",
-    "GridPanel_0",
+# Panel widget classes the EditorUtilityWidgetBlueprintFactory may pick as
+# the root, depending on UEditorUtilityWidgetProjectSettings.  CanvasPanel
+# is the default; the others come from CommonRootWidgetClasses.
+_PANEL_WIDGET_CLASSES = (
+    "CanvasPanel",
+    "Overlay",
+    "VerticalBox",
+    "HorizontalBox",
+    "SizeBox",
+    "Border",
+    "ScaleBox",
+    "GridPanel",
+)
+
+# Names UE's MakeUniqueObjectName produces for the first panel widget added
+# to a fresh WidgetTree.  We cover suffixes _0..._5 because compiler reruns
+# can bump the index, plus the bare name as a fallback.
+_ROOT_WIDGET_VAR_NAMES = tuple(
+    [f"{cls}_{n}" for cls in _PANEL_WIDGET_CLASSES for n in range(6)]
+    + list(_PANEL_WIDGET_CLASSES)
 )
 
 

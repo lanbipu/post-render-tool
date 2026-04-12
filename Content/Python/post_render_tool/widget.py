@@ -355,19 +355,11 @@ class PostRenderToolUI:
 
         Returns a VerticalBox ready for child population, or None.
         """
-        _PANEL_CLASSES = (
-            "CanvasPanel", "Overlay", "VerticalBox", "HorizontalBox",
-            "SizeBox", "Border", "ScaleBox", "GridPanel",
-        )
-
-        # Build candidate name list: each panel class with suffix _0..._5.
-        candidates = [
-            f"{cls}_{n}" for cls in _PANEL_CLASSES for n in range(6)
-        ] + list(_PANEL_CLASSES)
+        from .widget_builder import _ROOT_WIDGET_VAR_NAMES
 
         root_widget = None
         found_via = None
-        for name in candidates:
+        for name in _ROOT_WIDGET_VAR_NAMES:
             # Primary: Blueprint variable UPROPERTY (bound at runtime by
             # InitializeWidgetStatic when Widget->bIsVariable is true).
             try:
