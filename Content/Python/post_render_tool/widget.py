@@ -114,6 +114,15 @@ class PostRenderToolUI:
             root_widget.clear_children()
             root = self._make_widget(unreal.VerticalBox)
             root_widget.add_child(root)
+            # CanvasPanel children need anchors set to fill the panel,
+            # otherwise the slot defaults to zero size.
+            slot = root.slot
+            if slot is not None and isinstance(slot, unreal.CanvasPanelSlot):
+                slot.set_editor_property("anchors", unreal.Anchors(
+                    minimum=unreal.Vector2D(0.0, 0.0),
+                    maximum=unreal.Vector2D(1.0, 1.0),
+                ))
+                slot.set_editor_property("offsets", unreal.Margin(0.0, 0.0, 0.0, 0.0))
         else:
             raise RuntimeError(
                 "Host widget has no root widget — UI cannot attach. "
