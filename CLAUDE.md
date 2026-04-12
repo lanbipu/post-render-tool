@@ -38,6 +38,13 @@ importlib.reload(wb); importlib.reload(w)
 wb.rebuild_widget()
 ```
 
+## Git / P4 Workflow
+
+- **Post-commit hook on `main` auto-pushes to the Helix4Git depot** (installed via commits `0581b3c` → `a46045f`). Feature branches do NOT trigger the hook — safe to iterate on a branch.
+- **P4 workspace mirror**: `/Users/bip.lan/AIWorkspace/vp/p4-workspace/ue/post-render-tool/` is a parallel clone of the same depot, pinned to `main` for UE Editor consumption. `P4CLIENT = claude-workspace` (set via `P4CLIENT=claude-workspace p4 ...` or `~/.p4config`).
+- **Worktree convention**: For multi-commit refactors, create a worktree outside the repo: `git worktree add ~/.config/superpowers/worktrees/post_render_tool/<branch> -b feature/<name>`. Keeps the main working tree clean and avoids triggering the p4 hook while iterating.
+- **Main repo vs worktree**: Edits in a worktree on a non-main branch are invisible to the main repo's working tree until you `git checkout <branch>` in main or merge. If someone says "I don't see the new files", that's usually why.
+
 ## First-time setup
 
 See `docs/plugin-setup.md` for first-time plugin installation, UBT build, and Blueprint authoring instructions.
@@ -137,6 +144,8 @@ For uncertain UE Python API behavior, read the source directly instead of guessi
 - `Engine/Source/Editor/UMGEditor/` — `WidgetBlueprint`, `WidgetBlueprintCompiler` (BindWidget validation lives here)
 - `Engine/Source/Editor/Blutility/` — `EditorUtilityWidget`, `EditorUtilityWidgetBlueprintFactory`, `EditorUtilitySubsystem`
 - `Engine/Source/Editor/BlueprintEditorLibrary/Public/BlueprintEditorLibrary.h` — `CompileBlueprint` UFUNCTION
+
+For API edge cases, dispatch an `Explore` subagent with a concrete question (e.g. "verify X is a UFUNCTION in UE 5.7") and require `file:line` citations. Faster than grepping the engine source yourself and keeps the main context clean.
 
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->
 ## Knowledge Base (Managed by Docsmith)
