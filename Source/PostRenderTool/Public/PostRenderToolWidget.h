@@ -116,7 +116,7 @@ public:
     UButton* btn_spawn_cam;
 
     // ======================================================================
-    // Section 5: Axis Mapping — Position
+    // Section 5a: Axis Mapping — Position
     // ======================================================================
 
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
@@ -138,7 +138,7 @@ public:
     USpinBox* spn_pos_z_scale;
 
     // ======================================================================
-    // Section 5: Axis Mapping — Rotation
+    // Section 5b: Axis Mapping — Rotation
     // ======================================================================
 
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
