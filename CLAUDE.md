@@ -44,6 +44,7 @@ wb.rebuild_widget()
 - **P4 workspace mirror**: `/Users/bip.lan/AIWorkspace/vp/p4-workspace/ue/post-render-tool/` is a parallel clone of the same depot, pinned to `main` for UE Editor consumption. Feature-branch commits land in the depot but don't advance this mirror. `P4CLIENT = claude-workspace` (set via `P4CLIENT=claude-workspace p4 ...` or `~/.p4config`).
 - **Worktree convention**: For multi-commit refactors, create a worktree outside the repo: `git worktree add ~/.config/superpowers/worktrees/post_render_tool/<branch> -b feature/<name>`. Keeps the main working tree and the p4 workspace mirror clean. Each commit still pushes the feature branch to the depot (safe — `main` doesn't move until merge).
 - **Main repo vs worktree**: Edits in a worktree on a non-main branch are invisible to the main repo's working tree until you `git checkout <branch>` in main or merge. If someone says "I don't see the new files", that's usually why.
+- **Known hook quirk — `--no-ff` merges don't trigger the hook.** `git merge --no-ff` creates a merge commit, but the `post-commit` hook does NOT fire on it in this setup (observed at `2db9686`, session 2026-04-12). After any `--no-ff` merge into `main`, manually run `git push p4 main` to advance the p4 depot. Fast-forward merges (no new commit) don't need a push at all.
 
 ## First-time setup
 
