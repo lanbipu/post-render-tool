@@ -25,6 +25,48 @@ _CONTENT_REL_DIR = WIDGET_PACKAGE_PATH.removeprefix("/Game/")
 _active_ui = None
 
 
+def _ensure_root_widget(widget_bp) -> bool:
+    """Ensure the Blueprint's WidgetTree has a root VerticalBox.
+
+    The factory may create a CanvasPanel or leave the tree empty.
+    widget.py expects a VerticalBox root (via ``get_root_widget()``).
+
+    Returns True if the Blueprint was modified and needs saving.
+    """
+    try:
+        wt = widget_bp.get_editor_property("widget_tree")
+    except Exception:
+        return False
+    if wt is None:
+        return False
+
+    # Already a VerticalBox — nothing to do.
+    try:
+        existing = wt.get_editor_property("root_widget")
+        if existing is not None and isinstance(existing, unreal.VerticalBox):
+            return False
+    except Exception:
+        pass
+
+    # Create a VerticalBox root (replaces any non-VerticalBox default).
+    root = None
+    try:
+        root = wt.construct_widget(unreal.VerticalBox, "RootVBox")
+    except (AttributeError, Exception):
+        try:
+            root = unreal.VerticalBox()
+        except Exception:
+            return False
+
+    try:
+        wt.set_editor_property("root_widget", root)
+        unreal.log("[widget_builder] Root VerticalBox set in Blueprint WidgetTree.")
+        return True
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] Could not set root_widget: {exc}")
+        return False
+
+
 def _cleanup_disk_asset() -> None:
     """Remove any .uasset/.uexp left on disk from a previous crashed save."""
     try:
@@ -54,6 +96,10 @@ def create_widget() -> object:
         loaded = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
         if loaded is not None:
             unreal.log(f"[widget_builder] Reusing existing widget: {WIDGET_ASSET_PATH}")
+            if _ensure_root_widget(loaded):
+                unreal.EditorAssetLibrary.save_asset(
+                    loaded.get_path_name(), only_if_is_dirty=False
+                )
             return loaded
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] load_asset failed, will recreate: {exc}")
@@ -75,6 +121,8 @@ def create_widget() -> object:
         raise RuntimeError(
             f"Failed to create EditorUtilityWidgetBlueprint at {WIDGET_FULL_PATH}"
         )
+
+    _ensure_root_widget(widget_bp)
 
     unreal.EditorAssetLibrary.save_asset(
         widget_bp.get_path_name(), only_if_is_dirty=False
@@ -109,25 +157,36 @@ def _inject_ui(widget_bp) -> None:
     attempts = [0]
     handle_holder = [None]
 
+    last_error = [None]
+
     def _try_inject(delta_time):
         global _active_ui
         attempts[0] += 1
         try:
             w = subsystem.find_utility_widget_from_blueprint(widget_bp)
-            if w is not None:
+        except Exception:
+            w = None
+
+        if w is not None:
+            try:
                 from .widget import PostRenderToolUI
                 _active_ui = PostRenderToolUI(w)
                 unreal.log("[widget_builder] UI injected (deferred).")
                 unreal.unregister_slate_post_tick_callback(handle_holder[0])
                 return
-        except Exception:
-            pass
+            except Exception as exc:
+                # May be transient (widget tree not ready yet) — retry.
+                last_error[0] = exc
+
         if attempts[0] >= 30:
-            unreal.log_error(
-                "[widget_builder] Could not find widget instance after spawn. "
+            msg = (
+                "[widget_builder] UI injection failed after 30 attempts. "
                 "Try: from post_render_tool.widget_builder import rebuild_widget; "
                 "rebuild_widget()"
             )
+            if last_error[0] is not None:
+                msg = f"[widget_builder] UI injection failed: {last_error[0]}"
+            unreal.log_error(msg)
             unreal.unregister_slate_post_tick_callback(handle_holder[0])
 
     handle_holder[0] = unreal.register_slate_post_tick_callback(_try_inject)
