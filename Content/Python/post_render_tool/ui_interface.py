@@ -12,6 +12,8 @@ import ast
 import importlib
 import os
 import re
+import subprocess
+import sys
 import tempfile
 from typing import List, Tuple
 
@@ -22,63 +24,120 @@ import unreal
 # Public utilities
 # ---------------------------------------------------------------------------
 
+_DIALOG_TITLE = "Select Disguise Designer CSV Dense File"
+
+
 def browse_csv_file() -> str:
     """Open a native file-picker dialog and return the chosen CSV path.
+
+    UE 5.7 does not expose ``DesktopPlatformBlueprintLibrary`` to Python by
+    default, so this function uses platform-native fallbacks:
+
+    1. ``unreal.DesktopPlatformBlueprintLibrary`` if it happens to be present
+    2. macOS: ``osascript`` ``choose file`` dialog
+    3. ``tkinter.filedialog`` (cross-platform, requires Tk to be importable)
 
     Returns
     -------
     str
         The selected absolute file path, or an empty string if the user
-        cancelled or the dialog is unavailable.
+        cancelled or every backend failed.
     """
-    try:
-        dialog_title = "Select Disguise Designer CSV Dense File"
-        default_path = ""
-        default_file = ""
-        file_types = "CSV Files (*.csv)|*.csv"
-
-        # unreal.DesktopPlatformBlueprintLibrary is available in Editor builds.
-        result = unreal.DesktopPlatformBlueprintLibrary.open_file_dialog(
-            dialog_title,
-            default_path,
-            default_file,
-            file_types,
-            False,  # bAllowMultiSelect
-        )
-
-        # The API returns (bool_success, [file_paths]).
-        # In some UE versions it returns just a list or a struct — handle both.
-        if isinstance(result, (list, tuple)) and len(result) >= 2:
-            # (success_bool, [paths]) form
-            _success_flag = result[0]
-            paths = result[1]
-            if isinstance(paths, (list, tuple)) and len(paths) > 0:
-                return str(paths[0])
-        elif isinstance(result, (list, tuple)) and len(result) == 1:
-            # bare [path] form (some wrappers)
-            return str(result[0])
-
-        return ""
-
-    except AttributeError:
-        # Fallback: try the AppReturnType / slate dialog approach (older UE).
+    # Backend 1 — UE BP library, if available in this build.
+    if hasattr(unreal, "DesktopPlatformBlueprintLibrary"):
         try:
-            paths = unreal.AppReturnType.open_file_dialog(
-                "Select CSV",
+            result = unreal.DesktopPlatformBlueprintLibrary.open_file_dialog(
+                _DIALOG_TITLE,
                 "",
                 "",
                 "CSV Files (*.csv)|*.csv",
                 False,
             )
-            if paths:
-                return str(paths[0])
+            path = _extract_first_path(result)
+            if path:
+                return path
         except Exception as exc:  # noqa: BLE001
-            unreal.log_warning(f"[ui_interface] browse_csv_file fallback failed: {exc}")
+            unreal.log_warning(
+                f"[ui_interface] DesktopPlatformBlueprintLibrary failed: {exc}"
+            )
 
+    # Backend 2 — macOS native dialog via osascript.
+    if sys.platform == "darwin":
+        path = _browse_via_osascript()
+        if path:
+            return path
+
+    # Backend 3 — tkinter fallback.
+    path = _browse_via_tkinter()
+    if path:
+        return path
+
+    return ""
+
+
+def _extract_first_path(result) -> str:
+    """Normalize the various return shapes of open_file_dialog into a path."""
+    if isinstance(result, (list, tuple)) and len(result) >= 2:
+        paths = result[1]
+        if isinstance(paths, (list, tuple)) and len(paths) > 0:
+            return str(paths[0])
+    elif isinstance(result, (list, tuple)) and len(result) == 1:
+        return str(result[0])
+    return ""
+
+
+def _browse_via_osascript() -> str:
+    """macOS: invoke `choose file` via osascript and return POSIX path."""
+    script = (
+        f'POSIX path of (choose file with prompt "{_DIALOG_TITLE}" '
+        'of type {"csv", "public.comma-separated-values-text"})'
+    )
+    try:
+        proc = subprocess.run(
+            ["osascript", "-e", script],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+    except FileNotFoundError:
+        unreal.log_warning("[ui_interface] osascript not available on this machine.")
+        return ""
+    except subprocess.TimeoutExpired:
+        unreal.log_warning("[ui_interface] osascript file dialog timed out.")
         return ""
 
+    if proc.returncode != 0:
+        # User cancelled (-128) is the common case — stay silent.
+        stderr = (proc.stderr or "").strip()
+        if stderr and "User canceled" not in stderr and "-128" not in stderr:
+            unreal.log_warning(f"[ui_interface] osascript error: {stderr}")
+        return ""
+
+    return (proc.stdout or "").strip()
+
+
+def _browse_via_tkinter() -> str:
+    """Cross-platform Tk file dialog. Returns "" if Tk is unusable."""
+    try:
+        import tkinter
+        from tkinter import filedialog
     except Exception as exc:  # noqa: BLE001
-        unreal.log_warning(f"[ui_interface] browse_csv_file error: {exc}")
+        unreal.log_warning(f"[ui_interface] tkinter unavailable: {exc}")
+        return ""
+
+    try:
+        root = tkinter.Tk()
+        root.withdraw()
+        root.update_idletasks()
+        path = filedialog.askopenfilename(
+            title=_DIALOG_TITLE,
+            filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")],
+        )
+        root.destroy()
+        return path or ""
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(f"[ui_interface] tkinter dialog failed: {exc}")
         return ""
 
 

@@ -31,6 +31,13 @@ from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_
 open_widget()      # load template + spawn tab + inject UI
 rebuild_widget()   # reopen (drops cached UI, does NOT delete the template)
 delete_widget()    # destructive: delete template asset; must recreate manually
+
+# UE Python console — hot reload after editing .py files (no UE restart)
+import importlib
+import post_render_tool.widget_builder as wb
+import post_render_tool.widget as w
+importlib.reload(wb); importlib.reload(w)
+wb.open_widget()
 ```
 
 ## One-time template setup (UE Editor)
@@ -81,6 +88,15 @@ UE-dependent modules can only run inside UE Editor.
 - **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.
   Use `hasattr(unreal, "ClassName")` to detect plugin availability instead.
 - **UE Python module reload:** After editing config.py, use `importlib.reload()` — no UE restart needed.
+- **UE Python reflection visibility:** `get_editor_property` / `dir()` only see
+  UPROPERTYs with `CPF_BlueprintVisible | CPF_BlueprintAssignable`, or editor-only
+  UPROPERTYs with `CPF_Edit` (see `PyGenUtil.cpp` `IsScriptExposedProperty` /
+  `ShouldExportEditorOnlyProperty`). Bare `UPROPERTY()` is invisible from Python.
+- **UE Python UFUNCTION requirement:** plain C++ methods are NOT Python-callable.
+  Known gotchas: `UserWidget::GetRootWidget()` (not UFUNCTION — use
+  `EditorUtilityWidget::FindChildWidgetByName` or a named Blueprint variable),
+  `FKismetEditorUtilities::CompileBlueprint` (non-UObject static — use
+  `unreal.BlueprintEditorLibrary.compile_blueprint` instead).
 - **Widget is plain Python, NOT @uclass:** `widget.py` is a plain Python class
   (`PostRenderToolUI`) that builds UMG layout into a provided `EditorUtilityWidget`.
   The Blueprint is a **user-created template** with a VerticalBox named `RootPanel`
@@ -96,6 +112,17 @@ UE-dependent modules can only run inside UE Editor.
 - **Widget runtime UI construction:** `widget.py` builds the UMG layout in `__init__()`.
   If the UE Python API for `create_widget()` or `add_child()` behaves differently
   across UE versions, the layout may need adjustment.
+
+## UE Source Code Reference
+
+UE 5.7 engine source: `/Users/bip.lan/AIWorkspace/vp/UnrealEngine/`
+
+For uncertain UE Python API behavior, read the source directly instead of guessing:
+- `Engine/Plugins/Experimental/PythonScriptPlugin/Source/PythonScriptPlugin/Private/PyGenUtil.cpp`
+  — property/function script-exposure rules (`IsScriptExposedProperty`, `ShouldExportEditorOnlyProperty`)
+- `Engine/Source/Runtime/UMG/` — UMG runtime (`UserWidget`, `WidgetTree`, `PanelWidget`)
+- `Engine/Source/Editor/UMGEditor/` — `WidgetBlueprint`, `WidgetBlueprintCompiler`
+- `Engine/Source/Editor/Blutility/` — `EditorUtilityWidget`, `EditorUtilityWidgetBlueprintFactory`, `EditorUtilitySubsystem`
 
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->
 ## Knowledge Base (Managed by Docsmith)
