@@ -199,7 +199,3 @@ def rebuild_widget() -> None:
     global _active_ui
     _active_ui = None
     open_widget()
-
-
-# Backwards-compatible alias — older code calls create_widget().
-create_widget = load_widget
