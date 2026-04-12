@@ -37,6 +37,18 @@ _CONTENT_REL_DIR = WIDGET_PACKAGE_PATH.removeprefix("/Game/")
 _active_ui = None
 
 
+_ROOT_WIDGET_VAR_NAMES = (
+    "CanvasPanel_0",
+    "Overlay_0",
+    "VerticalBox_0",
+    "HorizontalBox_0",
+    "SizeBox_0",
+    "Border_0",
+    "ScaleBox_0",
+    "GridPanel_0",
+)
+
+
 def _compile_widget_blueprint(widget_bp) -> None:
     """Recompile the Blueprint so GeneratedClass picks up the WidgetTree root.
 
@@ -55,6 +67,40 @@ def _compile_widget_blueprint(widget_bp) -> None:
         )
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] compile_blueprint failed: {exc}")
+
+
+def _has_root_widget_binding(widget_bp) -> bool:
+    """Check whether the Blueprint's GeneratedClass exposes a root-widget
+    UPROPERTY (the variable added by the factory's ``OnVariableAdded`` call).
+
+    The CDO stores the UPROPERTY itself but the value is nullptr until the
+    live instance is created — so we check *property existence*, not value.
+    ``get_editor_property`` raises when the property does not exist, and
+    returns ``None`` (without raising) when the property exists but is unset.
+
+    Returns False for assets saved before the factory fix was applied (no
+    variable in the GeneratedClass at all).
+    """
+    try:
+        gen_class = widget_bp.generated_class()
+    except Exception:
+        return False
+    if gen_class is None:
+        return False
+    try:
+        cdo = gen_class.get_default_object()
+    except Exception:
+        return False
+    if cdo is None:
+        return False
+
+    for name in _ROOT_WIDGET_VAR_NAMES:
+        try:
+            cdo.get_editor_property(name)
+        except Exception:
+            continue
+        return True
+    return False
 
 
 def _cleanup_disk_asset() -> None:
@@ -85,8 +131,19 @@ def create_widget() -> object:
     try:
         loaded = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
         if loaded is not None:
-            unreal.log(f"[widget_builder] Reusing existing widget: {WIDGET_ASSET_PATH}")
-            return loaded
+            if _has_root_widget_binding(loaded):
+                unreal.log(
+                    f"[widget_builder] Reusing existing widget: {WIDGET_ASSET_PATH}"
+                )
+                return loaded
+            unreal.log_warning(
+                "[widget_builder] Existing asset has no root-widget UPROPERTY "
+                "(stale from an older version); deleting and recreating..."
+            )
+            try:
+                unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)
+            except Exception as exc:
+                unreal.log_warning(f"[widget_builder] delete_asset failed: {exc}")
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] load_asset failed, will recreate: {exc}")
 

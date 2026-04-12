@@ -355,21 +355,10 @@ class PostRenderToolUI:
 
         Returns a VerticalBox ready for child population, or None.
         """
-        # Factory default is UCanvasPanel → MakeUniqueObjectName → "CanvasPanel_0".
-        # Cover the alternative root classes the project settings could pick.
-        _ROOT_NAMES = [
-            "CanvasPanel_0",
-            "Overlay_0",
-            "VerticalBox_0",
-            "HorizontalBox_0",
-            "SizeBox_0",
-            "Border_0",
-            "ScaleBox_0",
-            "GridPanel_0",
-        ]
+        from .widget_builder import _ROOT_WIDGET_VAR_NAMES
 
         root_widget = None
-        for name in _ROOT_NAMES:
+        for name in _ROOT_WIDGET_VAR_NAMES:
             # Primary: Blueprint variable UPROPERTY (bound by
             # InitializeWidgetStatic).
             try:
@@ -398,7 +387,7 @@ class PostRenderToolUI:
                     and not a.startswith("_")
                 })
                 unreal.log_warning(
-                    f"[widget] No root widget found.  "
+                    "[widget] No root widget found. "
                     f"Host relevant attrs: {relevant[:30]}"
                 )
             except Exception:
