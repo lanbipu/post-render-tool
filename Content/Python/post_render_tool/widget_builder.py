@@ -25,25 +25,102 @@ _CONTENT_REL_DIR = WIDGET_PACKAGE_PATH.removeprefix("/Game/")
 _active_ui = None
 
 
-def _ensure_root_widget(widget_bp) -> bool:
-    """Ensure the Blueprint's WidgetTree has a root VerticalBox.
+def _get_widget_tree(widget_bp):
+    """Discover the Blueprint's WidgetTree, trying multiple access methods.
 
-    The factory may create a CanvasPanel or leave the tree empty.
-    widget.py expects a VerticalBox root (via ``get_root_widget()``).
+    UE 5.7 may not expose ``widget_tree`` via ``get_editor_property`` on the
+    ``EditorUtilityWidgetBlueprint`` wrapper.  We try progressively broader
+    techniques until one succeeds.
+
+    Returns the WidgetTree object, or *None*.
+    """
+    # 1. get_editor_property — standard path (works in UE ≤5.6).
+    try:
+        wt = widget_bp.get_editor_property("widget_tree")
+        if wt is not None:
+            return wt
+    except Exception:
+        pass
+
+    # 2. Direct attribute access (may bypass property wrapper).
+    for attr in ("widget_tree", "WidgetTree"):
+        try:
+            wt = getattr(widget_bp, attr, None)
+            if wt is not None:
+                return wt
+        except Exception:
+            pass
+
+    # 3. Cast to WidgetBlueprint parent — Python reflection for the child
+    #    class may not include parent-class UPROPERTY entries.
+    if hasattr(unreal, "WidgetBlueprint"):
+        try:
+            wb = unreal.WidgetBlueprint.cast(widget_bp)
+            if wb is not None:
+                wt = wb.get_editor_property("widget_tree")
+                if wt is not None:
+                    unreal.log("[widget_builder] WidgetTree found via WidgetBlueprint cast.")
+                    return wt
+        except Exception:
+            pass
+
+    # 4. Heuristic search — look for any attribute whose type has
+    #    ``construct_widget`` or ``root_widget`` (i.e. "looks like" a WidgetTree).
+    try:
+        for name in dir(widget_bp):
+            if "tree" in name.lower():
+                try:
+                    obj = getattr(widget_bp, name)
+                    if obj is not None and (
+                        hasattr(obj, "construct_widget")
+                        or hasattr(obj, "root_widget")
+                        or "WidgetTree" in type(obj).__name__
+                    ):
+                        unreal.log(f"[widget_builder] WidgetTree found via attr '{name}'.")
+                        return obj
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # Nothing worked — log diagnostics.
+    try:
+        chain = []
+        cls = widget_bp.get_class()
+        while cls is not None:
+            chain.append(cls.get_name())
+            cls = cls.get_super_class()
+        unreal.log_warning(
+            f"[widget_builder] Class hierarchy: {' -> '.join(chain)}"
+        )
+    except Exception:
+        pass
+    try:
+        relevant = sorted({
+            a for a in dir(widget_bp)
+            if any(k in a.lower() for k in ("widget", "tree", "root"))
+            and not a.startswith("__")
+        })
+        unreal.log_warning(
+            f"[widget_builder] Relevant attrs: {relevant[:30]}"
+        )
+    except Exception:
+        pass
+
+    return None
+
+
+def _ensure_root_widget(widget_bp) -> bool:
+    """Ensure the Blueprint's WidgetTree has a VerticalBox root.
 
     Returns True if the Blueprint was modified and needs saving.
     """
-    # Step 1: Get WidgetTree from Blueprint.
-    try:
-        wt = widget_bp.get_editor_property("widget_tree")
-    except Exception as exc:
-        unreal.log_warning(f"[widget_builder] Cannot access widget_tree: {exc}")
-        return False
+    wt = _get_widget_tree(widget_bp)
     if wt is None:
-        unreal.log_warning("[widget_builder] WidgetTree is None on Blueprint.")
+        unreal.log_warning("[widget_builder] WidgetTree not accessible — cannot set root.")
         return False
 
-    # Step 2: Check existing root — skip if already a VerticalBox.
+    # Already a VerticalBox — nothing to do.
     try:
         existing = wt.get_editor_property("root_widget")
         if existing is not None and isinstance(existing, unreal.VerticalBox):
@@ -56,25 +133,20 @@ def _ensure_root_widget(widget_bp) -> bool:
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] Cannot read root_widget: {exc}")
 
-    # Step 3: Create a VerticalBox owned by the WidgetTree.
+    # Create a VerticalBox owned by the WidgetTree.
     root = None
-    # Method A — construct_widget (canonical WidgetTree API).
     if hasattr(wt, "construct_widget"):
         try:
             root = wt.construct_widget(unreal.VerticalBox, "RootVBox")
         except Exception as exc:
             unreal.log_warning(f"[widget_builder] construct_widget failed: {exc}")
-    else:
-        unreal.log_warning("[widget_builder] WidgetTree has no construct_widget method.")
 
-    # Method B — manual construction with outer=WidgetTree.
     if root is None:
         try:
             root = unreal.VerticalBox(outer=wt)
         except Exception as exc:
             unreal.log_warning(f"[widget_builder] VerticalBox(outer=wt) failed: {exc}")
 
-    # Method C — plain construction (last resort).
     if root is None:
         try:
             root = unreal.VerticalBox()
@@ -82,21 +154,17 @@ def _ensure_root_widget(widget_bp) -> bool:
             unreal.log_warning(f"[widget_builder] VerticalBox() failed: {exc}")
             return False
 
-    # Step 4: Set as root widget.
-    try:
-        wt.set_editor_property("root_widget", root)
-        unreal.log("[widget_builder] Root VerticalBox set in Blueprint WidgetTree.")
-        return True
-    except Exception as exc:
-        unreal.log_warning(f"[widget_builder] set_editor_property root_widget failed: {exc}")
-
-    # Fallback: direct attribute assignment.
-    try:
-        wt.root_widget = root
-        unreal.log("[widget_builder] Root VerticalBox set via direct attribute.")
-        return True
-    except Exception as exc:
-        unreal.log_warning(f"[widget_builder] direct root_widget assignment failed: {exc}")
+    # Set as root widget.
+    for setter, label in (
+        (lambda r: wt.set_editor_property("root_widget", r), "set_editor_property"),
+        (lambda r: setattr(wt, "root_widget", r), "direct attribute"),
+    ):
+        try:
+            setter(root)
+            unreal.log(f"[widget_builder] Root VerticalBox set via {label}.")
+            return True
+        except Exception as exc:
+            unreal.log_warning(f"[widget_builder] {label} root_widget failed: {exc}")
 
     return False
 
@@ -134,7 +202,24 @@ def create_widget() -> object:
                 unreal.EditorAssetLibrary.save_asset(
                     loaded.get_path_name(), only_if_is_dirty=False
                 )
-            return loaded
+            # Verify the asset is usable (has a WidgetTree with a root).
+            wt = _get_widget_tree(loaded)
+            if wt is not None:
+                try:
+                    root = wt.get_editor_property("root_widget")
+                    if root is not None:
+                        return loaded
+                except Exception:
+                    pass
+            # Asset exists but is damaged — delete and recreate.
+            unreal.log_warning(
+                "[widget_builder] Existing asset has no usable root widget, "
+                "deleting and recreating..."
+            )
+            try:
+                unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)
+            except Exception:
+                pass
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] load_asset failed, will recreate: {exc}")
 
@@ -156,20 +241,16 @@ def create_widget() -> object:
             f"Failed to create EditorUtilityWidgetBlueprint at {WIDGET_FULL_PATH}"
         )
 
-    _ensure_root_widget(widget_bp)
-
-    # Verify root was actually set.
+    # Compile Blueprint first — this initialises internal WidgetTree
+    # structures and may create a default root widget (CanvasPanel).
     try:
-        _wt = widget_bp.get_editor_property("widget_tree")
-        if _wt is not None:
-            _root = _wt.get_editor_property("root_widget")
-            if _root is None:
-                unreal.log_warning(
-                    "[widget_builder] WARNING: Blueprint still has no root widget "
-                    "after _ensure_root_widget. UI injection will use fallback."
-                )
-    except Exception:
-        pass
+        unreal.KismetEditorUtilities.compile_blueprint(widget_bp)
+        unreal.log("[widget_builder] Blueprint compiled.")
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] compile_blueprint: {exc}")
+
+    # Try to set root to VerticalBox (may fail if WidgetTree not accessible).
+    _ensure_root_widget(widget_bp)
 
     unreal.EditorAssetLibrary.save_asset(
         widget_bp.get_path_name(), only_if_is_dirty=False
