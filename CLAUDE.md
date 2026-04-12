@@ -23,14 +23,31 @@ import init_post_render_tool
 from post_render_tool.pipeline import run_import
 result = run_import(r"path/to/csv", fps=24.0)
 
-# UE Python console — launch tool (creates + opens widget)
+# UE Python console — launch tool (loads template + opens widget)
 import init_post_render_tool
 
 # UE Python console — widget management
 from post_render_tool.widget_builder import open_widget, rebuild_widget
-open_widget()      # create if needed + open
-rebuild_widget()   # delete + recreate + open
+open_widget()      # load template + spawn tab + inject UI
+rebuild_widget()   # close tab + reopen
 ```
+
+## One-time template setup (UE Editor)
+
+The widget Blueprint must be created **manually once** in the UE Editor.
+Programmatic factory creation is not viable in UE 5.7 because the
+auto-generated root widget is created with `bIsVariable = false`,
+producing a UPROPERTY without `CPF_BlueprintVisible` that Python cannot
+access (see `widget_builder.TEMPLATE_SETUP_INSTRUCTIONS`).
+
+Steps:
+1. Content Browser → `/Game/PostRenderTool/`
+2. Right-click → Editor Utilities → Editor Utility Widget
+3. Pick parent class: `EditorUtilityWidget` (native)
+4. Name: `EUW_PostRenderTool`
+5. Open the Designer, drag a `Vertical Box` as the root
+6. Rename it to `RootPanel`, **check "Is Variable"** in the Details panel
+7. Compile + Save
 
 ## Architecture
 
@@ -65,8 +82,16 @@ UE-dependent modules can only run inside UE Editor.
 - **UE Python module reload:** After editing config.py, use `importlib.reload()` — no UE restart needed.
 - **Widget is plain Python, NOT @uclass:** `widget.py` is a plain Python class
   (`PostRenderToolUI`) that builds UMG layout into a provided `EditorUtilityWidget`.
-  The Blueprint uses native `EditorUtilityWidget` parent (safe to serialize).
-  UI is injected after spawn via `find_utility_widget_from_blueprint`.
+  The Blueprint is a **user-created template** with a VerticalBox named `RootPanel`
+  marked as variable.  UI is injected after spawn via `find_utility_widget_from_blueprint`.
+  See "One-time template setup" above for the manual creation steps.
+- **Why manual template?** UE 5.7's `EditorUtilityWidgetBlueprintFactory` auto-creates
+  the root panel with `bIsVariable = false`, so the compiler emits a UPROPERTY
+  without `CPF_BlueprintVisible`.  Python's `get_editor_property` and `dir()`
+  cannot see the widget at all.  `find_child_widget_by_name` also returned None
+  on the spawned instance, suggesting the WidgetTree archetype is not propagated
+  for factory-created widgets in this build.  Manual template creation in the
+  Designer marks the widget as a variable, producing a script-visible UPROPERTY.
 - **Widget runtime UI construction:** `widget.py` builds the UMG layout in `__init__()`.
   If the UE Python API for `create_widget()` or `add_child()` behaves differently
   across UE versions, the layout may need adjustment.

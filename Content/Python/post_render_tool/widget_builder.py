@@ -1,27 +1,16 @@
 """Widget Builder — VP Post-Render Tool.
 
-Creates and opens the EditorUtilityWidget Blueprint asset, then injects
-the Python-built UI into the spawned widget instance.
+Loads a user-provided EditorUtilityWidgetBlueprint template from disk and
+injects the Python-built UI into the spawned widget instance.
 
-The Blueprint uses the native EditorUtilityWidget as parent (safe to save).
-UI is constructed at runtime by ``PostRenderToolUI`` from ``widget.py``.
-
-Root-widget lifecycle
----------------------
-The ``EditorUtilityWidgetBlueprintFactory`` creates a CanvasPanel root inside
-the Blueprint's WidgetTree.  However, ``FKismetEditorUtilities::CreateBlueprint``
-compiles the GeneratedClass *before* the factory adds the root, so the
-GeneratedClass's WidgetTree is empty at creation time.  A post-factory
-``BlueprintEditorLibrary.compile_blueprint()`` call re-compiles the Blueprint
-and propagates the CanvasPanel root into the GeneratedClass.  At spawn time,
-``UserWidget.Initialize()`` duplicates the GeneratedClass's WidgetTree, and
-``get_root_widget()`` returns the CanvasPanel.  ``widget.py`` nests a
-VerticalBox inside it.
+The template must be created manually in the UE Editor — see
+``TEMPLATE_SETUP_INSTRUCTIONS`` below.  Programmatic factory creation is
+not possible in UE 5.7 because the auto-generated root widget is created
+with ``bIsVariable = false``, producing a UPROPERTY without
+``CPF_BlueprintVisible`` that Python cannot access.
 """
 
 from __future__ import annotations
-
-import os
 
 import unreal
 
@@ -31,162 +20,55 @@ WIDGET_ASSET_NAME = "EUW_PostRenderTool"
 WIDGET_FULL_PATH = f"{WIDGET_PACKAGE_PATH}/{WIDGET_ASSET_NAME}"
 WIDGET_ASSET_PATH = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
 
-_CONTENT_REL_DIR = WIDGET_PACKAGE_PATH.removeprefix("/Game/")
+# Name of the root widget variable in the template Blueprint.  widget.py
+# accesses it via ``host.get_editor_property(ROOT_VBOX_VAR_NAME)``.
+ROOT_VBOX_VAR_NAME = "RootPanel"
+
+TEMPLATE_SETUP_INSTRUCTIONS = f"""
+Template Blueprint not found.  Create it once in the UE Editor:
+
+  1. In Content Browser, navigate to {WIDGET_PACKAGE_PATH} (create folder if missing).
+  2. Right-click → Editor Utilities → Editor Utility Widget.
+  3. In the class picker dialog, pick "EditorUtilityWidget" (native).
+  4. Name the asset "{WIDGET_ASSET_NAME}".
+  5. Double-click to open the Widget Designer.
+  6. In the Palette, drag a "Vertical Box" onto the Hierarchy as the root.
+  7. Select the Vertical Box.  In the Details panel:
+     - Rename it to "{ROOT_VBOX_VAR_NAME}"
+     - Check the "Is Variable" checkbox (top of Details panel)
+  8. Compile (Ctrl+B) and Save (Ctrl+S).
+  9. Close the Widget Designer.
+ 10. Re-run:  import init_post_render_tool
+""".strip()
 
 # Module-level reference — prevents GC of the UI builder and its callbacks.
 _active_ui = None
 
 
-# Panel widget classes the EditorUtilityWidgetBlueprintFactory may pick as
-# the root, depending on UEditorUtilityWidgetProjectSettings.  CanvasPanel
-# is the default; the others come from CommonRootWidgetClasses.
-_PANEL_WIDGET_CLASSES = (
-    "CanvasPanel",
-    "Overlay",
-    "VerticalBox",
-    "HorizontalBox",
-    "SizeBox",
-    "Border",
-    "ScaleBox",
-    "GridPanel",
-)
-
-# Names UE's MakeUniqueObjectName produces for the first panel widget added
-# to a fresh WidgetTree.  We cover suffixes _0..._5 because compiler reruns
-# can bump the index, plus the bare name as a fallback.
-_ROOT_WIDGET_VAR_NAMES = tuple(
-    [f"{cls}_{n}" for cls in _PANEL_WIDGET_CLASSES for n in range(6)]
-    + list(_PANEL_WIDGET_CLASSES)
-)
-
-
-def _compile_widget_blueprint(widget_bp) -> None:
-    """Recompile the Blueprint so GeneratedClass picks up the WidgetTree root.
-
-    ``BlueprintEditorLibrary.compile_blueprint`` is a ``UFUNCTION(BlueprintCallable)``
-    on ``UBlueprintEditorLibrary`` (a UBlueprintFunctionLibrary), so it is
-    accessible from Python.  ``FKismetEditorUtilities::CompileBlueprint`` is a
-    non-UObject static function and is NOT callable from Python.
-    """
-    try:
-        unreal.BlueprintEditorLibrary.compile_blueprint(widget_bp)
-        unreal.log("[widget_builder] Blueprint compiled.")
-    except AttributeError:
-        unreal.log_warning(
-            "[widget_builder] BlueprintEditorLibrary not available — "
-            "root widget may not propagate to the spawned instance."
-        )
-    except Exception as exc:
-        unreal.log_warning(f"[widget_builder] compile_blueprint failed: {exc}")
-
-
-def _has_root_widget_binding(widget_bp) -> bool:
-    """Check whether the Blueprint's GeneratedClass exposes a root-widget
-    UPROPERTY (the variable added by the factory's ``OnVariableAdded`` call).
-
-    The CDO stores the UPROPERTY itself but the value is nullptr until the
-    live instance is created — so we check *property existence*, not value.
-    ``get_editor_property`` raises when the property does not exist, and
-    returns ``None`` (without raising) when the property exists but is unset.
-
-    Returns False for assets saved before the factory fix was applied (no
-    variable in the GeneratedClass at all).
-    """
-    try:
-        gen_class = widget_bp.generated_class()
-    except Exception:
-        return False
-    if gen_class is None:
-        return False
-    try:
-        cdo = gen_class.get_default_object()
-    except Exception:
-        return False
-    if cdo is None:
-        return False
-
-    for name in _ROOT_WIDGET_VAR_NAMES:
-        try:
-            cdo.get_editor_property(name)
-        except Exception:
-            continue
-        return True
-    return False
-
-
-def _cleanup_disk_asset() -> None:
-    """Remove any .uasset/.uexp left on disk from a previous crashed save."""
-    try:
-        content_dir = unreal.Paths.project_content_dir()
-        base = os.path.join(content_dir, _CONTENT_REL_DIR, WIDGET_ASSET_NAME)
-        for ext in (".uasset", ".uexp"):
-            try:
-                os.remove(base + ext)
-                unreal.log(f"[widget_builder] Removed stale file: {base}{ext}")
-            except FileNotFoundError:
-                pass
-    except Exception as exc:
-        unreal.log_warning(f"[widget_builder] Disk cleanup failed: {exc}")
-
-
-def create_widget() -> object:
-    """Create or load the EditorUtilityWidgetBlueprint asset.
-
-    Uses the native ``EditorUtilityWidget`` as parent (no PythonGeneratedClass),
-    so the Blueprint is safe to save to disk and persist across sessions.
+def load_widget():
+    """Load the user-created EditorUtilityWidgetBlueprint template.
 
     Returns
     -------
     unreal.EditorUtilityWidgetBlueprint
+
+    Raises
+    ------
+    RuntimeError
+        If the template asset does not exist on disk.
     """
+    loaded = None
     try:
         loaded = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
-        if loaded is not None:
-            if _has_root_widget_binding(loaded):
-                unreal.log(
-                    f"[widget_builder] Reusing existing widget: {WIDGET_ASSET_PATH}"
-                )
-                return loaded
-            unreal.log_warning(
-                "[widget_builder] Existing asset has no root-widget UPROPERTY "
-                "(stale from an older version); deleting and recreating..."
-            )
-            try:
-                unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)
-            except Exception as exc:
-                unreal.log_warning(f"[widget_builder] delete_asset failed: {exc}")
     except Exception as exc:
-        unreal.log_warning(f"[widget_builder] load_asset failed, will recreate: {exc}")
-
-    _cleanup_disk_asset()
-    unreal.EditorAssetLibrary.make_directory(WIDGET_PACKAGE_PATH)
-
-    factory = unreal.EditorUtilityWidgetBlueprintFactory()
-    # Default parent = EditorUtilityWidget (native) — safe to serialize.
-
-    widget_bp = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
-        WIDGET_ASSET_NAME,
-        WIDGET_PACKAGE_PATH,
-        None,  # asset_class — None lets the factory decide
-        factory,
-    )
-
-    if widget_bp is None:
         raise RuntimeError(
-            f"Failed to create EditorUtilityWidgetBlueprint at {WIDGET_FULL_PATH}"
+            f"load_asset failed for {WIDGET_ASSET_PATH}: {exc}\n\n"
+            + TEMPLATE_SETUP_INSTRUCTIONS
         )
-
-    # The factory added a CanvasPanel root to the Blueprint's WidgetTree,
-    # but the GeneratedClass was compiled BEFORE the root was added.
-    # Recompile to propagate the CanvasPanel root into the GeneratedClass.
-    _compile_widget_blueprint(widget_bp)
-
-    unreal.EditorAssetLibrary.save_asset(
-        widget_bp.get_path_name(), only_if_is_dirty=False
-    )
-    unreal.log(f"[widget_builder] Widget Blueprint created: {WIDGET_FULL_PATH}")
-
-    return widget_bp
+    if loaded is None:
+        raise RuntimeError(TEMPLATE_SETUP_INSTRUCTIONS)
+    unreal.log(f"[widget_builder] Loaded template: {WIDGET_ASSET_PATH}")
+    return loaded
 
 
 def _inject_ui(widget_bp) -> None:
@@ -195,7 +77,6 @@ def _inject_ui(widget_bp) -> None:
 
     subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
 
-    # Try to get widget instance immediately (synchronous after spawn)
     widget = None
     try:
         widget = subsystem.find_utility_widget_from_blueprint(widget_bp)
@@ -218,7 +99,6 @@ def _inject_ui(widget_bp) -> None:
     # Fallback: poll on next ticks until the widget is available.
     attempts = [0]
     handle_holder = [None]
-
     last_error = [None]
 
     def _try_inject(delta_time):
@@ -237,7 +117,6 @@ def _inject_ui(widget_bp) -> None:
                 unreal.unregister_slate_post_tick_callback(handle_holder[0])
                 return
             except Exception as exc:
-                # May be transient (widget tree not ready yet) — retry.
                 last_error[0] = exc
 
         if attempts[0] >= 30:
@@ -248,8 +127,7 @@ def _inject_ui(widget_bp) -> None:
             )
             unreal.log_error(
                 f"[widget_builder] UI injection failed after 30 attempts {detail}. "
-                "Try: from post_render_tool.widget_builder import rebuild_widget; "
-                "rebuild_widget()"
+                "Try reopening the widget, or re-check the template setup."
             )
             unreal.unregister_slate_post_tick_callback(handle_holder[0])
 
@@ -257,12 +135,8 @@ def _inject_ui(widget_bp) -> None:
 
 
 def open_widget() -> None:
-    """Open the PostRenderTool widget as an editor tab.
-
-    Creates the widget asset first if it doesn't exist, then injects
-    the Python-built UI into the spawned widget instance.
-    """
-    widget_bp = create_widget()
+    """Load the template, spawn the editor tab, inject UI."""
+    widget_bp = load_widget()
 
     try:
         subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
@@ -272,40 +146,32 @@ def open_widget() -> None:
         unreal.log_error(f"[widget_builder] Failed to open widget tab: {exc}")
         try:
             unreal.EditorUtilityLibrary.run_editor_utility_widget(widget_bp)
-            unreal.log("[widget_builder] Widget opened via EditorUtilityLibrary fallback.")
+            unreal.log("[widget_builder] Widget opened via fallback.")
         except Exception as exc2:
-            unreal.log_error(
-                f"[widget_builder] Fallback also failed: {exc2}. "
-                "Try: from post_render_tool.widget_builder import rebuild_widget; "
-                "rebuild_widget()"
-            )
+            unreal.log_error(f"[widget_builder] Fallback also failed: {exc2}.")
             return
 
     _inject_ui(widget_bp)
 
 
-def delete_widget() -> bool:
-    """Delete the existing widget Blueprint asset (for rebuilding).
-
-    Returns
-    -------
-    bool
-        True if deleted, False if not found.
-    """
+def close_widget() -> None:
+    """Close the currently spawned widget tab and release the UI reference."""
     global _active_ui
     _active_ui = None
-    deleted = False
     try:
-        unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)
-        unreal.log(f"[widget_builder] Widget deleted: {WIDGET_ASSET_PATH}")
-        deleted = True
+        widget_bp = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
+        if widget_bp is not None:
+            subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+            subsystem.close_tab_by_id(widget_bp.get_path_name())
     except Exception as exc:
-        unreal.log_warning(f"[widget_builder] delete_asset failed: {exc}")
-    _cleanup_disk_asset()
-    return deleted
+        unreal.log_warning(f"[widget_builder] close_tab failed: {exc}")
 
 
 def rebuild_widget() -> None:
-    """Delete, recreate, and open the widget Blueprint asset."""
-    delete_widget()
+    """Close the tab and reopen it (re-injects fresh UI)."""
+    close_widget()
     open_widget()
+
+
+# Backwards-compatible alias — older code calls create_widget().
+create_widget = load_widget

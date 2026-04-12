@@ -101,15 +101,11 @@ class PostRenderToolUI:
 
     def _build_ui(self):
         """Build the entire UMG widget tree dynamically."""
-        # GetRootWidget() is NOT a UFUNCTION — Python cannot call it.
-        # Use EditorUtilityWidget.FindChildWidgetByName() (UFUNCTION) to
-        # locate the root panel widget created by the factory.
         root = self._acquire_root_vbox()
         if root is None:
             raise RuntimeError(
-                "Cannot find root panel in widget tree. "
-                "Fix: from post_render_tool.widget_builder import "
-                "rebuild_widget; rebuild_widget()"
+                "Template root widget not accessible. "
+                "Check the [widget_builder] template setup instructions in the log."
             )
 
         # --- Title ---
@@ -340,94 +336,42 @@ class PostRenderToolUI:
     # ---------------------------------------------------------------
 
     def _acquire_root_vbox(self):
-        """Find the factory root widget and return a usable VerticalBox.
+        """Return the template's user-created root VerticalBox.
 
-        Python cannot access ``UUserWidget::WidgetTree`` directly (no
-        CPF_BlueprintVisible flag), and ``GetRootWidget()`` is not a
-        UFUNCTION.  However, the factory's ``OnVariableAdded(Root->GetFName())``
-        exports the root widget as a Blueprint variable — and at runtime
-        ``InitializeWidgetStatic`` auto-binds the live widget into that
-        UPROPERTY on the instance (WidgetBlueprintGeneratedClass.cpp:270).
-
-        We look it up via ``get_editor_property`` (Blueprint variables are
-        CPF_BlueprintVisible by default).  ``FindChildWidgetByName`` is used
-        as a secondary fallback that searches the live WidgetTree.
-
-        Returns a VerticalBox ready for child population, or None.
+        The template Blueprint (see ``widget_builder.TEMPLATE_SETUP_INSTRUCTIONS``)
+        must have a VerticalBox named ``RootPanel`` with ``bIsVariable = true``.
+        The compiler generates a ``CPF_BlueprintVisible`` UPROPERTY for it,
+        so ``get_editor_property`` can access it from Python.
         """
-        from .widget_builder import _ROOT_WIDGET_VAR_NAMES
+        from .widget_builder import ROOT_VBOX_VAR_NAME, TEMPLATE_SETUP_INSTRUCTIONS
 
-        root_widget = None
-        found_via = None
-        for name in _ROOT_WIDGET_VAR_NAMES:
-            # Primary: Blueprint variable UPROPERTY (bound at runtime by
-            # InitializeWidgetStatic when Widget->bIsVariable is true).
-            try:
-                w = self._host.get_editor_property(name)
-                if w is not None:
-                    root_widget = w
-                    found_via = f"UPROPERTY '{name}'"
-                    break
-            except Exception:
-                pass
-            # Secondary: live WidgetTree search (does not require
-            # CPF_BlueprintVisible; works even when bIsVariable was false).
-            try:
-                w = self._host.find_child_widget_by_name(name)
-                if w is not None:
-                    root_widget = w
-                    found_via = f"FindChildWidgetByName '{name}'"
-                    break
-            except Exception:
-                pass
-
-        if root_widget is not None:
-            unreal.log(f"[widget] Root found via {found_via}.")
-        else:
-            # Last-resort diagnostic: enumerate every non-private attribute
-            # whose value is a UWidget instance, so we can see what the
-            # factory actually produced.
-            try:
-                widget_attrs = []
-                for a in dir(self._host):
-                    if a.startswith("_"):
-                        continue
-                    try:
-                        v = getattr(self._host, a)
-                    except Exception:
-                        continue
-                    if isinstance(v, unreal.Widget):
-                        widget_attrs.append(f"{a}={type(v).__name__}")
-                unreal.log_warning(
-                    f"[widget] No root widget found. "
-                    f"Widget-typed attrs on host: {widget_attrs[:20]}"
-                )
-            except Exception as exc:
-                unreal.log_warning(
-                    f"[widget] No root widget found (diagnostic failed: {exc})."
-                )
+        try:
+            root_widget = self._host.get_editor_property(ROOT_VBOX_VAR_NAME)
+        except Exception as exc:
+            unreal.log_warning(
+                f"[widget] Template is missing the '{ROOT_VBOX_VAR_NAME}' "
+                f"variable: {exc}"
+            )
+            unreal.log_warning(TEMPLATE_SETUP_INSTRUCTIONS)
             return None
 
-        # If the root IS a VerticalBox already, use it directly.
-        if isinstance(root_widget, unreal.VerticalBox):
-            root_widget.clear_children()
-            return root_widget
+        if root_widget is None:
+            unreal.log_warning(
+                f"[widget] '{ROOT_VBOX_VAR_NAME}' UPROPERTY exists but is None "
+                "(template widget not bound at runtime)."
+            )
+            return None
 
-        # Otherwise (CanvasPanel, Overlay, etc.) nest a VerticalBox inside.
+        if not isinstance(root_widget, unreal.VerticalBox):
+            unreal.log_warning(
+                f"[widget] '{ROOT_VBOX_VAR_NAME}' is a "
+                f"{type(root_widget).__name__}, expected VerticalBox. "
+                "Recreate the template with VerticalBox as root."
+            )
+            return None
+
         root_widget.clear_children()
-        vbox = self._make_widget(unreal.VerticalBox)
-        root_widget.add_child(vbox)
-
-        # CanvasPanel children default to zero-size slot — anchor to fill.
-        slot = vbox.slot
-        if slot is not None and isinstance(slot, unreal.CanvasPanelSlot):
-            slot.set_editor_property("anchors", unreal.Anchors(
-                minimum=unreal.Vector2D(0.0, 0.0),
-                maximum=unreal.Vector2D(1.0, 1.0),
-            ))
-            slot.set_editor_property("offsets", unreal.Margin(0.0, 0.0, 0.0, 0.0))
-
-        return vbox
+        return root_widget
 
     def _make_widget(self, widget_class):
         """Create a UMG widget owned by the host widget."""
