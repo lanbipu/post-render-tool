@@ -14,31 +14,31 @@ from __future__ import annotations
 
 import unreal
 
-# Asset location in Content Browser
-WIDGET_PACKAGE_PATH = "/Game/PostRenderTool"
-WIDGET_ASSET_NAME = "EUW_PostRenderTool"
+# Asset location inside the PostRenderTool plugin's Content folder.
+# The plugin mounts Content/ at the virtual root `/PostRenderTool/`.
+WIDGET_PACKAGE_PATH = "/PostRenderTool/Blueprints"
+WIDGET_ASSET_NAME = "BP_PostRenderToolWidget"
 WIDGET_FULL_PATH = f"{WIDGET_PACKAGE_PATH}/{WIDGET_ASSET_NAME}"
 WIDGET_ASSET_PATH = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
 
-# Name of the root widget variable in the template Blueprint.  widget.py
-# accesses it via ``host.get_editor_property(ROOT_VBOX_VAR_NAME)``.
-ROOT_VBOX_VAR_NAME = "RootPanel"
-
 TEMPLATE_SETUP_INSTRUCTIONS = f"""
-Template Blueprint not found.  Create it once in the UE Editor:
+Blueprint asset not found: {WIDGET_ASSET_PATH}
 
-  1. In Content Browser, navigate to {WIDGET_PACKAGE_PATH} (create folder if missing).
-  2. Right-click → Editor Utilities → Editor Utility Widget.
-  3. In the class picker dialog, pick "EditorUtilityWidget" (native).
-  4. Name the asset "{WIDGET_ASSET_NAME}".
-  5. Double-click to open the Widget Designer.
-  6. In the Palette, drag a "Vertical Box" onto the Hierarchy as the root.
-  7. Select the Vertical Box.  In the Details panel:
-     - Rename it to "{ROOT_VBOX_VAR_NAME}"
-     - Check the "Is Variable" checkbox (top of Details panel)
-  8. Compile (Ctrl+B) and Save (Ctrl+S).
-  9. Close the Widget Designer.
- 10. Re-run:  import init_post_render_tool
+The BP_PostRenderToolWidget asset is shipped inside the PostRenderTool plugin.
+If you are seeing this error:
+
+  1. Confirm the plugin is installed at <UEProject>/Plugins/PostRenderTool/
+  2. Confirm the plugin compiled successfully (Edit → Plugins → VP Post-Render Tool → green)
+  3. Confirm Content/Blueprints/BP_PostRenderToolWidget.uasset exists on disk
+  4. Confirm the plugin is enabled (Edit → Plugins → search "Post-Render")
+  5. Restart UE Editor and try again
+
+If the Blueprint was deleted, re-create it via:
+  Content Browser → Plugins → VP Post-Render Tool Content → Blueprints
+  → Right-click → Blueprint Class → PostRenderToolWidget → name it "BP_PostRenderToolWidget"
+
+Then open the Designer and add widgets matching the BindWidget contract in
+Source/PostRenderTool/Public/PostRenderToolWidget.h.
 """.strip()
 
 # Module-level reference — prevents GC of the UI builder and its callbacks.
