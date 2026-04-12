@@ -355,43 +355,65 @@ class PostRenderToolUI:
 
         Returns a VerticalBox ready for child population, or None.
         """
-        from .widget_builder import _ROOT_WIDGET_VAR_NAMES
+        _PANEL_CLASSES = (
+            "CanvasPanel", "Overlay", "VerticalBox", "HorizontalBox",
+            "SizeBox", "Border", "ScaleBox", "GridPanel",
+        )
+
+        # Build candidate name list: each panel class with suffix _0..._5.
+        candidates = [
+            f"{cls}_{n}" for cls in _PANEL_CLASSES for n in range(6)
+        ] + list(_PANEL_CLASSES)
 
         root_widget = None
-        for name in _ROOT_WIDGET_VAR_NAMES:
-            # Primary: Blueprint variable UPROPERTY (bound by
-            # InitializeWidgetStatic).
+        found_via = None
+        for name in candidates:
+            # Primary: Blueprint variable UPROPERTY (bound at runtime by
+            # InitializeWidgetStatic when Widget->bIsVariable is true).
             try:
                 w = self._host.get_editor_property(name)
                 if w is not None:
                     root_widget = w
-                    unreal.log(f"[widget] Root found via UPROPERTY '{name}'.")
+                    found_via = f"UPROPERTY '{name}'"
                     break
             except Exception:
                 pass
-            # Secondary: live WidgetTree search.
+            # Secondary: live WidgetTree search (does not require
+            # CPF_BlueprintVisible; works even when bIsVariable was false).
             try:
                 w = self._host.find_child_widget_by_name(name)
                 if w is not None:
                     root_widget = w
-                    unreal.log(f"[widget] Root found via FindChildWidgetByName '{name}'.")
+                    found_via = f"FindChildWidgetByName '{name}'"
                     break
             except Exception:
                 pass
 
-        if root_widget is None:
+        if root_widget is not None:
+            unreal.log(f"[widget] Root found via {found_via}.")
+        else:
+            # Last-resort diagnostic: enumerate every non-private attribute
+            # whose value is a UWidget instance, so we can see what the
+            # factory actually produced.
             try:
-                relevant = sorted({
-                    a for a in dir(self._host)
-                    if any(k in a.lower() for k in ("panel", "box", "tree", "root"))
-                    and not a.startswith("_")
-                })
+                widget_attrs = []
+                for a in dir(self._host):
+                    if a.startswith("_"):
+                        continue
+                    try:
+                        v = getattr(self._host, a)
+                    except Exception:
+                        continue
+                    if isinstance(v, unreal.Widget):
+                        widget_attrs.append(f"{a}={type(v).__name__}")
                 unreal.log_warning(
-                    "[widget] No root widget found. "
-                    f"Host relevant attrs: {relevant[:30]}"
+                    f"[widget] No root widget found. "
+                    f"Widget-typed attrs on host: {widget_attrs[:20]}"
                 )
-            except Exception:
-                unreal.log_warning("[widget] No root widget found.")
+            except Exception as exc:
+                unreal.log_warning(
+                    f"[widget] No root widget found (diagnostic failed: {exc})."
+                )
             return None
 
         # If the root IS a VerticalBox already, use it directly.
