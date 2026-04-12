@@ -40,9 +40,9 @@ wb.rebuild_widget()
 
 ## Git / P4 Workflow
 
-- **Post-commit hook on `main` auto-pushes to the Helix4Git depot** (installed via commits `0581b3c` → `a46045f`). Feature branches do NOT trigger the hook — safe to iterate on a branch.
-- **P4 workspace mirror**: `/Users/bip.lan/AIWorkspace/vp/p4-workspace/ue/post-render-tool/` is a parallel clone of the same depot, pinned to `main` for UE Editor consumption. `P4CLIENT = claude-workspace` (set via `P4CLIENT=claude-workspace p4 ...` or `~/.p4config`).
-- **Worktree convention**: For multi-commit refactors, create a worktree outside the repo: `git worktree add ~/.config/superpowers/worktrees/post_render_tool/<branch> -b feature/<name>`. Keeps the main working tree clean and avoids triggering the p4 hook while iterating.
+- **Post-commit hook pushes the CURRENT branch to the Helix4Git depot** on every commit (`scripts/git-hooks/post-commit`, `core.hooksPath = scripts/git-hooks`, installed via commits `0581b3c` → `a46045f`). `main` and feature branches both push; hook exits 0 on failure so it never blocks commits. Output: `[p4-sync] ✓ <branch> pushed to p4` on stderr; rolling log at `.git/p4-push.log`.
+- **P4 workspace mirror**: `/Users/bip.lan/AIWorkspace/vp/p4-workspace/ue/post-render-tool/` is a parallel clone of the same depot, pinned to `main` for UE Editor consumption. Feature-branch commits land in the depot but don't advance this mirror. `P4CLIENT = claude-workspace` (set via `P4CLIENT=claude-workspace p4 ...` or `~/.p4config`).
+- **Worktree convention**: For multi-commit refactors, create a worktree outside the repo: `git worktree add ~/.config/superpowers/worktrees/post_render_tool/<branch> -b feature/<name>`. Keeps the main working tree and the p4 workspace mirror clean. Each commit still pushes the feature branch to the depot (safe — `main` doesn't move until merge).
 - **Main repo vs worktree**: Edits in a worktree on a non-main branch are invisible to the main repo's working tree until you `git checkout <branch>` in main or merge. If someone says "I don't see the new files", that's usually why.
 
 ## First-time setup
