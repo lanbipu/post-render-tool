@@ -101,38 +101,29 @@ class PostRenderToolUI:
 
     def _build_ui(self):
         """Build the entire UMG widget tree dynamically."""
-        root_widget = None
-        try:
-            root_widget = self._host.get_root_widget()
-        except (AttributeError, Exception):
-            pass
-
-        if root_widget is not None and isinstance(root_widget, unreal.VerticalBox):
-            root = root_widget
-        elif root_widget is not None:
-            # Root is CanvasPanel or other container — nest a VerticalBox inside.
-            root_widget.clear_children()
-            root = self._make_widget(unreal.VerticalBox)
-            root_widget.add_child(root)
-            # CanvasPanel children need anchors set to fill the panel,
-            # otherwise the slot defaults to zero size.
-            slot = root.slot
-            if slot is not None and isinstance(slot, unreal.CanvasPanelSlot):
-                slot.set_editor_property("anchors", unreal.Anchors(
-                    minimum=unreal.Vector2D(0.0, 0.0),
-                    maximum=unreal.Vector2D(1.0, 1.0),
-                ))
-                slot.set_editor_property("offsets", unreal.Margin(0.0, 0.0, 0.0, 0.0))
-        else:
+        # GetRootWidget() is NOT a UFUNCTION — not callable from Python.
+        # Use EditorUtilityWidget.FindChildWidgetByName() (a UFUNCTION)
+        # to locate the CanvasPanel root created by the factory.
+        root_panel = self._find_root_panel()
+        if root_panel is None:
             raise RuntimeError(
-                "Host widget has no root widget — UI cannot attach. "
-                "Check UE Output Log for [widget_builder] diagnostics. "
+                "Cannot find root CanvasPanel in widget tree. "
                 "Fix: from post_render_tool.widget_builder import "
                 "rebuild_widget; rebuild_widget()"
             )
 
-        # Clear any leftover children from a previous injection (re-entry).
-        root.clear_children()
+        root_panel.clear_children()
+        root = self._make_widget(unreal.VerticalBox)
+        root_panel.add_child(root)
+
+        # CanvasPanel children default to zero size — anchor to fill.
+        slot = root.slot
+        if slot is not None and isinstance(slot, unreal.CanvasPanelSlot):
+            slot.set_editor_property("anchors", unreal.Anchors(
+                minimum=unreal.Vector2D(0.0, 0.0),
+                maximum=unreal.Vector2D(1.0, 1.0),
+            ))
+            slot.set_editor_property("offsets", unreal.Margin(0.0, 0.0, 0.0, 0.0))
 
         # --- Title ---
         title = self._make_text("VP Post-Render Tool", size=18, is_bold=True)
@@ -360,6 +351,36 @@ class PostRenderToolUI:
     # ---------------------------------------------------------------
     # Widget Factory Helpers
     # ---------------------------------------------------------------
+
+    def _find_root_panel(self):
+        """Locate the root CanvasPanel created by the factory.
+
+        ``UserWidget.GetRootWidget()`` is NOT a UFUNCTION, so Python cannot
+        call it.  ``EditorUtilityWidget.FindChildWidgetByName()`` IS a
+        UFUNCTION — use it to find the CanvasPanel by its auto-generated name.
+        """
+        if not hasattr(self._host, "find_child_widget_by_name"):
+            unreal.log_warning(
+                "[widget] Host has no find_child_widget_by_name — "
+                "not an EditorUtilityWidget?"
+            )
+            return None
+
+        # The factory's ConstructWidget uses MakeUniqueObjectName, which
+        # typically produces "CanvasPanel_0" for the first CanvasPanel.
+        for name in ("CanvasPanel_0", "CanvasPanel0", "CanvasPanel"):
+            try:
+                w = self._host.find_child_widget_by_name(name)
+                if w is not None:
+                    return w
+            except Exception:
+                pass
+
+        unreal.log_warning(
+            "[widget] Could not find root CanvasPanel by name. "
+            "The factory may have used a different name."
+        )
+        return None
 
     def _make_widget(self, widget_class):
         """Create a UMG widget owned by the host widget."""
