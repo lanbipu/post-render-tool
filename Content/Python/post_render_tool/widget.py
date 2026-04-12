@@ -342,28 +342,22 @@ class PostRenderToolUI:
     def _acquire_root_vbox(self):
         """Find the factory root widget and return a usable VerticalBox.
 
-        ``UserWidget.GetRootWidget()`` is NOT a UFUNCTION, so Python cannot
-        call it.  ``EditorUtilityWidget.FindChildWidgetByName(FName)`` IS a
-        UFUNCTION — we use it to locate the root widget.
+        Python cannot access ``UUserWidget::WidgetTree`` directly (no
+        CPF_BlueprintVisible flag), and ``GetRootWidget()`` is not a
+        UFUNCTION.  However, the factory's ``OnVariableAdded(Root->GetFName())``
+        exports the root widget as a Blueprint variable — and at runtime
+        ``InitializeWidgetStatic`` auto-binds the live widget into that
+        UPROPERTY on the instance (WidgetBlueprintGeneratedClass.cpp:270).
 
-        The factory creates the root via ``WidgetTree->ConstructWidget`` with
-        ``NAME_None``; UE's ``MakeUniqueObjectName`` produces
-        ``<ClassName>_<N>``.  We try all plausible root-widget class names
-        so this works regardless of project settings (CanvasPanel default,
-        or user-selected Overlay / VerticalBox / etc.).
+        We look it up via ``get_editor_property`` (Blueprint variables are
+        CPF_BlueprintVisible by default).  ``FindChildWidgetByName`` is used
+        as a secondary fallback that searches the live WidgetTree.
 
         Returns a VerticalBox ready for child population, or None.
         """
-        if not hasattr(self._host, "find_child_widget_by_name"):
-            unreal.log_warning(
-                "[widget] Host has no find_child_widget_by_name — "
-                "not an EditorUtilityWidget?"
-            )
-            return None
-
-        # Class basenames the factory may use, with _0 suffix from
-        # MakeUniqueObjectName.  Order: most-likely first.
-        _CANDIDATE_NAMES = [
+        # Factory default is UCanvasPanel → MakeUniqueObjectName → "CanvasPanel_0".
+        # Cover the alternative root classes the project settings could pick.
+        _ROOT_NAMES = [
             "CanvasPanel_0",
             "Overlay_0",
             "VerticalBox_0",
@@ -375,20 +369,40 @@ class PostRenderToolUI:
         ]
 
         root_widget = None
-        for name in _CANDIDATE_NAMES:
+        for name in _ROOT_NAMES:
+            # Primary: Blueprint variable UPROPERTY (bound by
+            # InitializeWidgetStatic).
+            try:
+                w = self._host.get_editor_property(name)
+                if w is not None:
+                    root_widget = w
+                    unreal.log(f"[widget] Root found via UPROPERTY '{name}'.")
+                    break
+            except Exception:
+                pass
+            # Secondary: live WidgetTree search.
             try:
                 w = self._host.find_child_widget_by_name(name)
                 if w is not None:
                     root_widget = w
+                    unreal.log(f"[widget] Root found via FindChildWidgetByName '{name}'.")
                     break
             except Exception:
                 pass
 
         if root_widget is None:
-            unreal.log_warning(
-                "[widget] No root widget found.  Tried: "
-                + ", ".join(_CANDIDATE_NAMES)
-            )
+            try:
+                relevant = sorted({
+                    a for a in dir(self._host)
+                    if any(k in a.lower() for k in ("panel", "box", "tree", "root"))
+                    and not a.startswith("_")
+                })
+                unreal.log_warning(
+                    f"[widget] No root widget found.  "
+                    f"Host relevant attrs: {relevant[:30]}"
+                )
+            except Exception:
+                unreal.log_warning("[widget] No root widget found.")
             return None
 
         # If the root IS a VerticalBox already, use it directly.

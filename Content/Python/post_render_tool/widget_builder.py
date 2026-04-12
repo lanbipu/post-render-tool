@@ -86,9 +86,6 @@ def create_widget() -> object:
         loaded = unreal.EditorAssetLibrary.load_asset(WIDGET_ASSET_PATH)
         if loaded is not None:
             unreal.log(f"[widget_builder] Reusing existing widget: {WIDGET_ASSET_PATH}")
-            # Recompile — ensures GeneratedClass WidgetTree is in sync
-            # (handles assets saved before compile fix was applied).
-            _compile_widget_blueprint(loaded)
             return loaded
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] load_asset failed, will recreate: {exc}")
@@ -134,7 +131,7 @@ def _inject_ui(widget_bp) -> None:
     widget = None
     try:
         widget = subsystem.find_utility_widget_from_blueprint(widget_bp)
-    except (AttributeError, Exception) as exc:
+    except Exception as exc:
         unreal.log_warning(
             f"[widget_builder] find_utility_widget_from_blueprint: {exc}"
         )
@@ -176,14 +173,16 @@ def _inject_ui(widget_bp) -> None:
                 last_error[0] = exc
 
         if attempts[0] >= 30:
-            msg = (
-                "[widget_builder] UI injection failed after 30 attempts. "
+            detail = (
+                f"(last error: {last_error[0]})"
+                if last_error[0] is not None
+                else "(widget never became available)"
+            )
+            unreal.log_error(
+                f"[widget_builder] UI injection failed after 30 attempts {detail}. "
                 "Try: from post_render_tool.widget_builder import rebuild_widget; "
                 "rebuild_widget()"
             )
-            if last_error[0] is not None:
-                msg = f"[widget_builder] UI injection failed: {last_error[0]}"
-            unreal.log_error(msg)
             unreal.unregister_slate_post_tick_callback(handle_holder[0])
 
     handle_holder[0] = unreal.register_slate_post_tick_callback(_try_inject)
