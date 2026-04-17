@@ -134,10 +134,15 @@ def _collect_all_widget_names(widget_tree: unreal.WidgetTree) -> set:
         w = stack.pop()
         if w is None:
             continue
+        # Record the name if available, but do NOT short-circuit on failure —
+        # a rare get_name() error (half-constructed / mid-GC widget) must still
+        # fall through to child traversal below, otherwise an entire subtree of
+        # already-placed BindWidget targets would be silently invisible to
+        # rerun-deduplication and get duplicated.
         try:
             names.add(w.get_name())
         except Exception:  # noqa: BLE001
-            continue
+            pass
 
         if isinstance(w, unreal.PanelWidget):
             try:
