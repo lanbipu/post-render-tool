@@ -25,10 +25,15 @@ from post_render_tool.pipeline import run_import
 result = run_import(r"path/to/csv", fps=24.0)
 
 # UE Python console — widget management
-from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
-open_widget()      # load BP_PostRenderToolWidget + spawn tab + bind callbacks
-rebuild_widget()   # reopen (drops cached UI, does NOT delete the Blueprint asset)
-delete_widget()    # destructive: delete the deployment-authored asset (not shipped; must be re-authored per deployment-guide.md §1.3 or re-synced from version control)
+from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget, rebuild_from_spec
+open_widget()        # load BP_PostRenderToolWidget + spawn tab + bind callbacks
+rebuild_widget()     # reopen (drops cached UI, does NOT delete the Blueprint asset)
+rebuild_from_spec()  # regenerate BP from docs/widget-tree-spec.json (idempotent — preserves user tweaks on existing widgets) + reopen tab
+delete_widget()      # destructive: delete the deployment-authored asset (not shipped; must be re-authored per deployment-guide.md §1.3 or re-synced from version control)
+
+# UE Python console — build BP from JSON spec (standalone, without reopen)
+from post_render_tool import build_widget_blueprint
+build_widget_blueprint.run_build()
 
 # UE Python console — hot reload after editing .py files (no UE restart)
 import importlib
@@ -36,6 +41,9 @@ import post_render_tool.widget_builder as wb
 import post_render_tool.widget as w
 importlib.reload(wb); importlib.reload(w)
 wb.rebuild_widget()
+
+# Cross-check widget names across C++ / widget.py / JSON spec (drift detector)
+cd Content/Python && python -m unittest post_render_tool.tests.test_spec_drift -v
 ```
 
 ## Git / P4 Workflow
@@ -100,7 +108,15 @@ UE loads the plugin from `<UEProject>/Plugins/PostRenderTool/`, mounts `Content/
 4. `PostRenderToolUI(widget)` acquires every bound widget via `host.get_editor_property("btn_browse")` (etc.) and wires callbacks
 5. Button clicks drive the existing pure-Python business logic (`parse_csv_dense`, `transform_position`, `run_import`, `spawn_test_camera`, …)
 
-Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`) have no `unreal` import and are testable outside UE Editor.
+**Build flow (Designer bootstrap automation):**
+1. `docs/widget-tree-spec.json` is the single source of truth for the full WidgetTree (41 contract + decorative nesting + widget properties + slot padding).
+2. `build_widget_blueprint.run_build()` parses the spec → calls `UPostRenderToolBuildHelper` (C++ bridge, 3 UFUNCTIONs) to mutate `UWidgetBlueprint.WidgetTree`. Python cannot touch WidgetTree directly (`BaseWidgetBlueprint.h:16-17` → bare `UPROPERTY()` without `BlueprintVisible` is invisible to Python reflection per `PyGenUtil.cpp::IsScriptExposedProperty`).
+3. `widget_properties.apply_widget_properties/apply_slot_properties` sets per-widget + slot-layout values via `set_editor_property()` reflection.
+4. `unreal.BlueprintEditorLibrary.compile_blueprint` + `unreal.EditorAssetLibrary.save_asset` persist the `.uasset`.
+5. Idempotent: rerun only creates widgets that are missing by name; existing ones (possibly user-tweaked in Designer) are left untouched. Properties/slot are applied ONLY on fresh creation — user edits survive.
+6. C++ side: `UPostRenderToolBuildHelper` exposes `EnsureRootPanel`, `FindWidgetByName`, `EnsureWidgetUnderParent` (the latter returns `(result_enum, widget, slot)` as a Python tuple via UFUNCTION out-params).
+
+Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_loader`, `widget_properties`) have no `unreal` import and are testable outside UE Editor.
 
 ## Gotchas
 
@@ -133,6 +149,24 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`) have no 
   `PostRenderToolWidget.h` causes `get_editor_property()` to return None, and the
   binder logs a warning but keeps going. Keep the two sides in sync; see
   `docs/bindwidget-contract.md` for the authoritative list.
+- **JSON spec is the fourth source of truth for widget names.** Besides `PostRenderToolWidget.h`
+  UPROPERTY names and `widget.py`'s `_REQUIRED_CONTROLS`/`_OPTIONAL_CONTROLS`, `docs/widget-tree-spec.json`
+  also lists the 33+8 contract names. Three-way drift (C++ / widget.py / JSON) is detected by
+  `post_render_tool/tests/test_spec_drift.py` — rerun it after any contract rename.
+- **`UWidget::bIsVariable` cannot be set from business C++.** Widget.h:318 is a private bitfield with
+  no public setter; `UMGEditor::SWidgetDetailsView.cpp:641` is the only code that writes it (because
+  UMGEditor module has compile-time private access). Workaround: `Widget.cpp:195` constructor
+  initializes it to `true` by default, which satisfies BindWidget reflection for all widgets
+  constructed via `UWidgetTree::ConstructWidget`. Cost: decorative widgets become variables too
+  (harmless; a few extra UPROPERTYs on the generated class).
+- **Widget tree structural changes need `FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified`,
+  not `Blueprint->Modify()`.** `Modify()` is Undo-only; structural mutations require the stronger
+  marker to invalidate the generated class layout for the next compile. Used inside
+  `UPostRenderToolBuildHelper::{EnsureRootPanel,EnsureWidgetUnderParent}`.
+- **C++ UFUNCTION changes require full Editor restart + plugin rebuild.** Live Coding registers new
+  UFUNCTIONs inconsistently. After touching `PostRenderToolBuildHelper.h`/`.cpp`, quit the Editor,
+  rebuild the plugin via UBT, relaunch, and verify `unreal.PostRenderToolBuildHelper.ensure_widget_under_parent`
+  is visible in `help(unreal.PostRenderToolBuildHelper)` before running `build_widget_blueprint.run_build()`.
 
 ## UE Source Code Reference
 
