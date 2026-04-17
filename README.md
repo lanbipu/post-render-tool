@@ -49,7 +49,7 @@ print(result.report.format_report())
 
 **方式 2：Blueprint UI**
 
-plugin 随仓库附带 `Content/Blueprints/BP_PostRenderToolWidget.uasset`，首次安装后直接启动工具即可。如需手动重建 Blueprint 资产，完整步骤见 `docs/plugin-setup.md`。
+Plugin 源码里**不包含** `BP_PostRenderToolWidget.uasset`（UE 5.7 的 `UWidgetBlueprint::WidgetTree` 对 Python 反射不可见，无法自动生成，team 决定 Designer 手工搭建）。每个部署环境首次使用要按 `docs/deployment-guide.md` §1.3 在 UMG Designer 里一次性创建 + 提交资产到 git / p4，团队 sync 后共享。
 
 ## Project Structure
 

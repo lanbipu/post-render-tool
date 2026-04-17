@@ -28,7 +28,7 @@ result = run_import(r"path/to/csv", fps=24.0)
 from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_widget
 open_widget()      # load BP_PostRenderToolWidget + spawn tab + bind callbacks
 rebuild_widget()   # reopen (drops cached UI, does NOT delete the Blueprint asset)
-delete_widget()    # destructive: delete the plugin-shipped asset (normally unneeded)
+delete_widget()    # destructive: delete the deployment-authored asset (not shipped; must be re-authored per deployment-guide.md §1.3 or re-synced from version control)
 
 # UE Python console — hot reload after editing .py files (no UE restart)
 import importlib
@@ -68,7 +68,7 @@ post_render_tool/                               ← plugin root
 │           └── PostRenderToolWidget.cpp        ← empty NativeConstruct stub
 ├── Content/
 │   ├── Blueprints/
-│   │   └── BP_PostRenderToolWidget.uasset     ← Designer-authored UMG layout (Phase C)
+│   │   └── BP_PostRenderToolWidget.uasset     ← NOT in repo; each deployment authors once via deployment-guide.md §1.3 then commits
 │   └── Python/
 │       ├── init_post_render_tool.py            ← entry point, calls widget_builder.open_widget()
 │       └── post_render_tool/

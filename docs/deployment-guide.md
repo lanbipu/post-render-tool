@@ -215,7 +215,7 @@ importlib.reload(w); importlib.reload(wb)
 wb.rebuild_widget()
 ```
 
-> **注意：** Blueprint 资产 `BP_PostRenderToolWidget` 随 plugin 一起提交到版本控制，团队成员 `git pull` / `p4 sync` 就能拿到同一份。不要在 Content Browser 里随便删除，否则要按 1.3 重新创建。
+> **注意：** Blueprint 资产 `BP_PostRenderToolWidget` **不在 plugin 源码仓库里**（见 1.3 节开头说明）。完成 1.3 流程之后的 `.uasset` 要单独 `git add` / `p4 add` 提交到版本控制，团队成员 `git pull` / `p4 sync` 才能拿到。不要在 Content Browser 里随便删除本地 `.uasset`，否则得重新 sync 或按 1.3 从头再搭。
 >
 > **C++ UPROPERTY 变更**（在 `PostRenderToolWidget.h` 里增/删/改 BindWidget 属性）**不支持 Live Coding**，必须关闭 Editor 完整重编 plugin，然后重新 compile Blueprint。
 >
@@ -238,7 +238,7 @@ from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_
 
 open_widget()      # 加载 BP_PostRenderToolWidget + spawn tab + 绑定 callback
 rebuild_widget()   # 重新打开（释放缓存 UI 引用，不删 Blueprint 资产）
-delete_widget()    # 销毁性：删除 plugin-shipped Blueprint 资产——正常情况下不应调用
+delete_widget()    # 销毁性：删除部署环境自建的 Blueprint 资产——不是 plugin 自带的，删了必须 git/p4 sync 回来或按 1.3 重搭
 ```
 
 ### 故障排查

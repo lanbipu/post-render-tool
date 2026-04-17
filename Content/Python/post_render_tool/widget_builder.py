@@ -1,17 +1,23 @@
 """Widget Builder — VP Post-Render Tool.
 
-Loads the plugin-shipped ``BP_PostRenderToolWidget`` Blueprint, spawns it
-as an editor tab via ``EditorUtilitySubsystem.spawn_and_register_tab``,
+Loads ``BP_PostRenderToolWidget`` from the plugin's virtual content root,
+spawns it as an editor tab via ``EditorUtilitySubsystem.spawn_and_register_tab``,
 and hands the live instance to ``widget.PostRenderToolUI``, which binds
 Python callbacks to the widgets exposed by the BindWidget contract in
 ``UPostRenderToolWidget`` (C++).
 
-The Blueprint is authored in the UMG Designer and shipped inside
-``Content/Blueprints/``. Its widget tree must satisfy the BindWidget
-contract declared in ``Source/PostRenderTool/Public/PostRenderToolWidget.h``;
-missing required widgets fail the Blueprint compile. See
-``TEMPLATE_SETUP_INSTRUCTIONS`` below for recovery steps if the asset is
-missing or corrupt.
+**The Blueprint is NOT shipped with the plugin source.** UE 5.7 does not
+expose ``UWidgetBlueprint::WidgetTree`` to Python reflection, so this
+project's convention is: each deployment authors the Blueprint once in
+the UMG Designer, commits the resulting ``.uasset`` to git/p4, and the
+team shares it via sync. A fresh clone without the committed ``.uasset``
+must follow ``docs/deployment-guide.md`` §1.3 ("创建 Blueprint 资产并
+手动搭建 UI") before this module can load anything.
+
+The Blueprint's widget tree must satisfy the BindWidget contract in
+``Source/PostRenderTool/Public/PostRenderToolWidget.h``; missing required
+widgets fail the Blueprint compile. See ``TEMPLATE_SETUP_INSTRUCTIONS``
+below for recovery steps when the asset is missing or corrupt.
 """
 
 from __future__ import annotations
@@ -28,21 +34,30 @@ WIDGET_ASSET_PATH = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
 TEMPLATE_SETUP_INSTRUCTIONS = f"""
 Blueprint asset not found: {WIDGET_ASSET_PATH}
 
-The BP_PostRenderToolWidget asset is shipped inside the PostRenderTool plugin.
-If you are seeing this error:
+BP_PostRenderToolWidget is NOT shipped in the plugin source. Each deployment
+must author it once in the UMG Designer and commit the .uasset to git / p4.
+This error means your working copy is missing that committed asset, or
+it hasn't been authored for this project yet.
+
+Recovery path — follow docs/deployment-guide.md §1.3 end to end:
 
   1. Confirm the plugin is installed at <UEProject>/Plugins/PostRenderTool/
-  2. Confirm the plugin compiled successfully (Edit → Plugins → VP Post-Render Tool → green)
-  3. Confirm Content/Blueprints/BP_PostRenderToolWidget.uasset exists on disk
-  4. Confirm the plugin is enabled (Edit → Plugins → search "Post-Render")
-  5. Restart UE Editor and try again
+     and enabled (Edit → Plugins → VP Post-Render Tool is green)
+  2. p4 sync / git pull to pick up the committed BP_PostRenderToolWidget.uasset
+     if another teammate has already authored it. If the asset path at
+     Content/Blueprints/BP_PostRenderToolWidget.uasset now exists, restart
+     the Editor and retry.
+  3. If nobody has authored it yet (fresh project, new clone, asset lost),
+     you are the one creating it. Open docs/deployment-guide.md §1.3 and
+     walk through Step 1 → Step 7: build the Blueprint, drag 33 required
+     + 8 optional BindWidgets into RootPanel per docs/bindwidget-contract.md,
+     Compile until green, Save, then commit the .uasset so teammates get
+     it on next sync.
 
-If the Blueprint was deleted, re-create it via:
-  Content Browser → Plugins → VP Post-Render Tool Content → Blueprints
-  → Right-click → Blueprint Class → PostRenderToolWidget → name it "BP_PostRenderToolWidget"
-
-Then open the Designer and add widgets matching the BindWidget contract in
-Source/PostRenderTool/Public/PostRenderToolWidget.h.
+There is no Python / C++ automation for populating the widget tree —
+UE 5.7 hides UWidgetBlueprint::WidgetTree from reflection, and the team
+decided (commit bd140d7) that Designer hand-authoring + version-controlled
+.uasset is the canonical path.
 """.strip()
 
 # Module-level reference — prevents GC of the UI builder and its callbacks.
@@ -50,7 +65,12 @@ _active_ui = None
 
 
 def load_widget():
-    """Load the plugin-shipped BP_PostRenderToolWidget Blueprint.
+    """Load the BP_PostRenderToolWidget Blueprint from the plugin mount.
+
+    The asset is NOT shipped inside the plugin — each deployment authors it
+    once in the UMG Designer and commits the ``.uasset`` to version control.
+    This function only consumes the already-committed asset; if it's missing,
+    you have to go through ``docs/deployment-guide.md`` §1.3 to create it.
 
     Returns
     -------
@@ -59,7 +79,8 @@ def load_widget():
     Raises
     ------
     RuntimeError
-        If the template asset does not exist on disk.
+        If the asset does not exist on disk (i.e. §1.3 has not been completed
+        on this machine, or the committed asset hasn't been synced).
     """
     loaded = None
     try:
@@ -159,14 +180,21 @@ def open_widget() -> None:
 
 
 def delete_widget() -> bool:
-    """Delete the plugin-shipped Blueprint asset from disk.
+    """Delete the deployment-authored Blueprint asset from disk.
 
     .. warning::
-       Normally you should never need to call this — the asset is part of
-       the plugin and is reinstalled on every plugin sync.  If you do
-       delete it (e.g. the asset is corrupt and must be recreated), the
-       next ``open_widget()`` call will fail until the asset is recreated
-       via the steps in ``TEMPLATE_SETUP_INSTRUCTIONS``.
+       Destructive. This asset is NOT shipped with the plugin; it was
+       authored in the UMG Designer per ``docs/deployment-guide.md`` §1.3
+       and committed to git / p4. Deleting it locally means ``open_widget()``
+       will fail until you either:
+
+         - ``git pull`` / ``p4 sync`` the committed asset back from source
+           control, or
+         - Re-author from scratch following §1.3 Step 1 → Step 7 (a full
+           Designer session dragging 41 widgets and compiling)
+
+       Only call this if the local copy is genuinely corrupt and you want
+       to force a clean re-sync.
 
     Returns
     -------
