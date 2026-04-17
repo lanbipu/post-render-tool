@@ -13,8 +13,20 @@ void FPostRenderToolModule::StartupModule()
 {
     UE_LOG(LogTemp, Log, TEXT("[PostRenderTool] Plugin module started."));
 
-    ToolMenusStartupHandle = UToolMenus::RegisterStartupCallback(
-        FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FPostRenderToolModule::RegisterMenus));
+    // RegisterStartupCallback's synchronous fast path was observed not to fire
+    // the delegate on at least one UE 5.7 Editor build under this project's
+    // LoadingPhase=Default, even with IsToolMenuUIEnabled=true and TryGet
+    // returning non-null. Manually dispatch: call RegisterMenus directly when
+    // UToolMenus is ready, otherwise defer via the official callback.
+    if (UToolMenus::IsToolMenuUIEnabled() && UToolMenus::TryGet())
+    {
+        RegisterMenus();
+    }
+    else
+    {
+        ToolMenusStartupHandle = UToolMenus::RegisterStartupCallback(
+            FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FPostRenderToolModule::RegisterMenus));
+    }
 }
 
 void FPostRenderToolModule::ShutdownModule()
@@ -57,9 +69,15 @@ void FPostRenderToolModule::RegisterMenus()
 
     // If the Level Editor toolbar was already built before this plugin loaded
     // (LoadingPhase=Default runs after editor UI init), the new entry sits in
-    // the data layer but the live Slate snapshot ignores it. Force a targeted
-    // rebuild of just this menu's widget; no-op if it hasn't been generated.
-    ToolMenus->RefreshMenuWidget(MenuName);
+    // the data layer but the live Slate snapshot ignores it. RefreshAllWidgets
+    // is the broad hammer — RefreshMenuWidget(MenuName) was tried as a
+    // targeted alternative but observed to miss the generated widget (likely
+    // a key-mismatch in GeneratedMenuWidgets). Stick with the broad call.
+    ToolMenus->RefreshAllWidgets();
+
+    UE_LOG(LogTemp, Log,
+        TEXT("[PostRenderTool] Toolbar button registered at %s (widgets refreshed)."),
+        *MenuName.ToString());
 }
 
 void FPostRenderToolModule::OpenToolWidget()
