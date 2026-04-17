@@ -47,6 +47,8 @@ Copy-Item -Recurse "C:\path\to\post_render_tool" "C:\path\to\MyVPProject\Plugins
 
 **Step 2：用 Python 脚本自动填充 33 + 8 个 BindWidget**（推荐路径）
 
+> **前提：** 本方案通过 C++ `UPostRenderToolBuildHelper`（`BlueprintCallable` UFUNCTION）桥接 Python 到 `UWidgetBlueprint::WidgetTree`，因为 UE 5.7 下 WidgetTree 不被 Python 反射直接暴露。确保 plugin 已包含 `PostRenderToolBuildHelper.cpp` 并完成一次 UBT rebuild（commit 是否包含可用 `git log --oneline Source/PostRenderTool/Public/PostRenderToolBuildHelper.h` 确认）。
+
 打开 Editor 的 Output Log，下面切 **Python** 模式，输入：
 
 ```python
@@ -56,9 +58,9 @@ build_widget_blueprint.build()
 
 脚本会：
 1. Load 空 BP
-2. 在 `WidgetTree.root_widget` 下建 `VerticalBox` 根面板 `RootPanel`
-3. 遍历 33 个必需 binding + 8 个可选 binding，逐个 `construct_widget(UClass, name)` → `add_child`
-4. 调 `BlueprintEditorLibrary.compile_blueprint` + `EditorAssetLibrary.save_asset`
+2. 每个 binding 调用 `unreal.PostRenderToolBuildHelper.ensure_bind_widget(bp, name, class)` —— C++ 层在 `WidgetTree` 中查找同名 widget（递归 PanelWidget/ContentWidget），缺失就 `ConstructWidget` 并 append 到 `VerticalBox` 根面板 `RootPanel`（首次创建）
+3. 调 `unreal.BlueprintEditorLibrary.compile_blueprint` 编译 BP
+4. 调 `unreal.EditorAssetLibrary.save_asset` 保存
 
 成功后日志：
 

@@ -5,6 +5,14 @@ One-shot script that adds the 33 required + 8 optional widgets declared in
 ``BP_PostRenderToolWidget`` Blueprint, so the first-time setup does not require
 dragging 41 widgets by hand in the UMG Designer.
 
+UE 5.7 does NOT expose ``UWidgetBlueprint::WidgetTree`` to Python (no
+``BlueprintReadOnly`` / ``EditAnywhere`` flags → invisible to the reflection
+system). This script therefore delegates all tree mutation to the C++ helper
+``UPostRenderToolBuildHelper::EnsureBindWidget`` (declared in
+``Source/PostRenderTool/Public/PostRenderToolBuildHelper.h``), which is a
+``BlueprintCallable`` UFUNCTION bridging Python to the engine API. Python
+handles iteration, compile and save; C++ handles the single unexposed step.
+
 Usage inside the UE Editor Python console:
 
     from post_render_tool import build_widget_blueprint
@@ -12,26 +20,15 @@ Usage inside the UE Editor Python console:
 
 Safe to re-run after layout polish:
 
-- Existing widgets are detected by name across the **entire** widget tree,
-  including inside ``PanelWidget`` subclasses (VerticalBox, HorizontalBox,
-  CanvasPanel, Overlay, ScrollBox, ...) **and** ``ContentWidget`` subclasses
-  (Border, Button, SizeBox, ScaleBox, NamedSlot, ...). So the common polish
-  patterns — wrapping a TextBlock in a Border for background, or a Button in
-  a SizeBox for fixed width — do not trick the script into re-creating the
-  inner BindWidget on rerun.
-- An existing PanelWidget root is never replaced; new bindings are appended
-  to whatever root the user left behind. Only a completely empty tree gets
-  a fresh ``VerticalBox`` root named ``RootPanel``.
-- If the existing root is NOT a PanelWidget (e.g. a bare SizeBox), the
-  script aborts with a user-actionable error instead of forcing.
-
-Known blind spots (do **not** put BindWidget targets inside these if you
-plan to rerun the script):
-
-- ``UUserWidget`` subobjects nested inside this Blueprint — the script only
-  walks the top-level tree, not user-widget children.
-- Exotic compound widgets like ``UExpandableArea`` (Header / Body slots),
-  ``URichTextBlock`` inline decorators — rare in practice, not covered.
+- Existing widgets are detected by name across the **entire** widget tree
+  (recursive through ``PanelWidget`` children AND ``ContentWidget`` content),
+  so widgets wrapped in Border / SizeBox / nested VerticalBox are recognized
+  and not duplicated.
+- An existing PanelWidget root is never replaced; new bindings append to
+  whatever root the user left behind. Only a completely empty tree gets a
+  fresh ``VerticalBox`` root named ``RootPanel``.
+- If the existing root is NOT a PanelWidget, the helper returns false for
+  every add and logs a warning — no forced overwrite.
 
 Rerun is the right action after:
 
@@ -39,11 +36,9 @@ Rerun is the right action after:
 - C++ adds a new ``UPROPERTY(BindWidget)`` — rerun appends just the new ones
 - User accidentally deleted a widget in the Designer — rerun restores it
 
-Visual layout is intentionally minimal (flat VerticalBox) on first run. After
-the Blueprint compiles green, reorganize the hierarchy, add nesting / padding
-/ labels in the Designer as desired; the BindWidget contract only cares about
-widget names + types, not layout, and rerunning this script will not undo
-your polish.
+Known blind spots (do **not** put BindWidget targets inside these if you plan
+to rerun): ``UUserWidget`` nested subobjects, ``UExpandableArea`` Header/Body,
+``URichTextBlock`` inline decorators.
 """
 
 from __future__ import annotations
@@ -53,7 +48,6 @@ from typing import List, Tuple, Type
 import unreal
 
 WIDGET_BP_PATH = "/PostRenderTool/Blueprints/BP_PostRenderToolWidget"
-ROOT_PANEL_NAME = "RootPanel"
 
 # Mirror of docs/bindwidget-contract.md "Required widgets (33)" table.
 _REQUIRED: List[Tuple[str, Type[unreal.Widget]]] = [
@@ -105,103 +99,8 @@ _OPTIONAL: List[Tuple[str, Type[unreal.Widget]]] = [
 ]
 
 
-def _collect_all_widget_names(widget_tree: unreal.WidgetTree) -> set:
-    """Walk the entire widget tree, collecting every widget's name.
-
-    Handles the two container families commonly used during UMG layout polish:
-
-    - ``UPanelWidget`` subclasses (``VerticalBox``, ``HorizontalBox``,
-      ``CanvasPanel``, ``Overlay``, ``UniformGridPanel``, ``ScrollBox``,
-      ``WrapBox``, ``StackBox``, ...) — multiple children via
-      ``get_all_children()``
-    - ``UContentWidget`` subclasses (``Border``, ``Button``, ``SizeBox``,
-      ``ScaleBox``, ``NamedSlot``, ``BackgroundBlur``, ``InvalidationBox``,
-      ``MenuAnchor``, ``CheckBox``, ...) — a single wrapped child via
-      ``get_content()``. Duck-typed because ``unreal.ContentWidget`` is not
-      uniformly exposed as a Python class across UE 5.x builds.
-
-    Without ``ContentWidget`` traversal, a BindWidget moved into e.g. a
-    ``Border`` for background tint would not be seen on rerun and would be
-    duplicated, breaking the Blueprint compile.
-    """
-    names: set = set()
-    root = widget_tree.root_widget
-    if root is None:
-        return names
-
-    stack: list = [root]
-    while stack:
-        w = stack.pop()
-        if w is None:
-            continue
-        # Record the name if available, but do NOT short-circuit on failure —
-        # a rare get_name() error (half-constructed / mid-GC widget) must still
-        # fall through to child traversal below, otherwise an entire subtree of
-        # already-placed BindWidget targets would be silently invisible to
-        # rerun-deduplication and get duplicated.
-        try:
-            names.add(w.get_name())
-        except Exception:  # noqa: BLE001
-            pass
-
-        if isinstance(w, unreal.PanelWidget):
-            try:
-                for child in w.get_all_children():
-                    if child is not None:
-                        stack.append(child)
-            except Exception:  # noqa: BLE001
-                pass
-            continue
-
-        get_content = getattr(w, "get_content", None)
-        if callable(get_content):
-            try:
-                child = get_content()
-                if child is not None:
-                    stack.append(child)
-            except Exception:  # noqa: BLE001
-                pass
-    return names
-
-
-def _resolve_root_panel(widget_tree: unreal.WidgetTree):
-    """Return a PanelWidget to append missing bindings into.
-
-    - Empty tree → create a ``VerticalBox`` named ``RootPanel`` and install it
-      as the tree root.
-    - Existing root that is a PanelWidget → return it untouched (never
-      replaced, preserves the user's layout work).
-    - Existing root that is NOT a PanelWidget (e.g. a bare SizeBox wrapping a
-      single child) → cannot add children; return None so ``build`` aborts
-      cleanly with a user-actionable message.
-    """
-    root = widget_tree.root_widget
-    if root is None:
-        new_root = widget_tree.construct_widget(unreal.VerticalBox, ROOT_PANEL_NAME)
-        widget_tree.root_widget = new_root
-        unreal.log(f"[build_widget_blueprint] Created VerticalBox root '{ROOT_PANEL_NAME}'.")
-        return new_root
-
-    if isinstance(root, unreal.PanelWidget):
-        return root
-
-    unreal.log_error(
-        f"[build_widget_blueprint] Root widget '{root.get_name()}' is "
-        f"{type(root).__name__}, which is not a PanelWidget. Open the "
-        f"Blueprint and wrap it in a VerticalBox / HorizontalBox / Overlay / "
-        f"CanvasPanel before re-running this script — the script will never "
-        f"overwrite your existing root."
-    )
-    return None
-
-
 def build(include_optional: bool = True) -> bool:
-    """Populate the Blueprint. Returns True if the final compile succeeded.
-
-    Safe to rerun after layout polish: existing widgets are detected by name
-    anywhere in the tree (not just direct root children), and an existing
-    PanelWidget root is never replaced.
-    """
+    """Populate the Blueprint via the C++ helper. Returns True on success."""
     bp = unreal.EditorAssetLibrary.load_asset(WIDGET_BP_PATH)
     if bp is None:
         unreal.log_error(
@@ -212,15 +111,14 @@ def build(include_optional: bool = True) -> bool:
         )
         return False
 
-    widget_tree = bp.get_editor_property("widget_tree")
-    if widget_tree is None:
-        unreal.log_error("[build_widget_blueprint] Could not access widget_tree.")
-        return False
-
-    existing = _collect_all_widget_names(widget_tree)
-
-    root = _resolve_root_panel(widget_tree)
-    if root is None:
+    helper = getattr(unreal, "PostRenderToolBuildHelper", None)
+    if helper is None:
+        unreal.log_error(
+            "[build_widget_blueprint] unreal.PostRenderToolBuildHelper is not "
+            "available — the plugin has not been rebuilt with the C++ helper. "
+            "Close the Editor, delete Plugins/post-render-tool/Binaries and "
+            "Intermediate, reopen the .uproject and rebuild when prompted."
+        )
         return False
 
     targets = list(_REQUIRED)
@@ -229,20 +127,17 @@ def build(include_optional: bool = True) -> bool:
 
     added = 0
     for name, cls in targets:
-        if name in existing:
-            continue
         try:
-            w = widget_tree.construct_widget(cls, name)
+            was_added = helper.ensure_bind_widget(bp, name, cls)
         except Exception as exc:  # noqa: BLE001
             unreal.log_error(
-                f"[build_widget_blueprint] construct_widget failed for "
+                f"[build_widget_blueprint] ensure_bind_widget failed for "
                 f"{name} ({cls.__name__}): {exc}"
             )
             continue
-        root.add_child(w)
-        added += 1
-        unreal.log(f"[build_widget_blueprint]   + {name} ({cls.__name__}) — appended to "
-                   f"'{root.get_name()}'")
+        if was_added:
+            added += 1
+            unreal.log(f"[build_widget_blueprint]   + {name} ({cls.__name__})")
 
     if added == 0:
         unreal.log("[build_widget_blueprint] No new widgets added (all bindings already present).")
@@ -259,6 +154,8 @@ def build(include_optional: bool = True) -> bool:
     if saved:
         unreal.log(f"[build_widget_blueprint] Saved {WIDGET_BP_PATH}.")
     else:
-        unreal.log_warning(f"[build_widget_blueprint] save_asset returned False for {WIDGET_BP_PATH}.")
+        unreal.log_warning(
+            f"[build_widget_blueprint] save_asset returned False for {WIDGET_BP_PATH}."
+        )
 
     return True
