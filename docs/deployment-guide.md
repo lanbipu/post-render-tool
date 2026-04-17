@@ -71,7 +71,15 @@ build_widget_blueprint.build()
 [build_widget_blueprint] Saved /PostRenderTool/Blueprints/BP_PostRenderToolWidget.
 ```
 
-脚本是 **idempotent** 的 —— 再跑一次只会补齐缺失的 binding，已有同名 widget 跳过。以后 C++ 加新 `UPROPERTY(BindWidget)` 时再跑一次即可（见脚本头的注释）。
+脚本 **rerun-safe**：
+- 递归遍历整棵 widget tree 按名字识别已存在的 binding —— 你在 Step 3 把控件搬进嵌套 `VerticalBox` 后再跑也不会重复添加
+- 已有的 root panel（无论是你手动换成的 `ScrollBox` / `Overlay` / 还是脚本最初建的 `RootPanel` `VerticalBox`）**不会被替换**，新 binding 直接追加到当前 root
+- 只有在 root 完全不是 `PanelWidget`（比如 `SizeBox` 这种只能容纳 1 个子）时脚本会 abort 并报错，不会强行覆盖
+
+典型 rerun 场景：
+- C++ 新增 `UPROPERTY(BindWidget)` → 跑一次只追加新 binding
+- Designer 里误删某个 widget → 跑一次自动补回
+- 同事换机器全新 clone → 跑一次初始化
 
 **Step 3：视觉美化（可选）**
 

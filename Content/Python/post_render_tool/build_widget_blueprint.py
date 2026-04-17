@@ -10,14 +10,29 @@ Usage inside the UE Editor Python console:
     from post_render_tool import build_widget_blueprint
     build_widget_blueprint.build()
 
-Safe to re-run — existing widgets (matched by name) are kept untouched. Only
-missing bindings are added, which is also the right behaviour after C++
-UPROPERTY(BindWidget) additions.
+Safe to re-run after layout polish:
 
-Visual layout is intentionally minimal (flat VerticalBox). After the Blueprint
-compiles green, reorganize the hierarchy, add nesting / padding / labels in
-the Designer as desired; the BindWidget contract only cares about widget names
-+ types, not layout.
+- Existing widgets are detected by name across the **entire** widget tree,
+  not just the direct children of the root — so widgets the user moved into
+  nested panels (e.g. during Step 3 visual reorganization) are correctly
+  recognized and never duplicated.
+- An existing PanelWidget root is never replaced; new bindings are appended
+  to whatever root the user left behind. Only a completely empty tree gets
+  a fresh ``VerticalBox`` root named ``RootPanel``.
+- If the existing root is NOT a PanelWidget (e.g. a bare SizeBox), the
+  script aborts with a user-actionable error instead of forcing.
+
+Rerun is the right action after:
+
+- First bootstrap on a new machine (empty BP + nothing added)
+- C++ adds a new ``UPROPERTY(BindWidget)`` — rerun appends just the new ones
+- User accidentally deleted a widget in the Designer — rerun restores it
+
+Visual layout is intentionally minimal (flat VerticalBox) on first run. After
+the Blueprint compiles green, reorganize the hierarchy, add nesting / padding
+/ labels in the Designer as desired; the BindWidget contract only cares about
+widget names + types, not layout, and rerunning this script will not undo
+your polish.
 """
 
 from __future__ import annotations
@@ -79,29 +94,71 @@ _OPTIONAL: List[Tuple[str, Type[unreal.Widget]]] = [
 ]
 
 
-def _existing_child_names(panel: unreal.PanelWidget) -> set:
+def _collect_all_widget_names(widget_tree: unreal.WidgetTree) -> set:
+    """Walk the entire widget tree, collecting every widget's name.
+
+    Recursive so widgets already moved into nested panels (by a human doing
+    Step 3 layout polish) are still recognized on rerun and not duplicated.
+    """
     names: set = set()
-    try:
-        for child in panel.get_all_children():
-            names.add(child.get_name())
-    except Exception as exc:  # noqa: BLE001
-        unreal.log_warning(f"[build_widget_blueprint] get_all_children failed: {exc}")
+    root = widget_tree.root_widget
+    if root is None:
+        return names
+
+    stack: list = [root]
+    while stack:
+        w = stack.pop()
+        try:
+            names.add(w.get_name())
+        except Exception:  # noqa: BLE001
+            pass
+        if isinstance(w, unreal.PanelWidget):
+            try:
+                for child in w.get_all_children():
+                    stack.append(child)
+            except Exception:  # noqa: BLE001
+                pass
     return names
 
 
-def _ensure_root(widget_tree: unreal.WidgetTree) -> unreal.VerticalBox:
+def _resolve_root_panel(widget_tree: unreal.WidgetTree):
+    """Return a PanelWidget to append missing bindings into.
+
+    - Empty tree → create a ``VerticalBox`` named ``RootPanel`` and install it
+      as the tree root.
+    - Existing root that is a PanelWidget → return it untouched (never
+      replaced, preserves the user's layout work).
+    - Existing root that is NOT a PanelWidget (e.g. a bare SizeBox wrapping a
+      single child) → cannot add children; return None so ``build`` aborts
+      cleanly with a user-actionable message.
+    """
     root = widget_tree.root_widget
-    if isinstance(root, unreal.VerticalBox) and root.get_name() == ROOT_PANEL_NAME:
+    if root is None:
+        new_root = widget_tree.construct_widget(unreal.VerticalBox, ROOT_PANEL_NAME)
+        widget_tree.root_widget = new_root
+        unreal.log(f"[build_widget_blueprint] Created VerticalBox root '{ROOT_PANEL_NAME}'.")
+        return new_root
+
+    if isinstance(root, unreal.PanelWidget):
         return root
 
-    new_root = widget_tree.construct_widget(unreal.VerticalBox, ROOT_PANEL_NAME)
-    widget_tree.root_widget = new_root
-    unreal.log(f"[build_widget_blueprint] Created VerticalBox root '{ROOT_PANEL_NAME}'.")
-    return new_root
+    unreal.log_error(
+        f"[build_widget_blueprint] Root widget '{root.get_name()}' is "
+        f"{type(root).__name__}, which is not a PanelWidget. Open the "
+        f"Blueprint and wrap it in a VerticalBox / HorizontalBox / Overlay / "
+        f"CanvasPanel before re-running this script — the script will never "
+        f"overwrite your existing root."
+    )
+    return None
 
 
 def build(include_optional: bool = True) -> bool:
-    """Populate the Blueprint. Returns True if the final compile succeeded."""
+    """Populate the Blueprint. Returns True if the final compile succeeded.
+
+    Safe to rerun after layout polish: existing widgets are detected by name
+    anywhere in the tree (not just direct root children), and an existing
+    PanelWidget root is never replaced.
+    """
     bp = unreal.EditorAssetLibrary.load_asset(WIDGET_BP_PATH)
     if bp is None:
         unreal.log_error(
@@ -117,8 +174,11 @@ def build(include_optional: bool = True) -> bool:
         unreal.log_error("[build_widget_blueprint] Could not access widget_tree.")
         return False
 
-    root = _ensure_root(widget_tree)
-    existing = _existing_child_names(root)
+    existing = _collect_all_widget_names(widget_tree)
+
+    root = _resolve_root_panel(widget_tree)
+    if root is None:
+        return False
 
     targets = list(_REQUIRED)
     if include_optional:
@@ -138,7 +198,8 @@ def build(include_optional: bool = True) -> bool:
             continue
         root.add_child(w)
         added += 1
-        unreal.log(f"[build_widget_blueprint]   + {name} ({cls.__name__})")
+        unreal.log(f"[build_widget_blueprint]   + {name} ({cls.__name__}) — appended to "
+                   f"'{root.get_name()}'")
 
     if added == 0:
         unreal.log("[build_widget_blueprint] No new widgets added (all bindings already present).")
