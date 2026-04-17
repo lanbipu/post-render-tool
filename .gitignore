@@ -1,3 +1,6 @@
 __pycache__/
 *.py[cod]
 *.DS_Store
+
+# Claude Code superpowers worktrees — 不应进入 P4 graph depot
+.claude/worktrees/
