@@ -13,14 +13,25 @@ Usage inside the UE Editor Python console:
 Safe to re-run after layout polish:
 
 - Existing widgets are detected by name across the **entire** widget tree,
-  not just the direct children of the root — so widgets the user moved into
-  nested panels (e.g. during Step 3 visual reorganization) are correctly
-  recognized and never duplicated.
+  including inside ``PanelWidget`` subclasses (VerticalBox, HorizontalBox,
+  CanvasPanel, Overlay, ScrollBox, ...) **and** ``ContentWidget`` subclasses
+  (Border, Button, SizeBox, ScaleBox, NamedSlot, ...). So the common polish
+  patterns — wrapping a TextBlock in a Border for background, or a Button in
+  a SizeBox for fixed width — do not trick the script into re-creating the
+  inner BindWidget on rerun.
 - An existing PanelWidget root is never replaced; new bindings are appended
   to whatever root the user left behind. Only a completely empty tree gets
   a fresh ``VerticalBox`` root named ``RootPanel``.
 - If the existing root is NOT a PanelWidget (e.g. a bare SizeBox), the
   script aborts with a user-actionable error instead of forcing.
+
+Known blind spots (do **not** put BindWidget targets inside these if you
+plan to rerun the script):
+
+- ``UUserWidget`` subobjects nested inside this Blueprint — the script only
+  walks the top-level tree, not user-widget children.
+- Exotic compound widgets like ``UExpandableArea`` (Header / Body slots),
+  ``URichTextBlock`` inline decorators — rare in practice, not covered.
 
 Rerun is the right action after:
 
@@ -97,8 +108,21 @@ _OPTIONAL: List[Tuple[str, Type[unreal.Widget]]] = [
 def _collect_all_widget_names(widget_tree: unreal.WidgetTree) -> set:
     """Walk the entire widget tree, collecting every widget's name.
 
-    Recursive so widgets already moved into nested panels (by a human doing
-    Step 3 layout polish) are still recognized on rerun and not duplicated.
+    Handles the two container families commonly used during UMG layout polish:
+
+    - ``UPanelWidget`` subclasses (``VerticalBox``, ``HorizontalBox``,
+      ``CanvasPanel``, ``Overlay``, ``UniformGridPanel``, ``ScrollBox``,
+      ``WrapBox``, ``StackBox``, ...) — multiple children via
+      ``get_all_children()``
+    - ``UContentWidget`` subclasses (``Border``, ``Button``, ``SizeBox``,
+      ``ScaleBox``, ``NamedSlot``, ``BackgroundBlur``, ``InvalidationBox``,
+      ``MenuAnchor``, ``CheckBox``, ...) — a single wrapped child via
+      ``get_content()``. Duck-typed because ``unreal.ContentWidget`` is not
+      uniformly exposed as a Python class across UE 5.x builds.
+
+    Without ``ContentWidget`` traversal, a BindWidget moved into e.g. a
+    ``Border`` for background tint would not be seen on rerun and would be
+    duplicated, breaking the Blueprint compile.
     """
     names: set = set()
     root = widget_tree.root_widget
@@ -108,13 +132,27 @@ def _collect_all_widget_names(widget_tree: unreal.WidgetTree) -> set:
     stack: list = [root]
     while stack:
         w = stack.pop()
+        if w is None:
+            continue
         try:
             names.add(w.get_name())
         except Exception:  # noqa: BLE001
-            pass
+            continue
+
         if isinstance(w, unreal.PanelWidget):
             try:
                 for child in w.get_all_children():
+                    if child is not None:
+                        stack.append(child)
+            except Exception:  # noqa: BLE001
+                pass
+            continue
+
+        get_content = getattr(w, "get_content", None)
+        if callable(get_content):
+            try:
+                child = get_content()
+                if child is not None:
                     stack.append(child)
             except Exception:  # noqa: BLE001
                 pass
