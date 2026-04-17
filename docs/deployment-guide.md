@@ -50,13 +50,37 @@ plugin 随仓库附带 `Content/Blueprints/BP_PostRenderToolWidget.uasset`——
 
 ### 1.4 启动工具
 
+**方式 A — Toolbar 按钮（推荐）**
+
+Editor 主工具栏右侧会自动出现 **VPTool** 按钮（由 `FPostRenderToolModule::StartupModule` 通过 `UToolMenus` 注册到 `LevelEditor.LevelEditorToolBar.User` 扩展点）。点击按钮直接执行：
+
+```python
+from post_render_tool.widget_builder import open_widget; open_widget()
+```
+
+仅加载并 spawn widget tab — **不做命令行侧的 prerequisite 诊断输出**。如果依赖缺失，widget 里的 Prerequisites 区域仍会显示 MISSING。
+
+> 按钮没出现？插件没启用或 UBT 没重新编译。见第 4 节故障排查。
+
+**方式 B — Python Console（首次验证 / 诊断使用）**
+
 Output Log 切换到 **Python** 模式，输入：
 
 ```python
 import init_post_render_tool
 ```
 
-UI 面板自动弹出，Prerequisites 区域显示所有插件状态。如有 MISSING（Python Editor Script Plugin / Editor Scripting Utilities / Camera Calibration），去 **Edit → Plugins** 启用，然后重启编辑器。
+这会调用 `launch_tool()`：**先**把 `get_prerequisite_status()` 的结果逐项 log 到 Output Log（OK / MISSING + 修复提示），**再**调用 `open_widget()`；若 widget 依赖（`EditorAssetLibrary` / `EditorUtilitySubsystem`）缺失，则打印诊断信息、不打开 UI。首次部署、排查"按钮点了没反应"时用这条路径。
+
+> **两条路径的差异**：toolbar 按钮只"开窗"；Python Console 入口额外做 prerequisite 日志诊断 + 依赖缺失 fallback。运行态上两者最终都调到 `open_widget()`，但日志输出和失败处理路径不同。
+
+> **Prerequisites**：`ui_interface._PREREQUISITE_CHECKS` 会检查 6 项：Python Editor Script Plugin、Editor Scripting Utilities、Camera Calibration、CineCameraActor、LevelSequence、EditorUtilitySubsystem。
+>
+> - **自动启用（随 `PostRenderTool.uplugin` 依赖级联）**：`PythonScriptPlugin`、`EditorScriptingUtilities`
+> - **典型内建（UE 5.7 标准 Editor build 里可用）**：`CineCameraActor`、`EditorUtilitySubsystem`
+> - **可能需要手动启用**：**Camera Calibration**（提供 `LensFile`）、**Level Sequence Editor**（提供 `LevelSequence`，多数项目默认开启但并非保证）
+>
+> UI 里 Prerequisites 区域会列出所有项，MISSING 的按各自 hint 去 **Edit → Plugins** 启用并重启。
 
 ---
 
@@ -115,15 +139,11 @@ Results 区域显示验证报告（FOV 误差、异常帧检测等）。
 
 ## 3. 日常使用
 
-每次打开 UE 项目后启动工具：
+每次打开 UE 项目后：点工具栏 **VPTool** 按钮 → UI 面板弹出 → 加载 `BP_PostRenderToolWidget`、spawn 编辑器 tab、绑定 Python callback。
 
-```python
-import init_post_render_tool
-```
+**面板意外关闭时：** 再次点击 **VPTool** 按钮即可重开。
 
-这会加载 plugin 里的 `BP_PostRenderToolWidget`，spawn 编辑器 tab，绑定 Python callback。
-
-**面板意外关闭时：** 再次执行 `import init_post_render_tool` 即可重新打开。
+> 在 Python Console 重开要用 `from post_render_tool.widget_builder import open_widget; open_widget()`（toolbar 按钮执行的正是这行）。**不要**第二次敲 `import init_post_render_tool` — Python 会返回缓存的模块而不重新执行 `launch_tool()`。
 
 **修改 Python 代码后热重载（无需重启 UE）：**
 ```python
@@ -137,6 +157,8 @@ wb.rebuild_widget()
 > **注意：** Blueprint 资产 `BP_PostRenderToolWidget` 随 plugin 一起提交到版本控制，团队成员 `git pull` / `p4 sync` 就能拿到同一份。不要在 Content Browser 里随便删除，否则要按 1.3 重新创建。
 >
 > **C++ UPROPERTY 变更**（在 `PostRenderToolWidget.h` 里增/删/改 BindWidget 属性）**不支持 Live Coding**，必须关闭 Editor 完整重编 plugin，然后重新 compile Blueprint。
+>
+> **C++ 模块启动逻辑变更**（`PostRenderToolModule.cpp` 的 `StartupModule` / toolbar 注册）同样**不支持 Live Coding**。新增或修改 toolbar 按钮需关闭 Editor 完整 rebuild plugin 后再启动。
 
 ---
 
@@ -165,7 +187,9 @@ delete_widget()    # 销毁性：删除 plugin-shipped Blueprint 资产——正
 | Plugins 窗口里看不到 "VP Post-Render Tool" | plugin 目录没放在 `<UEProject>/Plugins/` 下 | 检查路径，确认 `PostRenderTool.uplugin` 存在 |
 | UE 启动时提示 "module missing / rebuild?" | 首次编译未完成 | 点 Yes，等 UBT 编译 |
 | UBT 编译失败 | 缺 C++ 工具链 | 装 Xcode（macOS）或 Visual Studio 2022（Windows），重试 |
-| Prerequisites 显示 MISSING | 插件未启用 | Edit → Plugins 启用 Python / Editor Scripting / Camera Calibration，重启编辑器 |
+| 工具栏上看不到 **VPTool** 按钮 | plugin 未启用 / UBT 未 rebuild / Editor 未重启 | 确认 plugin 绿色启用，完全关闭 Editor 后触发一次 rebuild，重开 |
+| 点 **VPTool** 按钮无反应，日志提示 `Python plugin unavailable` | `PythonScriptPlugin` 未加载 | 确认 `.uplugin` 里 `PythonScriptPlugin` enabled，或在 Edit → Plugins 手动启用并重启 |
+| Prerequisites 显示 MISSING | 对应插件未启用 / 未内建 | 按各项 hint 去 Edit → Plugins 启用并重启（常见手动项：**Camera Calibration** → `LensFile`；**Level Sequence Editor** → `LevelSequence`）。`PythonScriptPlugin` / `EditorScriptingUtilities` 已随 PostRenderTool 通过 `.uplugin` 自动启用，若仍显示 MISSING 说明依赖未生效，检查 plugin 版本与完整性 |
 | `ModuleNotFoundError: post_render_tool` | plugin 未启用或 Python path 未挂载 | 确认 plugin 在 Plugins 窗口里是绿色的，重启编辑器 |
 | Blueprint compile 报 `A required widget binding "X" of type Y was not found` | Blueprint 里缺少对应控件或类型不符 | 在 Designer 里添加/改类型，按 `docs/bindwidget-contract.md` 对照 |
 | `'btn_browse' UPROPERTY is None` | Blueprint 没有用当前 C++ class 重新 compile | 打开 `BP_PostRenderToolWidget`，Compile，然后重启工具 |

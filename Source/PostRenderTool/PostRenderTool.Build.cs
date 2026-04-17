@@ -29,6 +29,7 @@ public class PostRenderTool : ModuleRules
                 "UMGEditor",
                 "EditorSubsystem",
                 "ToolMenus",
+                "PythonScriptPlugin",
             }
         );
     }

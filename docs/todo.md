@@ -16,11 +16,12 @@
 
 ### 实现任务（方案 C）
 
-- [ ] C++ `StartupModule()` 注册 Level Editor toolbar extension
-- [ ] Toolbar 按钮点击回调：调用 `IPythonScriptPlugin::ExecPythonCommand("from post_render_tool.widget_builder import open_widget; open_widget()")`
-- [ ] `PostRenderTool.Build.cs` 添加依赖：`PythonScriptPlugin`、`LevelEditor`、`Slate`、`SlateCore`
-- [ ] 按钮图标（可先用文字 label "VPTool"，后续替换自定义 icon）
-- [ ] 验证：关闭 UI 后再次点击工具栏按钮能正常重开
+- [x] C++ `StartupModule()` 注册 Level Editor toolbar extension（`UToolMenus` + `RegisterStartupCallback`，扩展点 `LevelEditor.LevelEditorToolBar.User`）
+- [x] Toolbar 按钮点击回调：`IPythonScriptPlugin::ExecPythonCommand("from post_render_tool.widget_builder import open_widget; open_widget()")`
+- [x] `PostRenderTool.Build.cs` 添加依赖：`PythonScriptPlugin`（`ToolMenus`/`Slate`/`SlateCore` 已在）
+- [x] `PostRenderTool.uplugin` 添加插件依赖：`PythonScriptPlugin` + `EditorScriptingUtilities`
+- [x] 按钮 label = "VPTool"，icon 暂用空（后续替换自定义 icon）
+- [ ] 验证：UE 重启并 rebuild 后按钮出现；关闭 UI 后再次点击能重开
 
 ### 注意事项
 
