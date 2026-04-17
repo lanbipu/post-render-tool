@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VP Post-Render Tool — Codebase Dossier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #f2ece0;
+    --ink-muted: #a39b8a;
+    --ink-faint: #635c4f;
+    --paper: #0b0a08;
+    --paper-2: #100e0b;
+    --surface: #181512;
+    --surface-2: #221e18;
+    --surface-3: #2a251d;
+    --rule: #2d2820;
+    --rule-strong: #4a4236;
+    --accent: #e8704d;
+    --accent-soft: #f2a287;
+    --accent-glow: rgba(232, 112, 77, 0.14);
+    --ok: #7fb069;
+    --warn: #e8a23d;
+    --serif: 'Fraunces', 'Noto Serif CJK SC', Georgia, serif;
+    --sans: 'IBM Plex Sans', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', 'Menlo', 'SF Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 400;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* --------- Grain overlay --------- */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.85 0 0 0 0 0.7 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  /* Soft amber gradient wash */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(900px 700px at 88% -5%, rgba(232, 112, 77, 0.06), transparent 60%),
+      radial-gradient(1400px 900px at -10% 110%, rgba(60, 40, 20, 0.35), transparent 60%);
+  }
+
+  ::selection { background: var(--accent); color: var(--paper); }
+
+  a { color: inherit; }
+
+  /* --------- TOC (fixed left) --------- */
+  .toc {
+    position: fixed;
+    top: 50%;
+    right: 32px;
+    transform: translateY(-50%);
+    z-index: 60;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 18px 16px 18px 14px;
+    border-right: 1px solid var(--rule);
+    backdrop-filter: blur(6px);
+    text-align: right;
+  }
+  .toc a {
+    display: block;
+    padding: 6px 0;
+    text-decoration: none;
+    color: var(--ink-faint);
+    position: relative;
+    transition: color .2s, padding .2s;
+  }
+  .toc a::before {
+    content: attr(data-num);
+    display: inline-block;
+    width: 28px;
+    color: var(--ink-faint);
+    font-weight: 500;
+    margin-right: 6px;
+    text-align: left;
+  }
+  .toc a:hover { color: var(--ink); }
+  .toc a.active { color: var(--accent); padding-right: 8px; }
+  .toc a.active::before { color: var(--accent); }
+  @media (max-width: 1200px) { .toc { display: none; } }
+
+  /* --------- Container --------- */
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 56px;
+  }
+  @media (max-width: 760px) { .wrap { padding: 0 24px; } }
+
+  /* --------- Hero --------- */
+  .hero {
+    min-height: 100vh;
+    padding: 80px 0 60px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .folio {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--ink-muted);
+    margin-bottom: 90px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .folio .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .kicker::before, .kicker::after {
+    content: "";
+    display: inline-block;
+    width: 48px;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+  .kicker::after { flex: 1; opacity: 0.3; max-width: 220px; }
+
+  h1.title {
+    font-family: var(--serif);
+    font-weight: 360;
+    font-size: clamp(54px, 8.5vw, 128px);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    margin-bottom: 24px;
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+  }
+  h1.title em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--accent);
+    font-variation-settings: "opsz" 144, "SOFT" 80, "WONK" 1;
+  }
+  .lede {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(18px, 2vw, 22px);
+    line-height: 1.55;
+    color: var(--ink-muted);
+    max-width: 64ch;
+    margin-top: 28px;
+    font-variation-settings: "opsz" 24;
+  }
+  .hero-meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--rule);
+  }
+  @media (max-width: 700px) { .hero-meta { grid-template-columns: repeat(2, 1fr); gap: 24px; } }
+  .meta-item { font-family: var(--mono); font-size: 12px; }
+  .meta-item .label {
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    display: block;
+    margin-bottom: 8px;
+    font-size: 10px;
+  }
+  .meta-item .val {
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 13px;
+    word-break: break-all;
+  }
+  .meta-item .val.link { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent); padding-bottom: 1px; }
+  .meta-item .val.link:hover { color: var(--accent-soft); }
+
+  /* --------- Section scaffolding --------- */
+  section.chapter {
+    padding: 120px 0 80px;
+    position: relative;
+  }
+  section.chapter + section.chapter { border-top: 1px solid var(--rule); }
+  .ch-head {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 48px;
+    margin-bottom: 56px;
+    align-items: baseline;
+  }
+  @media (max-width: 760px) { .ch-head { grid-template-columns: 1fr; gap: 16px; } }
+  .ch-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    padding-top: 10px;
+    border-top: 1px solid var(--accent);
+    display: inline-block;
+    width: fit-content;
+  }
+  .ch-title {
+    font-family: var(--serif);
+    font-weight: 320;
+    font-size: clamp(36px, 5vw, 62px);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    font-variation-settings: "opsz" 96;
+  }
+  .ch-title em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 300;
+    font-variation-settings: "opsz" 96, "WONK" 1;
+  }
+  .ch-subtitle {
+    margin-top: 14px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 19px;
+    color: var(--ink-muted);
+    max-width: 60ch;
+  }
+
+  /* --------- Prose --------- */
+  .prose {
+    max-width: 72ch;
+    font-size: 15.5px;
+    line-height: 1.75;
+    color: var(--ink);
+  }
+  .prose.wide { max-width: none; }
+  .prose p { margin: 0 0 18px; }
+  .prose strong { color: var(--ink); font-weight: 600; }
+  .prose em { font-family: var(--serif); font-style: italic; color: var(--accent-soft); font-weight: 400; }
+  .prose code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--surface);
+    color: var(--accent-soft);
+    padding: 2px 6px;
+    border-radius: 2px;
+    border: 1px solid var(--rule);
+  }
+  .prose a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+
+  .dropcap::first-letter {
+    font-family: var(--serif);
+    font-weight: 320;
+    font-style: italic;
+    float: left;
+    font-size: 5.2em;
+    line-height: 0.85;
+    margin: 6px 10px -4px 0;
+    color: var(--accent);
+    font-variation-settings: "opsz" 144, "WONK" 1;
+  }
+
+  /* --------- Two-column layout helper --------- */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; gap: 40px; } }
+
+  .aside-box {
+    padding: 24px 28px;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--accent);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+  }
+  .aside-box .tag {
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-size: 10px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  /* --------- PANEL REPRODUCTION --------- */
+  .panel-stage {
+    display: grid;
+    grid-template-columns: minmax(340px, 400px) 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (max-width: 1000px) { .panel-stage { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(232,112,77,0.06);
+    position: sticky;
+    top: 24px;
+  }
+  .panel .psec {
+    background: #242424;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color .25s, background .25s, transform .2s;
+  }
+  .panel .psec:hover { border-color: var(--accent); background: #282420; }
+  .panel .psec.active {
+    border-color: var(--accent);
+    background: #2a241e;
+    box-shadow: 0 0 0 1px var(--accent) inset, 0 0 30px -8px var(--accent-glow);
+  }
+  .panel .psec-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: #e0e0e0;
+    justify-content: space-between;
+  }
+  .panel .psec-head .left { display: flex; align-items: center; gap: 8px; }
+  .panel .bar {
+    width: 3px;
+    height: 13px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+  .panel .chip-ok { color: #7fb069; font-size: 10.5px; font-weight: 400; }
+  .panel .stats { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; }
+  .panel .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .panel .btn {
+    background: #2e2e2e;
+    border: 1px solid #444;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .panel .btn:hover { border-color: var(--accent); color: var(--accent); background: #2a241e; }
+  .panel .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    padding: 10px 20px;
+    font-size: 12px;
+    width: 100%;
+    text-align: center;
+    display: block;
+  }
+  .panel .btn.primary:hover { background: #ef7f5c; color: #fff; }
+  .panel .spn {
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    padding: 5px 8px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 86px;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+  .panel .spn .arrows { display: flex; flex-direction: column; color: #808080; font-size: 7px; line-height: 1; }
+  .panel .cmb {
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    padding: 5px 10px;
+    border-radius: 3px;
+    display: flex;
+    justify-content: space-between;
+    min-width: 76px;
+    font-size: 11px;
+    gap: 8px;
+  }
+  .panel .cmb .caret { color: #808080; font-size: 10px; }
+  .panel .label { color: #a8a8a8; font-size: 11px; }
+  .panel .dim { color: #808080; font-size: 10.5px; }
+  .panel .chev { color: #808080; font-size: 11px; }
+  .panel .pair-box {
+    background: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    padding: 10px;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .panel .pair-box .sep { height: 1px; background: #2e2e2e; width: 100%; margin: 2px 0; }
+  .panel .tag-src { color: #808080; font-size: 9.5px; font-weight: 500; letter-spacing: 0.08em; }
+  .panel .tag-dst { color: var(--accent); font-size: 9.5px; font-weight: 500; letter-spacing: 0.08em; }
+  .panel .tag-sub { color: var(--accent); font-size: 10.5px; font-weight: 500; }
+  .panel .results {
+    background: #141414;
+    border: 1px solid #2e2e2e;
+    padding: 10px;
+    height: 150px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #a8a8a8;
+    overflow: auto;
+    font-family: var(--mono);
+    line-height: 1.5;
+  }
+  .panel .path-disp {
+    flex: 1;
+    color: #a8a8a8;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .panel .psec.collapsed .stats,
+  .panel .psec.collapsed .row,
+  .panel .psec.collapsed .pair-box,
+  .panel .psec.collapsed .btn,
+  .panel .psec.collapsed .results,
+  .panel .psec.collapsed .tag-sub,
+  .panel .psec.collapsed .rot-rows,
+  .panel .psec.collapsed .pos-rows,
+  .panel .psec.collapsed .prereq-body,
+  .panel .psec.collapsed .prereq-footer { display: none; }
+
+  /* Section 1 · Prerequisites expandable */
+  .panel .chev-toggle {
+    display: inline-block;
+    width: 12px;
+    font-size: 11px;
+    color: #808080;
+    line-height: 1;
+    user-select: none;
+    transition: color .2s, transform .25s;
+  }
+  .panel .chev-toggle::before { content: "▼"; }
+  .panel .psec.collapsed .chev-toggle::before { content: "▶"; }
+  .panel .psec[data-section="1"]:hover .chev-toggle { color: var(--accent); }
+
+  .panel .prereq-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 2px;
+    animation: prereq-fade .35s ease;
+  }
+  .panel .prereq-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #e0e0e0;
+    font-family: var(--mono);
+  }
+  .panel .prereq-dot {
+    width: 8px;
+    height: 8px;
+    background: #4caf50;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.35);
+    flex-shrink: 0;
+  }
+  .panel .prereq-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 4px;
+    animation: prereq-fade .35s ease;
+  }
+  .panel .last-checked {
+    flex: 1;
+    color: #808080;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  @keyframes prereq-fade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* --------- Section detail panel --------- */
+  .section-detail {
+    min-height: 100%;
+    padding-top: 12px;
+  }
+  .sd-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .sd-num::before {
+    content: "§";
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--accent);
+  }
+  .sd-title {
+    font-family: var(--serif);
+    font-weight: 340;
+    font-size: 44px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    font-variation-settings: "opsz" 96;
+  }
+  .sd-title em { font-style: italic; color: var(--accent); font-variation-settings: "opsz" 96, "WONK" 1; }
+  .sd-figma {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-bottom: 24px;
+    letter-spacing: 0.04em;
+  }
+  .sd-figma code { color: var(--accent-soft); }
+  .sd-body {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    margin-bottom: 28px;
+  }
+  .sd-body strong { color: var(--ink); }
+
+  table.contract {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 12px;
+    border-collapse: collapse;
+    margin: 0 0 28px;
+  }
+  table.contract th {
+    text-align: left;
+    padding: 10px 12px 8px;
+    color: var(--ink-faint);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    border-bottom: 1px solid var(--rule-strong);
+    background: transparent;
+  }
+  table.contract td {
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  table.contract tr:hover td { background: var(--surface); }
+  table.contract .ctrl-name { color: var(--accent-soft); font-weight: 500; }
+  table.contract .type { color: var(--ink-muted); }
+  table.contract .req { color: var(--ok); font-size: 10px; letter-spacing: 0.1em; }
+  table.contract .opt { color: var(--warn); font-size: 10px; letter-spacing: 0.1em; }
+  table.contract .handler { color: var(--ink); }
+  table.contract .handler code { color: var(--accent-soft); background: var(--surface); padding: 1px 5px; border-radius: 2px; font-size: 11px; }
+
+  .design-principle {
+    margin-top: 24px;
+    padding: 24px 28px;
+    border-left: 2px solid var(--accent);
+    background: linear-gradient(180deg, var(--surface), var(--paper-2));
+    border-radius: 0 4px 4px 0;
+  }
+  .design-principle .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .design-principle .text {
+    font-family: var(--serif);
+    font-size: 16.5px;
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1.65;
+    color: var(--ink);
+    font-variation-settings: "opsz" 24;
+  }
+
+  /* --------- Diagrams --------- */
+  .ascii-block {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 24px;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 28px 0;
+    border-radius: 4px;
+  }
+
+  .flow-diagram {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin: 40px 0;
+  }
+  @media (max-width: 900px) { .flow-diagram { grid-template-columns: repeat(2, 1fr); } }
+  .flow-step {
+    padding: 20px 18px;
+    background: linear-gradient(180deg, var(--surface), var(--paper-2));
+    border: 1px solid var(--rule);
+    position: relative;
+    transition: border-color .3s, transform .3s;
+  }
+  .flow-step:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .flow-step .num {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--accent);
+    font-weight: 300;
+    margin-bottom: 12px;
+    font-variation-settings: "opsz" 144, "WONK" 1;
+  }
+  .flow-step .name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .flow-step .desc {
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+  }
+  .flow-step::after {
+    content: "→";
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 18px;
+    background: var(--paper);
+    padding: 0 4px;
+    z-index: 2;
+  }
+  .flow-step:last-child::after { display: none; }
+  @media (max-width: 900px) { .flow-step::after { display: none; } }
+
+  /* --------- Module cards --------- */
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+  .module-card {
+    padding: 28px 28px 24px;
+    background: var(--paper-2);
+    transition: background .3s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .module-card:hover { background: var(--surface); }
+  .module-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 0;
+    background: var(--accent);
+    transition: height .35s ease;
+  }
+  .module-card:hover::before { height: 100%; }
+  .module-card .mod-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    letter-spacing: 0.18em;
+    margin-bottom: 10px;
+  }
+  .module-card .mod-name {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--accent-soft);
+    margin-bottom: 14px;
+  }
+  .module-card .mod-role {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 340;
+    line-height: 1.4;
+    color: var(--ink);
+    margin-bottom: 14px;
+    font-variation-settings: "opsz" 24;
+  }
+  .module-card .mod-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .module-card .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border: 1px solid var(--rule-strong);
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .module-card .tag.ue { border-color: #4a3a22; color: var(--warn); }
+  .module-card .tag.pure { border-color: #2d5a3a; color: var(--ok); }
+
+  /* --------- Trace block --------- */
+  .trace-block {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    padding: 28px 32px;
+    color: var(--ink-muted);
+    white-space: pre;
+    overflow-x: auto;
+    margin: 24px 0;
+    border-radius: 4px;
+  }
+  .trace-block .step {
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .trace-block .file {
+    color: var(--accent-soft);
+  }
+  .trace-block .comment {
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  /* --------- Callouts --------- */
+  .callout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 32px 0;
+  }
+  .callout {
+    padding: 28px 26px;
+    border: 1px solid var(--rule);
+    background: linear-gradient(180deg, var(--surface), var(--paper-2));
+    position: relative;
+    overflow: hidden;
+  }
+  .callout .icon {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 52px;
+    line-height: 0.9;
+    color: var(--accent);
+    font-weight: 300;
+    margin-bottom: 14px;
+    font-variation-settings: "opsz" 144, "WONK" 1;
+  }
+  .callout .ctitle {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 340;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+    font-variation-settings: "opsz" 48;
+  }
+  .callout .ctext {
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.65;
+  }
+  .callout .ctext code {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent-soft);
+  }
+
+  /* --------- Stat strip --------- */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 40px 0 8px;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 700px) { .stat-strip { grid-template-columns: repeat(2, 1fr); } }
+  .stat-cell {
+    padding: 24px 20px;
+    border-right: 1px solid var(--rule);
+  }
+  .stat-cell:last-child { border-right: none; }
+  @media (max-width: 700px) {
+    .stat-cell:nth-child(2n) { border-right: none; }
+    .stat-cell:nth-child(-n+2) { border-bottom: 1px solid var(--rule); }
+  }
+  .stat-cell .num {
+    font-family: var(--serif);
+    font-size: 54px;
+    font-weight: 320;
+    line-height: 1;
+    font-variation-settings: "opsz" 144;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .stat-cell .num em {
+    font-style: italic;
+    color: var(--accent);
+    font-variation-settings: "opsz" 144, "WONK" 1;
+  }
+  .stat-cell .lbl {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-faint);
+  }
+
+  /* --------- Matrix table --------- */
+  .matrix-wrap { overflow-x: auto; margin: 32px 0; }
+  table.matrix {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  table.matrix thead th {
+    padding: 14px 14px;
+    text-align: left;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 10px;
+    color: var(--ink-faint);
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--rule-strong);
+    border-top: 1px solid var(--rule-strong);
+  }
+  table.matrix td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: middle;
+  }
+  table.matrix tr:hover td { background: var(--surface); }
+  table.matrix .section-col {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  table.matrix .ctrl {
+    color: var(--accent-soft);
+    font-weight: 500;
+  }
+  table.matrix .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+  }
+  table.matrix .pill.req { color: var(--ok); border-color: #2d5a3a; }
+  table.matrix .pill.opt { color: var(--warn); border-color: #4a3a22; }
+
+  /* --------- Footer --------- */
+  footer.colophon {
+    margin-top: 120px;
+    padding: 64px 0 48px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+  footer .cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    margin-bottom: 48px;
+  }
+  @media (max-width: 700px) { footer .cols { grid-template-columns: repeat(2, 1fr); } }
+  footer .col h4 {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--ink-muted);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  footer .col a, footer .col span {
+    display: block;
+    padding: 5px 0;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 12.5px;
+    transition: color .2s;
+  }
+  footer .col a:hover { color: var(--accent); }
+  footer .bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 10.5px;
+  }
+  footer .mono-logo {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 20px;
+    font-weight: 320;
+    letter-spacing: 0;
+    color: var(--accent);
+    text-transform: none;
+    font-variation-settings: "opsz" 72, "WONK" 1;
+  }
+
+  /* --------- Reveal animation --------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+
+  /* Edge marks — moved to top-left since TOC occupies the right rail */
+  .edge-marks {
+    position: fixed;
+    top: 20px; left: 32px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    z-index: 60;
+  }
+  @media (max-width: 760px) { .edge-marks { display: none; } }
+
+  /* --------- Horizontal rule editorial --------- */
+  .editor-hr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 48px 0;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 26px;
+    color: var(--accent);
+    font-variation-settings: "opsz" 96, "WONK" 1;
+  }
+  .editor-hr::before, .editor-hr::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+  .editor-hr::before { max-width: 140px; }
+  .editor-hr::after { max-width: 140px; }
+
+  ul.bullet-list {
+    list-style: none;
+    margin: 20px 0;
+  }
+  ul.bullet-list li {
+    padding: 10px 0 10px 28px;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  ul.bullet-list li::before {
+    content: "→";
+    position: absolute;
+    left: 4px;
+    top: 10px;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  ul.bullet-list li strong { color: var(--accent-soft); font-family: var(--mono); font-weight: 500; font-size: 13px; }
+
+</style>
+</head>
+<body>
+
+<nav class="toc" id="toc">
+  <a href="#intro" data-num="00"  data-target="intro">Intro</a>
+  <a href="#ui"    data-num="I."  data-target="ui">Figma Panel</a>
+  <a href="#matrix" data-num="II." data-target="matrix">Contract</a>
+  <a href="#flow"  data-num="III." data-target="flow">Pipeline</a>
+  <a href="#modules" data-num="IV." data-target="modules">Modules</a>
+  <a href="#trace" data-num="V."  data-target="trace">Trace</a>
+  <a href="#studies" data-num="VI." data-target="studies">Studies</a>
+</nav>
+
+<div class="edge-marks">vp · post-render · 2026</div>
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<header class="hero wrap" id="intro">
+  <div class="folio">
+    <span><span class="dot"></span>Codebase Dossier · Ed. IV</span>
+    <span>2026 · April · 17</span>
+  </div>
+
+  <div class="kicker">VP · UE 5.7 Plugin · Technical Walkthrough</div>
+
+  <h1 class="title">Post&#8209;Render<br>Tool<em>,</em> by the page.</h1>
+
+  <p class="lede">
+    一份面向工程师的导览小册。把 Disguise Designer 录下的 <em>CSV Dense</em>
+    拖回虚幻引擎，变成 CineCameraActor、LensFile 与 LevelSequence——
+    这本册子把 Figma 面板上的每一个按钮、每一根状态线都对回 Python / C++ / Blueprint 的具体行号。
+  </p>
+
+  <div class="hero-meta">
+    <div class="meta-item">
+      <span class="label">Commit</span>
+      <span class="val">7aeff28 · main</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">Format</span>
+      <span class="val">UE 5.7 Editor Utility Widget</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">Contract</span>
+      <span class="val">33 required &middot; 8 optional · 41 total</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">Figma Source</span>
+      <a class="val link" target="_blank" rel="noopener"
+         href="https://www.figma.com/design/H6WkczRHFmCVuPmTFahZBN/VP-Post-Render-Tool-%E2%80%94-UE-Panel-Design?node-id=1-2">node 1:2 ↗</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     I · FIGMA PANEL (interactive)
+     ============================================================ -->
+<section class="chapter wrap" id="ui">
+  <div class="ch-head reveal">
+    <span class="ch-num">Ch. I · UI → Code</span>
+    <h2 class="ch-title">Six sections, one linear <em>workflow.</em></h2>
+  </div>
+  <p class="ch-subtitle reveal" style="max-width: 62ch; margin-left:168px; margin-top:-42px; margin-bottom: 64px;">
+    这块面板自上而下就是一次完整的现场回流动作——<em>Prereq ✓ → 选 CSV → 看摘要 → 验轴映射 → Import → 查报告</em>。
+    点击左侧任意一个分节，右侧展开它的 BindWidget 契约与 Python 句柄。
+  </p>
+
+  <div class="panel-stage reveal">
+
+    <div class="panel" id="panel">
+
+      <!-- Section 1: Prerequisites (click to toggle ▶ collapsed ↔ ▼ expanded) -->
+      <div class="psec collapsed" data-section="1">
+        <div class="psec-head">
+          <div class="left">
+            <span class="chev-toggle" aria-hidden="true"></span>
+            <span class="bar"></span>
+            <span>Prerequisites</span>
+          </div>
+          <span class="chip-ok">6 / 6 OK</span>
+        </div>
+        <div class="prereq-body">
+          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: Python Editor Script Plugin</span></div>
+          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: Editor Scripting Utilities</span></div>
+          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: Camera Calibration</span></div>
+          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: CineCameraActor</span></div>
+          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: LevelSequence</span></div>
+          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: EditorUtilitySubsystem</span></div>
+        </div>
+        <div class="prereq-footer">
+          <div class="btn" data-action="recheck">Recheck</div>
+          <span class="last-checked">Last checked: 2026-04-17 10:23</span>
+        </div>
+      </div>
+
+      <!-- Section 2: CSV File -->
+      <div class="psec" data-section="2">
+        <div class="psec-head">
+          <div class="left"><span class="bar"></span><span>CSV File</span></div>
+        </div>
+        <div class="row">
+          <div class="btn">Browse...</div>
+          <div class="path-disp">E:/d3 Projects/…/shot_1_take_5_dense.csv</div>
+        </div>
+      </div>
+
+      <!-- Section 3: CSV Preview -->
+      <div class="psec" data-section="3">
+        <div class="psec-head">
+          <div class="left"><span class="bar"></span><span>CSV Preview</span></div>
+        </div>
+        <div class="stats">
+          <div>Frames: 974</div>
+          <div>Focal Length: 30.30 – 30.30 mm</div>
+          <div>Timecode: 00:00:30.00 → 00:00:30.00</div>
+          <div>Sensor Width: 35.00 mm</div>
+        </div>
+        <div class="row">
+          <span class="label">FPS</span>
+          <div class="spn"><span>24.0</span><span class="arrows">▲<br>▼</span></div>
+          <span class="dim">Auto: 23.976 fps</span>
+        </div>
+      </div>
+
+      <!-- Section 4: Coordinate Verification -->
+      <div class="psec" data-section="4">
+        <div class="psec-head">
+          <div class="left"><span class="bar"></span><span>Coordinate Verification</span></div>
+        </div>
+        <div class="row">
+          <span class="label">Frame</span>
+          <div class="spn"><span>0</span><span class="arrows">▲<br>▼</span></div>
+          <span class="dim">0 / 973</span>
+        </div>
+        <div class="pair-box">
+          <span class="tag-src">DESIGNER (source)</span>
+          <span>Pos&nbsp;&nbsp;(1.2345, -0.5678, 2.3456) m</span>
+          <span>Rot&nbsp;&nbsp;(12.34, -56.78, 90.12)°</span>
+          <div class="sep"></div>
+          <span class="tag-dst">→ UE (result)</span>
+          <span>Pos&nbsp;&nbsp;(234.6, 123.5, -56.8) cm</span>
+          <span>Rot&nbsp;&nbsp;P=-12.34&nbsp;&nbsp;Y=56.78&nbsp;&nbsp;R=90.12°</span>
+        </div>
+        <div class="btn">Spawn Test Camera</div>
+      </div>
+
+      <!-- Section 5: Axis Mapping -->
+      <div class="psec" data-section="5">
+        <div class="psec-head">
+          <div class="left"><span class="bar"></span><span>Axis Mapping</span></div>
+        </div>
+        <span class="tag-sub">POSITION&nbsp;&nbsp;(m → cm)</span>
+        <div class="pos-rows" style="display:flex; flex-direction:column; gap:6px;">
+          <div class="row">
+            <span class="label" style="min-width:30px;">UE.X</span>
+            <span class="chev">←</span>
+            <div class="cmb"><span>Z (2)</span><span class="caret">▾</span></div>
+            <span class="dim">×</span>
+            <div class="spn"><span>-100.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+          <div class="row">
+            <span class="label" style="min-width:30px;">UE.Y</span>
+            <span class="chev">←</span>
+            <div class="cmb"><span>X (0)</span><span class="caret">▾</span></div>
+            <span class="dim">×</span>
+            <div class="spn"><span>100.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+          <div class="row">
+            <span class="label" style="min-width:30px;">UE.Z</span>
+            <span class="chev">←</span>
+            <div class="cmb"><span>Y (1)</span><span class="caret">▾</span></div>
+            <span class="dim">×</span>
+            <div class="spn"><span>100.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+        </div>
+        <span class="tag-sub">ROTATION&nbsp;&nbsp;(deg)</span>
+        <div class="rot-rows" style="display:flex; flex-direction:column; gap:6px;">
+          <div class="row">
+            <span class="label" style="min-width:30px;">Pitch</span>
+            <span class="chev">←</span>
+            <div class="cmb"><span>X (0)</span><span class="caret">▾</span></div>
+            <span class="dim">×</span>
+            <div class="spn"><span>-1.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+          <div class="row">
+            <span class="label" style="min-width:30px;">Yaw</span>
+            <span class="chev">←</span>
+            <div class="cmb"><span>Y (1)</span><span class="caret">▾</span></div>
+            <span class="dim">×</span>
+            <div class="spn"><span>-1.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+          <div class="row">
+            <span class="label" style="min-width:30px;">Roll</span>
+            <span class="chev">←</span>
+            <div class="cmb"><span>Z (2)</span><span class="caret">▾</span></div>
+            <span class="dim">×</span>
+            <div class="spn"><span>1.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="btn">Apply Mapping</div>
+          <div class="btn">Save to config.py</div>
+        </div>
+      </div>
+
+      <!-- Section 6: Actions + RESULTS -->
+      <div class="psec" data-section="6">
+        <div class="psec-head">
+          <div class="left"><span class="bar"></span><span>Actions</span></div>
+        </div>
+        <div class="btn primary">Import</div>
+        <div class="row" style="gap:8px;">
+          <div class="btn" style="flex:1; text-align:center;">Open Sequencer</div>
+          <div class="btn" style="flex:1; text-align:center;">Open MRQ</div>
+        </div>
+        <span class="tag-sub">RESULTS</span>
+        <div class="results">[OK] CSV parsed:  974 frames @ 23.976 fps
+[OK] Validator:   FOV Δ max 0.12°   (0 anomalies)
+[OK] LensFile:    /Game/PostRenderTool/LF_shot1.ulens
+[OK] Camera:      BP_CineCamera_shot1
+[OK] Sequence:    LS_shot1  (0–973)
+
+Import finished in 3.42s.</div>
+      </div>
+    </div>
+
+    <!-- Detail panel (right side) -->
+    <div class="section-detail" id="detail">
+      <!-- content swapped by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     II · CONTRACT MATRIX
+     ============================================================ -->
+<section class="chapter wrap" id="matrix">
+  <div class="ch-head reveal">
+    <span class="ch-num">Ch. II · Binding Contract</span>
+    <h2 class="ch-title">Four names, one <em>truth.</em></h2>
+  </div>
+  <p class="ch-subtitle reveal" style="max-width: 62ch; margin-left:168px; margin-top:-42px; margin-bottom: 56px;">
+    同一个控件，四处出现：Figma 里的图层名、C++ 里的 <em>UPROPERTY</em>、Python 里的字符串、Designer 搭 BP 时的 Widget 名——
+    **任何一处拼写漂移都会让 <em>get_editor_property</em> 沉默地返回 None**。
+  </p>
+
+  <div class="stat-strip reveal">
+    <div class="stat-cell">
+      <div class="num"><em>41</em></div>
+      <div class="lbl">Total UPROPERTYs</div>
+    </div>
+    <div class="stat-cell">
+      <div class="num">33</div>
+      <div class="lbl">BindWidget (required)</div>
+    </div>
+    <div class="stat-cell">
+      <div class="num">8</div>
+      <div class="lbl">BindWidgetOptional</div>
+    </div>
+    <div class="stat-cell">
+      <div class="num"><em>6</em></div>
+      <div class="lbl">Visible panel sections</div>
+    </div>
+  </div>
+
+  <div class="matrix-wrap reveal">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th style="width:22%">Section</th>
+          <th style="width:28%">Control</th>
+          <th style="width:24%">Type</th>
+          <th style="width:14%">Req / Opt</th>
+          <th>Handler (widget.py)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="section-col">I · Prerequisites</td><td class="ctrl">prereq_label_0..5</td><td>UTextBlock</td><td><span class="pill opt">Optional</span></td><td><code>_check_and_display_prereqs</code></td></tr>
+        <tr><td class="section-col">I · Prerequisites</td><td class="ctrl">prereq_summary</td><td>UTextBlock</td><td><span class="pill opt">Optional</span></td><td>—</td></tr>
+        <tr><td class="section-col">I · Prerequisites</td><td class="ctrl">btn_recheck</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_recheck_prereqs</code></td></tr>
+        <tr><td class="section-col">II · CSV File</td><td class="ctrl">btn_browse</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_browse_clicked</code></td></tr>
+        <tr><td class="section-col">II · CSV File</td><td class="ctrl">txt_file_path</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
+        <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_frame_count</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
+        <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_focal_range</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
+        <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_timecode</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
+        <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_sensor_width</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
+        <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">spn_fps</td><td>USpinBox</td><td><span class="pill req">Required</span></td><td><code>_on_fps_changed</code></td></tr>
+        <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_detected_fps</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
+        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">spn_frame</td><td>USpinBox</td><td><span class="pill req">Required</span></td><td><code>_on_frame_changed</code></td></tr>
+        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_frame_hint</td><td>UTextBlock</td><td><span class="pill opt">Optional</span></td><td>—</td></tr>
+        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_designer_pos / _rot</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td><code>_refresh_coord_preview</code></td></tr>
+        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_ue_pos / _rot</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td><code>_refresh_coord_preview</code></td></tr>
+        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">btn_spawn_cam</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_spawn_test_camera</code></td></tr>
+        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">cmb_pos_{x,y,z}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
+        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">spn_pos_{x,y,z}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
+        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">cmb_rot_{pitch,yaw,roll}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
+        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">spn_rot_{pitch,yaw,roll}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
+        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">btn_apply_mapping</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_apply_mapping</code></td></tr>
+        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">btn_save_mapping</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_save_mapping</code></td></tr>
+        <tr><td class="section-col">VI · Actions</td><td class="ctrl">btn_import</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_import_clicked</code></td></tr>
+        <tr><td class="section-col">VI · Actions</td><td class="ctrl">btn_open_seq</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_open_sequencer_clicked</code></td></tr>
+        <tr><td class="section-col">VI · Actions</td><td class="ctrl">btn_open_mrq</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_open_mrq_clicked</code></td></tr>
+        <tr><td class="section-col">VI · Actions</td><td class="ctrl">txt_results</td><td>UMultiLineEditableText</td><td><span class="pill req">Required</span></td><td><code>_set_results</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout-grid reveal">
+    <div class="callout">
+      <div class="icon">¹</div>
+      <div class="ctitle">C++ 只声明，不填肉</div>
+      <div class="ctext"><code>PostRenderToolWidget.h</code> 里 41 个 UPROPERTY 是"契约模版"——规定 BP 里必须有哪些控件、什么名字、什么类型。实现都在 BP 里。</div>
+    </div>
+    <div class="callout">
+      <div class="icon">²</div>
+      <div class="ctitle">BindWidget 必须配 BlueprintReadOnly</div>
+      <div class="ctext">仅 <code>meta=(BindWidget)</code> 在 Python 里 <em>不可见</em>；必须补 <code>BlueprintReadOnly</code> 才能 <code>get_editor_property()</code>。</div>
+    </div>
+    <div class="callout">
+      <div class="icon">³</div>
+      <div class="ctitle">BP 不随插件源码分发</div>
+      <div class="ctext">首次由谁 bootstrap 一次（UMG Designer 手搭），commit <code>.uasset</code>；之后所有部署只 <em>git pull / p4 sync</em>。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     III · PIPELINE / DATA FLOW
+     ============================================================ -->
+<section class="chapter wrap" id="flow">
+  <div class="ch-head reveal">
+    <span class="ch-num">Ch. III · Pipeline</span>
+    <h2 class="ch-title">One Import button, <em>five</em> stages.</h2>
+  </div>
+  <p class="ch-subtitle reveal" style="max-width: 62ch; margin-left:168px; margin-top:-42px; margin-bottom: 48px;">
+    点下橙色 Import 后，<em>pipeline.run_import()</em> 把 CSV 依次喂给 parser / lens / camera / sequence / validator。
+    每个阶段都是纯 Python + UE API 的薄包装，成败写进同一个 <em>PipelineResult</em> 不抛异常。
+  </p>
+
+  <div class="flow-diagram reveal">
+    <div class="flow-step">
+      <div class="num">1</div>
+      <div class="name">csv_parser</div>
+      <div class="desc">读取、验列、提帧、估算 FPS。输出 <em>CsvDenseResult</em>。</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">2</div>
+      <div class="name">lens_file_builder</div>
+      <div class="desc">按焦距分组 → 归一化畸变 → 写入 <em>.ulens</em> 资产。</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">3</div>
+      <div class="name">camera_builder</div>
+      <div class="desc">Spawn CineCameraActor，设 Filmback，挂 LensComponent。</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">4</div>
+      <div class="name">sequence_builder</div>
+      <div class="desc">创建 LevelSequence，9 个 channel × N 帧关键帧。</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">5</div>
+      <div class="name">validator</div>
+      <div class="desc">FOV 一致性 + 跳变检测，出 <em>ValidationReport</em>。</div>
+    </div>
+  </div>
+
+  <div class="ascii-block reveal">
+Disguise CSV Dense file
+        │
+        ▼
+<span style="color:var(--accent-soft)">csv_parser.parse_csv_dense()</span>
+        │  → CsvDenseResult { frames, sensor_width_mm, focal_length_range, detected_fps }
+        │
+        ├──────────────────────────────────────────┐
+        ▼                                          ▼
+<span style="color:var(--accent-soft)">lens_file_builder</span>                        <span style="color:var(--accent-soft)">coordinate_transform</span>
+按焦距分组 → 归一化畸变参数                  Designer(m, Y-up) → UE(cm, Z-up)
+→ 写入 LensFile                            transform_position / _rotation
+        │                                          │
+        ▼                                          ▼
+<span style="color:var(--accent-soft)">camera_builder</span>                          <span style="color:var(--accent-soft)">sequence_builder</span>
+Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
+挂 LensComponent + 畸变开关                  Loc(X/Y/Z) + Rot(P/Y/R) + Focal + Aperture + Focus
+        │
+        └──────────────────────────────────┐
+                                           ▼
+                                       <span style="color:var(--accent-soft)">validator</span>
+                              FOV 交叉校验 + 位移/旋转跳变检测
+                              → ValidationReport</div>
+
+  <div class="callout-grid reveal">
+    <div class="callout">
+      <div class="icon">⁓</div>
+      <div class="ctitle">Errors as data</div>
+      <div class="ctext"><code>PipelineResult</code> 有 <code>success: bool + error_message</code>。调用方只看字段，不需要 try/except。</div>
+    </div>
+    <div class="callout">
+      <div class="icon">♯</div>
+      <div class="ctitle">帧 cadence 保持</div>
+      <div class="ctext">CSV 从第 100 帧起 → Sequence 从时间 0 起，但 gap 保留。<code>seq_idx = frame_number - first_frame_number</code>。</div>
+    </div>
+    <div class="callout">
+      <div class="icon">≠</div>
+      <div class="ctitle">有理数帧率</div>
+      <div class="ctext">23.976 fps = <code>24000/1001</code>，不是 float。UE 的 <code>FrameRate</code> 用分数防浮点累积误差。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     IV · MODULES
+     ============================================================ -->
+<section class="chapter wrap" id="modules">
+  <div class="ch-head reveal">
+    <span class="ch-num">Ch. IV · Modules at a glance</span>
+    <h2 class="ch-title">Twelve files, <em>twelve roles.</em></h2>
+  </div>
+  <p class="ch-subtitle reveal" style="max-width: 62ch; margin-left:168px; margin-top:-42px; margin-bottom: 48px;">
+    从叶节点到总调度——左半边是不需要 UE 就能单元测试的纯 Python；右半边依赖 <em>unreal</em> 模块。
+  </p>
+
+  <div class="module-grid reveal">
+    <div class="module-card">
+      <div class="mod-num">§ 4.1</div>
+      <div class="mod-name">config.py</div>
+      <div class="mod-role">全局配置中心。POSITION_MAPPING / ROTATION_MAPPING 与阈值常量。支持 <code>importlib.reload</code> 热重载。</div>
+      <div class="mod-tags"><span class="tag pure">pure</span><span class="tag">leaf</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.2</div>
+      <div class="mod-name">csv_parser.py</div>
+      <div class="mod-role">解析 Disguise CSV Dense：自动识别相机前缀、17 列校验、逐行聚合、帧率估算。</div>
+      <div class="mod-tags"><span class="tag pure">pure</span><span class="tag">dataclass</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.3</div>
+      <div class="mod-name">coordinate_transform.py</div>
+      <div class="mod-role">Designer (Y-up, m) → UE (Z-up, cm) 的 3 行实质变换。<code>cfg=None</code> 延迟绑定让 Apply Mapping 立即生效。</div>
+      <div class="mod-tags"><span class="tag pure">pure</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.4</div>
+      <div class="mod-name">validator.py</div>
+      <div class="mod-role">FOV 一致性（光学公式重算）+ 位移/旋转跳变检测。<code>format_report()</code> 出中文报告。</div>
+      <div class="mod-tags"><span class="tag pure">pure</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.5</div>
+      <div class="mod-name">lens_file_builder.py</div>
+      <div class="mod-role">按焦距分组写 <code>.ulens</code>。双 API 路径（UE 5.4+ 与旧版）兜底版本差异。</div>
+      <div class="mod-tags"><span class="tag ue">UE</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.6</div>
+      <div class="mod-name">camera_builder.py</div>
+      <div class="mod-role">Spawn CineCameraActor，配 Filmback，挂 LensComponent 开启畸变。注意 UE struct 的值语义。</div>
+      <div class="mod-tags"><span class="tag ue">UE</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.7</div>
+      <div class="mod-name">sequence_builder.py</div>
+      <div class="mod-role">LevelSequence + 9 个通道关键帧（Loc3 + Rot3 + Focal + Aperture + Focus）。帧 cadence 保真。</div>
+      <div class="mod-tags"><span class="tag ue">UE</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.8</div>
+      <div class="mod-name">pipeline.py</div>
+      <div class="mod-role">唯一对外 API：<code>run_import(csv_path, fps)</code>。五步编排，错误分层捕获，始终返回 <code>PipelineResult</code>。</div>
+      <div class="mod-tags"><span class="tag ue">UE</span><span class="tag">orchestrator</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.9</div>
+      <div class="mod-name">ui_interface.py</div>
+      <div class="mod-role">UI 辅助函数库：文件对话框三段降级、Sequencer/MRQ 打开、前置检查、Spawn Test Camera、config.py 原子写入。</div>
+      <div class="mod-tags"><span class="tag ue">UE</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.10</div>
+      <div class="mod-name">widget_builder.py</div>
+      <div class="mod-role">UI 生命周期：load BP → spawn Tab → 找 widget 实例（可异步轮询 30 帧）→ 注入 <code>PostRenderToolUI</code>。bootstrap-once + sync-forever 的分发说明。</div>
+      <div class="mod-tags"><span class="tag ue">UE</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.11</div>
+      <div class="mod-name">widget.py</div>
+      <div class="mod-role">UI 控制器。持有所有 UI 状态，把 41 个 UPROPERTY 指针绑到 10 个事件回调。全部 Figma 控件在这里"活"起来。</div>
+      <div class="mod-tags"><span class="tag ue">UE</span><span class="tag">controller</span></div>
+    </div>
+    <div class="module-card">
+      <div class="mod-num">§ 4.12</div>
+      <div class="mod-name">PostRenderToolWidget.h</div>
+      <div class="mod-role">C++ BindWidget 契约。41 个 UPROPERTY，按 Figma 分节用注释分组。BlueprintReadOnly 是 Python 可见的必要条件。</div>
+      <div class="mod-tags"><span class="tag">cpp</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     V · END-TO-END TRACE
+     ============================================================ -->
+<section class="chapter wrap" id="trace">
+  <div class="ch-head reveal">
+    <span class="ch-num">Ch. V · End-to-End Trace</span>
+    <h2 class="ch-title">Browse → Import, <em>with line numbers.</em></h2>
+  </div>
+  <p class="ch-subtitle reveal" style="max-width: 62ch; margin-left:168px; margin-top:-42px; margin-bottom: 48px;">
+    一次完整操作——从 <em>import init_post_render_tool</em> 到 txt_results 里的验证报告——跨越哪些文件、哪些行号。
+  </p>
+
+  <div class="trace-block reveal"><span class="step">Step 0 · Bootstrap</span>
+  init_post_render_tool.py:69 → launch_tool()
+    <span class="file">ui_interface.py</span>:188  get_prerequisite_status()   <span class="comment"># hasattr(unreal, "LensFile") 等 6 次探测</span>
+    <span class="file">widget_builder.py</span>:190 open_widget()
+
+<span class="step">Step 1 · UI spawn</span>
+  widget_builder.py:192 load_widget()
+    → EditorAssetLibrary.load_asset("/PostRenderTool/Blueprints/BP_PostRenderToolWidget")
+  widget_builder.py:196 subsystem.spawn_and_register_tab(widget_bp)
+  widget_builder.py:207 _inject_ui(widget_bp)
+    → register_slate_post_tick_callback 轮询最多 30 帧
+    → PostRenderToolUI(widget)  <span class="comment"># 控制器挂载到模块全局 _active_ui，防 GC</span>
+
+<span class="step">Step 2 · UI wire-up</span>
+  widget.py:87  _acquire_all_controls()   <span class="comment"># host.get_editor_property(name) × 41</span>
+  widget.py:88  _init_axis_combos()       <span class="comment"># 填 X(0)/Y(1)/Z(2) 三个选项</span>
+  widget.py:89  _push_initial_mapping_values()  <span class="comment"># 回填 config 的 POSITION/ROTATION</span>
+  widget.py:90  _bind_events()            <span class="comment"># 10 个回调挂上 on_clicked / on_value_changed</span>
+  widget.py:91  _check_and_display_prereqs()  <span class="comment"># Section I 亮起绿色 OK</span>
+
+<span class="step">Step 3 · User clicks Browse  (Section II · btn_browse)</span>
+  widget.py:266 _on_browse_clicked()
+    ↓ ui_interface.py:30 browse_csv_file()
+      → osascript (macOS) → Finder picker
+  widget.py:273 txt_file_path ← path
+  widget.py:276 parse_csv_dense(csv_path)
+    csv_parser.py:206  open(file, encoding="utf-8-sig")
+    csv_parser.py:216  _detect_camera_prefix(headers)  <span class="comment"># 正则匹配 camera:cam01</span>
+    csv_parser.py:227  for row in reader: FrameData(...)
+    csv_parser.py:263  return CsvDenseResult(frame_count=1200, detected_fps=24.0, ...)
+  widget.py:288 txt_frame_count / txt_focal_range / txt_timecode / txt_sensor_width / txt_detected_fps  ← 全部刷新
+  widget.py:311 spn_frame.max_value = 1199
+  widget.py:314 _refresh_coord_preview()  <span class="comment"># Section IV 的 4 个字段立即填上</span>
+
+<span class="step">Step 4 · User clicks Import  (Section VI · btn_import)</span>
+  widget.py:501 _on_import_clicked()
+  <span class="file">pipeline.py</span>:74  run_import(csv_path, fps=0.0)
+    :94   package_path = /Game/PostRender/shot1_take5_dense
+    :105  [1/5] parse_csv_dense()
+    :115  effective_fps = 24.0 (自动检测值兜底)
+    :138  [2/5] lens_file_builder.build_lens_file(...)
+          → AssetTools.create_asset(LensFile)
+          → _group_by_focal_length(tolerance=0.1)
+          → lens_file.add_distortion_point(focus=0, zoom=..., state=...)
+          → EditorAssetLibrary.save_asset
+    :149  [3/5] camera_builder.build_camera(...)
+          → EditorLevelLibrary.spawn_actor_from_class(CineCameraActor)
+          → comp.filmback.sensor_width = 60.0  <span class="comment"># struct 值语义：读→改→写回</span>
+          → LensComponent.set_editor_property("lens_file", lens_file)
+    :160  [4/5] sequence_builder.build_sequence(...)
+          → MovieScene3DTransformTrack + 3 FloatTracks
+          → for frame in 1200: add_key(seq_frame_idx, ...)  <span class="comment"># 9 channels</span>
+    :172  [5/5] validator.generate_report(...)
+          → compute_fov_h(f, sw) vs csv.fov_h
+          → pos_dist = sqrt(dx² + dy² + dz²)
+
+<span class="step">Step 5 · Report</span>
+  widget.py:512  self._last_result = pipeline_result
+  widget.py:514  txt_results ← pipeline_result.report.format_report()
+                  ┌──────────────────────────────┐
+                  │ ✓ 最大 FOV 误差: 0.0002°      │
+                  │ ✓ 未发现位置/旋转跳变          │
+                  └──────────────────────────────┘</div>
+
+</section>
+
+<!-- ============================================================
+     VI · STUDIES / CLOSING
+     ============================================================ -->
+<section class="chapter wrap" id="studies">
+  <div class="ch-head reveal">
+    <span class="ch-num">Ch. VI · Open studies</span>
+    <h2 class="ch-title">What remains <em>uncertain.</em></h2>
+  </div>
+
+  <div class="prose dropcap reveal" style="max-width: 68ch; margin-bottom: 48px;">
+    <p>
+      这个工具最大的未完成工作不在代码里，而在<em>默认坐标映射</em>。
+      <code>config.py</code> 里那三行 POSITION_MAPPING 和三行 ROTATION_MAPPING 注释明确写着
+      <em>"INITIAL GUESSES"</em>——它们是按 Disguise 的 Y-up 米制推断到 UE 的 Z-up 厘米的理论值，
+      但 stage 校准、舞台原点偏移、导演镜像需求都可能让真实值偏 180°。
+      Section IV 的 Spawn Test Camera 和 Section V 的 Apply / Save 正是为此存在：
+      用 UE viewport 自己当真值表，而不是让工程师在脑里做矩阵乘法。
+    </p>
+  </div>
+
+  <div class="editor-hr">§</div>
+
+  <ul class="bullet-list reveal">
+    <li><strong>sequence_builder.py:165</strong>&nbsp;&nbsp;Transform channel 索引 [3/4/5] = Roll/Pitch/Yaw 硬编码，UE 版本更新可能静默错位。</li>
+    <li><strong>lens_file_builder.py:93</strong>&nbsp;&nbsp;焦距分组 O(n·m)；变焦镜头下可换 <code>bisect</code> 降到 O(n·log m)。</li>
+    <li><strong>ui_interface.py:405</strong>&nbsp;&nbsp;save_axis_mapping 的 <code>importlib.reload</code> 与 Apply 的内存写入存在短暂状态竞争。</li>
+    <li><strong>csv_parser.py:233</strong>&nbsp;&nbsp;<code>int(float(row["frame"]))</code> 双层转换是为 <code>"100.0"</code> 字符串准备的，未注释。</li>
+    <li><strong>Figma 静态文本</strong>&nbsp;&nbsp;不在契约中、无 CI 检查——<em>POSITION (m → cm)</em> 打反不会报错。</li>
+    <li><strong>坐标映射默认值</strong>&nbsp;&nbsp;未用真实 CSV 验证；工具在 Section IV 提供了验证闭环但未执行。</li>
+  </ul>
+
+  <div class="editor-hr">✦</div>
+
+  <div class="prose reveal" style="max-width: 68ch; text-align: center; color: var(--ink-muted);">
+    <p style="font-family: var(--serif); font-style: italic; font-size: 22px; line-height: 1.5; color: var(--ink); font-variation-settings: 'opsz' 48;">
+      "A one-click pipeline is only as honest as its first-frame preview."
+    </p>
+    <p style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; font-family: var(--mono); margin-top: 20px;">
+      — conclusion
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER · COLOPHON
+     ============================================================ -->
+<footer class="colophon wrap">
+  <div class="cols">
+    <div class="col">
+      <h4>Source</h4>
+      <a href="codebase-walkthrough.md">codebase-walkthrough.md</a>
+      <a href="bindwidget-contract.md">bindwidget-contract.md</a>
+      <a href="plugin-setup.md">plugin-setup.md</a>
+      <a href="deployment-guide.md">deployment-guide.md</a>
+    </div>
+    <div class="col">
+      <h4>Repo</h4>
+      <span>branch&nbsp;·&nbsp;main</span>
+      <span>commit&nbsp;·&nbsp;7aeff28</span>
+      <span>git + p4 dual push</span>
+    </div>
+    <div class="col">
+      <h4>Stack</h4>
+      <span>Python 3 · UE 5.7</span>
+      <span>UMG · Editor Utility</span>
+      <span>C++ / UHT</span>
+    </div>
+    <div class="col">
+      <h4>Set in</h4>
+      <span>Fraunces · display</span>
+      <span>IBM Plex Sans · body</span>
+      <span>IBM Plex Mono · code</span>
+    </div>
+  </div>
+  <div class="bottom">
+    <span>VP · Post-Render · Codebase Dossier</span>
+    <span class="mono-logo">Ed. IV &mdash; 2026</span>
+    <span>Updated 17 April</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  /* --- SECTION DETAIL CONTENT --- */
+  const details = {
+    "1": {
+      num: "§ I",
+      title: "<em>Prerequisites</em> · 环境健康仪表盘",
+      figma: "Figma · State A 折叠 <code>1:3</code> &nbsp;·&nbsp; State B 展开 <code>29:3</code>",
+      body: `
+        <p>面板首行的可折叠区——启动时自动跑 <strong>hasattr(unreal, …)</strong> 探测六个前置插件/类，把 <em>fix_hint</em> 拼到 MISSING 行末端，让用户不必等 Import 崩了再找原因。</p>
+        <p><strong>两态交互（对照 Figma State A / State B）</strong>：</p>
+        <ul style="list-style:none; padding-left:0; margin:8px 0 14px; display:flex; flex-direction:column; gap:8px;">
+          <li style="padding-left:18px; position:relative;"><span style="position:absolute; left:0; color:var(--accent); font-family:var(--mono);">▶</span> <strong>State A</strong>&nbsp;折叠（启动默认）：只露 header — chevron + 标题 + 右侧绿色 <em>6 / 6 OK</em> 摘要徽章。环境正常时不抢视线。</li>
+          <li style="padding-left:18px; position:relative;"><span style="position:absolute; left:0; color:var(--accent); font-family:var(--mono);">▼</span> <strong>State B</strong>&nbsp;展开（用户点击）：6 行绿点 + <em>OK: &lt;插件名&gt;</em>；底部 <em>Recheck</em> 按钮 + <em>Last checked: 2026-04-17 10:23</em> 时间戳。</li>
+        </ul>
+        <p style="color: var(--ink-muted); font-size: 13.5px;">👉 点左侧面板的 <em>Prerequisites</em> 区就能在 A / B 两态之间切换；点 <em>Recheck</em> 会刷新时间戳但不会把面板折叠（<code>stopPropagation</code>）。</p>
+      `,
+      table: [
+        ["prereq_summary", "UTextBlock", "opt", "_check_and_display_prereqs"],
+        ["prereq_label_0..5", "UTextBlock", "opt", "_check_and_display_prereqs"],
+        ["btn_recheck", "UButton", "req", "_on_recheck_prereqs"]
+      ],
+      principle: `插件缺失是 Import 失败最常见的根因。默认折叠只露"6 / 6 OK" 徽章——环境正常时不打扰；一旦某项 MISSING，用户点开就能看到带 fix_hint 的具体行与 Recheck 按钮，形成"摘要可见，细节可召唤"的典型披露模式。`
+    },
+    "2": {
+      num: "§ II",
+      title: "<em>CSV File</em> · 选择输入",
+      figma: "Figma 节点 <code>1:10 / 1:15 / 1:17</code>",
+      body: `
+        <p>Browse 走 <strong>三段降级</strong>：UE BP 库 → macOS osascript → tkinter。UE 5.7 的 Python 没有开箱即用的原生文件对话框，VP 现场又跨 Mac / Windows，这套方案不依赖 <code>pip install</code>。</p>
+        <p>选到路径后立即同步调 <code>parse_csv_dense()</code>，把 Section III 一次填满。</p>
+      `,
+      table: [
+        ["btn_browse", "UButton", "req", "_on_browse_clicked"],
+        ["txt_file_path", "UTextBlock", "req", "—"]
+      ],
+      principle: `三段降级是跨平台兼容性的常见写法；每一段都显式失败后再尝试下一段，不依赖外部安装。`
+    },
+    "3": {
+      num: "§ III",
+      title: "<em>CSV Preview</em> · 机器估算 + 人工覆盖",
+      figma: "Figma 节点 <code>2:2 / 2:6 / 2:11</code>",
+      body: `
+        <p>六个字段在 Browse 回调里一次性填充。<code>spn_fps</code> 默认 <strong>0.0</strong>——语义是"让 pipeline 自己选"，pipeline 则用 <code>csv_result.detected_fps</code> 兜底。</p>
+        <p>用户可手动输入 24.0 / 29.97 覆盖——适用于 CSV 时间戳抖动超过 10%、自动检测返回 None 的场景。</p>
+      `,
+      table: [
+        ["txt_frame_count", "UTextBlock", "req", "—"],
+        ["txt_focal_range", "UTextBlock", "req", "—"],
+        ["txt_timecode", "UTextBlock", "req", "—"],
+        ["txt_sensor_width", "UTextBlock", "req", "—"],
+        ["spn_fps", "USpinBox", "req", "_on_fps_changed"],
+        ["txt_detected_fps", "UTextBlock", "req", "—"]
+      ],
+      principle: `Trust-but-override：机器给估算值，人类随时能覆盖。并列展示"自动 23.976" 让用户一眼知道默认行为是什么。`
+    },
+    "4": {
+      num: "§ IV",
+      title: "<em>Coordinate Verification</em> · 真值表",
+      figma: "Figma 节点 <code>2:19 / 2:25 / 2:31 / 2:39</code>",
+      body: `
+        <p><strong>整个工具最关键的交互区。</strong><code>config.py</code> 的默认映射是"初始猜测"，必须由人拿真机数据验证——这就是这一节存在的唯一目的。</p>
+        <p>拨动 <code>spn_frame</code> → 上半区显示 Designer 原始值、下半区显示转换后 UE 值；同时 Section V 的轴映射改变会实时反映到 UE 值上。</p>
+        <p>点 Spawn Test Camera → 创建真相机、按 Tag（不是 label）识别旧相机并销毁、pilot viewport 对齐观察。</p>
+      `,
+      table: [
+        ["spn_frame", "USpinBox", "req", "_on_frame_changed"],
+        ["txt_frame_hint", "UTextBlock", "opt", "—"],
+        ["txt_designer_pos / _rot", "UTextBlock × 2", "req", "_refresh_coord_preview"],
+        ["txt_ue_pos / _rot", "UTextBlock × 2", "req", "_refresh_coord_preview"],
+        ["btn_spawn_cam", "UButton", "req", "_on_spawn_test_camera"]
+      ],
+      principle: `把"单帧预览 + 真相机 Spawn"摆在一起，是让 UE viewport 自己当坐标系的真值表——避免工程师在脑里做矩阵乘法。`
+    },
+    "5": {
+      num: "§ V",
+      title: "<em>Axis Mapping</em> · 双层承诺",
+      figma: "Figma 节点 <code>4:2 / 4:6 / 4:44 / 4:82</code>",
+      body: `
+        <p>每一行都是 <code>ComboBox × SpinBox</code>——选源轴、填缩放系数（含 m→cm 的 ×100 + 可选方向翻转）。</p>
+        <p><strong>Apply</strong> 是内存沙盒——直接覆盖 <code>config.POSITION_MAPPING</code> 字典，下一次 <code>transform_position</code> 立刻生效（因为 <code>_default_cfg()</code> 不缓存）。<strong>Save</strong> 固化到磁盘：AST 语法验证 + tempfile + .bak 备份 + os.replace() 原子替换 + reload。</p>
+      `,
+      table: [
+        ["cmb_pos_{x,y,z}_src", "UComboBoxString × 3", "req", "_init_axis_combos"],
+        ["spn_pos_{x,y,z}_scale", "USpinBox × 3", "req", "_read_mapping_from_ui"],
+        ["cmb_rot_{pitch,yaw,roll}_src", "UComboBoxString × 3", "req", "_init_axis_combos"],
+        ["spn_rot_{pitch,yaw,roll}_scale", "USpinBox × 3", "req", "_read_mapping_from_ui"],
+        ["btn_apply_mapping", "UButton", "req", "_on_apply_mapping"],
+        ["btn_save_mapping", "UButton", "req", "_on_save_mapping"]
+      ],
+      principle: `Apply（内存试错）+ Save（磁盘固化）= 双层承诺。用户可反复拨、配合 Section IV 验证，然后一键固化——避免"改了忘存"。`
+    },
+    "6": {
+      num: "§ VI",
+      title: "<em>Actions</em> · 主操作与日志",
+      figma: "Figma 节点 <code>5:2 / 5:6 / 5:14</code>",
+      body: `
+        <p><strong>Import 是面板唯一的橙色主按钮</strong>（<code>#e8704d</code> 背景 + 白字）——UI 设计里只给一个主操作上高亮色是 Fitts-Law 常规做法。</p>
+        <p>Open Sequencer 依赖上次 Import 的 <code>self._last_result.level_sequence</code>；Open MRQ 独立工具，随时可开。</p>
+        <p><code>txt_results</code> 用 <code>UMultiLineEditableText</code> 而非 TextBlock——自带滚动，配 <em>Roboto Mono</em> 等宽字体 + <code>#141414</code> 深灰背景，经典日志面板语法。</p>
+      `,
+      table: [
+        ["btn_import", "UButton", "req", "_on_import_clicked"],
+        ["btn_open_seq", "UButton", "req", "_on_open_sequencer_clicked"],
+        ["btn_open_mrq", "UButton", "req", "_on_open_mrq_clicked"],
+        ["txt_results", "UMultiLineEditableText", "req", "_set_results"]
+      ],
+      principle: `唯一一个上强烈视觉色的按钮就是主操作。其它灰色并排的次按钮清楚地表明它们是"Import 之后的后续入口"。`
+    }
+  };
+
+  function renderDetail(key){
+    const d = details[key];
+    if (!d) return;
+    const rows = d.table.map(r => {
+      const pill = r[2] === 'req'
+        ? '<span class="req">Required</span>'
+        : '<span class="opt">Optional</span>';
+      return `<tr>
+        <td><span class="ctrl-name">${r[0]}</span></td>
+        <td class="type">${r[1]}</td>
+        <td>${pill}</td>
+        <td class="handler">${r[3] === '—' ? '<span style="color:var(--ink-faint)">—</span>' : '<code>'+r[3]+'</code>'}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `
+      <div class="sd-num">${d.num}</div>
+      <h3 class="sd-title">${d.title}</h3>
+      <div class="sd-figma">${d.figma}</div>
+      <div class="sd-body">${d.body}</div>
+      <table class="contract">
+        <thead><tr><th>Control</th><th>Type</th><th>Contract</th><th>Python handler</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="design-principle">
+        <span class="label">Design principle</span>
+        <div class="text">${d.principle}</div>
+      </div>
+    `;
+    const target = document.getElementById('detail');
+    target.style.opacity = '0';
+    target.style.transform = 'translateY(10px)';
+    setTimeout(() => {
+      target.innerHTML = html;
+      target.style.transition = 'opacity .35s ease, transform .35s ease';
+      target.style.opacity = '1';
+      target.style.transform = 'translateY(0)';
+    }, 120);
+  }
+
+  /* Panel interactivity */
+  const sections = document.querySelectorAll('.panel .psec');
+  function activate(el){
+    sections.forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    renderDetail(el.dataset.section);
+  }
+  sections.forEach(el => {
+    el.addEventListener('click', () => {
+      if (el.dataset.section === "1") {
+        el.classList.toggle('collapsed');
+      }
+      activate(el);
+    });
+  });
+  /* Stop Recheck button from propagating collapse-toggle */
+  document.querySelectorAll('.panel .prereq-footer .btn').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ts = document.querySelector('.panel .last-checked');
+      if (ts) {
+        const d = new Date();
+        const p = (n) => String(n).padStart(2, '0');
+        ts.textContent = 'Last checked: ' +
+          d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) +
+          ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+      }
+    });
+  });
+  /* Default: show Section 4 (Coordinate Verification) — the most instructive one */
+  activate(document.querySelector('.panel .psec[data-section="4"]'));
+
+  /* --- Scroll reveal --- */
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+  reveals.forEach(el => io.observe(el));
+
+  /* --- TOC scroll spy --- */
+  const tocLinks = document.querySelectorAll('.toc a');
+  const chapters = Array.from(tocLinks).map(a => document.getElementById(a.dataset.target));
+  function onScroll(){
+    const y = window.scrollY + window.innerHeight * 0.35;
+    let active = chapters[0];
+    for (const ch of chapters) {
+      if (ch && ch.offsetTop <= y) active = ch;
+    }
+    tocLinks.forEach(a => {
+      a.classList.toggle('active', a.dataset.target === active?.id);
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* Smooth anchor scroll with offset */
+  tocLinks.forEach(a => {
+    a.addEventListener('click', (e) => {
+      const t = document.getElementById(a.dataset.target);
+      if (!t) return;
+      e.preventDefault();
+      window.scrollTo({ top: t.offsetTop - 24, behavior: 'smooth' });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
