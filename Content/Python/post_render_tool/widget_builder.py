@@ -255,3 +255,21 @@ def rebuild_widget() -> None:
     global _active_ui
     _active_ui = None
     open_widget()
+
+
+def rebuild_from_spec() -> object:
+    """Re-populate BP_PostRenderToolWidget from docs/widget-tree-spec.json.
+
+    Idempotent: existing widgets (with user tweaks) are preserved; only missing
+    contract widgets + their spec'd properties are added. After C++ UPROPERTY
+    changes, a full Editor restart + plugin rebuild is still required — this
+    command only operates on the WidgetBlueprint asset, not the C++ reflection
+    metadata.
+
+    Re-opens the tab after rebuilding so the running Python UI picks up the
+    regenerated bindings immediately.
+    """
+    from . import build_widget_blueprint
+    bp = build_widget_blueprint.run_build()
+    rebuild_widget()
+    return bp
