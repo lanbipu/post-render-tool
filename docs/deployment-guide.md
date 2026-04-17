@@ -31,22 +31,77 @@ Copy-Item -Recurse "C:\path\to\post_render_tool" "C:\path\to\MyVPProject\Plugins
 
 **编译失败时**：检查 `Saved/Logs/` 下的 UBT 日志，或确认系统已装 Xcode（macOS）/ Visual Studio 2022（Windows）。
 
-### 1.3 创建 Blueprint 资产（仅首次）
+### 1.3 创建 Blueprint 资产并填充 BindWidget（必做一次性工作）
 
-plugin 随仓库附带 `Content/Blueprints/BP_PostRenderToolWidget.uasset`——如果这个资产存在，跳到 1.4。如果是全新仓库或资产被删除，需手动创建一次：
+> **重要：** 当前仓库**没有**完整的 `BP_PostRenderToolWidget.uasset`（git / p4 里只跟踪 C++ 源码和 Python 文件，UMG 资产需要每个部署环境一次性补齐）。
+>
+> 现象识别：UI 打开是空白面板 + Output Log 一大片 `A required widget binding "<name>" of type <type> was not found.` 编译错误 → 处于"空壳 BP"状态，走本节流程。
 
-1. **Content Browser** → 左侧 "Plugins" → **VP Post-Render Tool Content** → `Blueprints/`
-2. 右键 → **Blueprint Class** → 搜索 `PostRenderToolWidget`
+**Step 1：创建 Blueprint 外壳**（必做，手动，<30 秒）
+
+1. 启动 Editor，**Content Browser** → 左侧 "Plugins" 区 → **VP Post-Render Tool Content** → `Blueprints/`
+2. 右键 → **Blueprint Class** → 底部 "ALL CLASSES" 搜 `PostRenderToolWidget`
 3. 选中 `UPostRenderToolWidget` → **Select**
-4. 命名 **`BP_PostRenderToolWidget`**
-5. 双击打开 Widget Designer
-6. 删除默认 `CanvasPanel_0` 根节点，从 Palette 拖一个 **Vertical Box** 作为新根，命名 `RootPanel`
-7. 按 `docs/bindwidget-contract.md` 里的 33 个必需控件名/类型清单，往 Hierarchy 里拖控件，每个控件的名字必须与 C++ UPROPERTY 严格对应
-8. **Compile**（Ctrl+B）— 如果 Compiler Results 报 `A required widget binding "X" of type Y was not found`，按提示补齐缺失的控件再次编译
-9. **Save**（Ctrl+S）
-10. 提交资产到 git / p4
+4. 命名 **`BP_PostRenderToolWidget`**（必须一字不差，C++ 和 Python 都按这个名字查）
+5. **不用打开 Designer 做任何事**，保存、关闭
 
-完整步骤和排错见 `docs/plugin-setup.md`。
+**Step 2：用 Python 脚本自动填充 33 + 8 个 BindWidget**（推荐路径）
+
+打开 Editor 的 Output Log，下面切 **Python** 模式，输入：
+
+```python
+from post_render_tool import build_widget_blueprint
+build_widget_blueprint.build()
+```
+
+脚本会：
+1. Load 空 BP
+2. 在 `WidgetTree.root_widget` 下建 `VerticalBox` 根面板 `RootPanel`
+3. 遍历 33 个必需 binding + 8 个可选 binding，逐个 `construct_widget(UClass, name)` → `add_child`
+4. 调 `BlueprintEditorLibrary.compile_blueprint` + `EditorAssetLibrary.save_asset`
+
+成功后日志：
+
+```
+[build_widget_blueprint] Created VerticalBox root 'RootPanel'.
+[build_widget_blueprint]   + btn_recheck (Button)
+[build_widget_blueprint]   + btn_browse (Button)
+...（共 41 行 "+")
+[build_widget_blueprint] Added 41 widget(s).
+[build_widget_blueprint] Saved /PostRenderTool/Blueprints/BP_PostRenderToolWidget.
+```
+
+脚本是 **idempotent** 的 —— 再跑一次只会补齐缺失的 binding，已有同名 widget 跳过。以后 C++ 加新 `UPROPERTY(BindWidget)` 时再跑一次即可（见脚本头的注释）。
+
+**Step 3：视觉美化（可选）**
+
+脚本只满足"BindWidget 合规"最低要求，所有控件平铺在 `RootPanel` 里，长得丑。打开 Designer：
+
+- 按 `docs/bindwidget-contract.md` 的 `Section` 列把控件拖到分组（Prerequisites / CSV File / CSV Preview 等 6 个 `VerticalBox` 子容器）
+- 调字体、颜色、padding、label
+- **千万不要改 widget 的 `Name` 或 `Is Variable` checkbox** —— 改了就断 binding
+- Compile + Save
+
+**Step 4：提交资产**
+
+Content Browser 右键 `BP_PostRenderToolWidget` → Source Control / 或直接在 git / p4 里 add 该 `.uasset`。二进制资产提交后团队成员 sync 就能拿同一份，免得每人都跑 Step 1~3。
+
+---
+
+**备选：纯手动搭建**（不推荐，但脚本失败时的兜底方案）
+
+如果 Step 2 的 Python 脚本在你的 UE 版本里报错（比如 `construct_widget` API 签名变化、`widget_tree` 反射不可见等），fallback 到手工：
+
+1. 按 Step 1 新建 BP 后**双击进 Designer**
+2. Hierarchy 里删掉默认 `CanvasPanel_0`，拖一个 **Vertical Box** 命名 `RootPanel`
+3. 打开 `docs/bindwidget-contract.md`，按"Required widgets (33)"和"Optional widgets (8)"表一条条拖控件：
+   - 类型严格按 `Type` 列（`UButton` = Button、`UTextBlock` = Text、`USpinBox` = Spin Box、`UComboBoxString` = Combo Box (String)、`UMultiLineEditableText` = Editable Text (Multi-Line)）
+   - 名字严格按 `Name` 列，大小写下划线不能错
+   - 保持 "Is Variable" 勾选（默认已勾）
+4. Compile → 看 Compiler Results → 缺哪个补哪个 → 再 Compile → Save
+5. 提交资产
+
+完整排错见 `docs/plugin-setup.md` 与 `docs/bindwidget-contract.md`。
 
 ### 1.4 启动工具
 
