@@ -43,26 +43,43 @@ Blueprint asset not found: {WIDGET_ASSET_PATH}
 BP_PostRenderToolWidget is NOT shipped with the plugin source. The canonical
 distribution is: the first team member who sets up the project bootstraps
 the Blueprint once via docs/deployment-guide.md §1.3, commits the .uasset,
-and everyone else gets it via git pull / p4 sync. This error means either
-(a) the committed asset hasn't reached your working copy yet, or (b) it
-has never been bootstrapped for this project.
+and everyone else receives it via source-control sync. Figure out which
+scenario you are in before running any command:
 
-Resolve in this order:
+Scenario A — fresh clone, you never had the asset locally
+---------------------------------------------------------
+You just cloned the repo / synced the workspace for the first time, and
+the .uasset has never existed in your working directory.
 
-  1. Confirm the plugin is installed at <UEProject>/Plugins/PostRenderTool/
-     and enabled (Edit → Plugins → VP Post-Render Tool is green).
+  • git repo:  git pull   (brings down the committed .uasset as part of the
+               initial checkout)
+  • p4 depot:  p4 sync    (same, pulls the head revision)
 
-  2. Sync from source control. Run `git pull` / `p4 sync` and verify that
-     `Content/Blueprints/BP_PostRenderToolWidget.uasset` appears under the
-     plugin directory. If it does, restart the Editor and retry — you do
-     NOT need to build anything yourself. In 90% of cases this is enough.
+Verify {WIDGET_ASSET_PATH} now exists on disk, restart the Editor, retry.
 
-  3. Only if sync comes back empty (fresh project that has never been
-     bootstrapped, or the repo copy was accidentally deleted upstream and
-     nobody has it), follow docs/deployment-guide.md §1.3 Step 1 → Step 7
-     to author the Blueprint yourself — then commit the .uasset so every
-     subsequent teammate recovers via sync (they won't have to repeat the
-     work). This is a one-time bootstrap, not a per-deployment task.
+Scenario B — you had it before, but the local file is gone / corrupt
+--------------------------------------------------------------------
+The asset existed locally at some point but you deleted it, a merge blew
+it away, or it got corrupt. The depot copy is still healthy. `git pull`
+and plain `p4 sync` WILL NOT help here — git pull only fetches new commits
+(it doesn't restore working-tree deletions), and p4 sync short-circuits
+with "up-to-date" when the head revision is already recorded as synced.
+Use the correct per-SCM recovery command:
+
+  • git repo:  git restore Content/Blueprints/BP_PostRenderToolWidget.uasset
+               (or: git checkout HEAD -- <path>)
+  • p4 depot:  p4 sync -f //depot/.../BP_PostRenderToolWidget.uasset
+               (the -f flag force-resyncs even if p4 thinks you're current;
+               alternatively `p4 revert` if the file is open in a changelist)
+
+Scenario C — nobody has ever bootstrapped, or depot copy is gone too
+--------------------------------------------------------------------
+This is a fresh project where §1.3 has never been run, or an upstream
+mistake wiped the committed .uasset. Only in this case do you actually
+have to build the Blueprint yourself: follow docs/deployment-guide.md
+§1.3 Step 1 → Step 7, then commit the resulting .uasset so every
+subsequent teammate recovers via Scenario A or B, not a re-bootstrap.
+This is a one-time bootstrap, not a per-deployment task.
 
 There is no Python / C++ automation for populating the widget tree —
 UE 5.7 hides UWidgetBlueprint::WidgetTree from reflection, and the team

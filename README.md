@@ -52,8 +52,9 @@ print(result.report.format_report())
 Plugin 源码里**不包含** `BP_PostRenderToolWidget.uasset`（UE 5.7 的 `UWidgetBlueprint::WidgetTree` 对 Python 反射不可见，无法自动生成，team 决定 Designer 手工搭建）。分布流程：
 
 - **Bootstrap（仅一次）**：项目第一个部署者按 `docs/deployment-guide.md` §1.3 在 UMG Designer 里创建 BP、满足 BindWidget contract、Compile 通过、保存、`git add` / `p4 add` 该 `.uasset` 并提交。
-- **后续所有部署**：`git pull` / `p4 sync` 就能拿到同一份 `.uasset`，**不需要**重新搭建。
-- **BP 损坏 / 本地误删**：先尝试 sync 回来；sync 不到（比如别人也删了、depot 里没有）才按 §1.3 重新 bootstrap 并重新提交。
+- **后续所有部署（新机器 / 新同事 / CI）**：初次 `git pull` 或 `p4 sync` 就能拿到同一份 `.uasset`，**不需要**重新搭建。
+- **BP 本地误删 / 损坏（depot 还在）**：`git restore Content/Blueprints/BP_PostRenderToolWidget.uasset` 或 `p4 sync -f //.../BP_PostRenderToolWidget.uasset` 强制恢复。**不要**用 `git pull` / `p4 sync`（不带 `-f`）—— 前者只拉新 commits 不恢复 working-tree 删除，后者在 head 已同步状态下报 "up-to-date" 不会重新下发文件。
+- **depot 里也没有（极端情况）**：才重走 §1.3 bootstrap 并重新提交。
 
 ## Project Structure
 

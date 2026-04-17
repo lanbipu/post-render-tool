@@ -33,12 +33,20 @@ Copy-Item -Recurse "C:\path\to\post_render_tool" "C:\path\to\MyVPProject\Plugins
 
 ### 1.3 首次 Bootstrap：创建 Blueprint 资产并手动搭建 UI（**只做一次**，不是每个部署都要做）
 
-> **谁应该走这一节：**
-> - **项目里还没有人做过 BP 时**（全新仓库 / 从未 bootstrap）→ 第一个部署者按本节 Step 1 → Step 7 搭建并提交 `.uasset`，团队里**只需要一个人做这一次**。
-> - **BP 已经在 depot 里**（另一位同事已经 bootstrap 过）→ 不要走本节！直接 `git pull` / `p4 sync` 就能拿到同一份 `.uasset`，enable plugin 后工具即刻可用。
-> - **BP 本地被误删 / 损坏**（depot 还有）→ `git restore` / `p4 sync -f` 恢复即可，同样不需要走本节。
+> **谁应该走这一节（按场景选恢复命令，别走错）：**
 >
-> **判断自己处于哪种情况：** Editor 打开 UI 后如果空白面板 + Output Log 一大片 `A required widget binding "<name>" of type <type> was not found.` → 说明本地没拿到 BP。先 sync 试试；sync 不到再回本节 bootstrap。
+> | 场景 | 你该做什么 | git 命令 | p4 命令 |
+> |---|---|---|---|
+> | **A. 全新 clone / 从未拿过这个 asset** —— 团队已有人 bootstrap，你是新机器/新同事 | 初次拉取 | `git pull` | `p4 sync` |
+> | **B. 本地曾有但被删 / 损坏，depot 还健康** —— 误 `rm`、merge 冲突选错、cache 损坏 | 恢复工作区 | `git restore Content/Blueprints/BP_PostRenderToolWidget.uasset`（或 `git checkout HEAD -- <path>`） | `p4 sync -f //.../BP_PostRenderToolWidget.uasset`（或 `p4 revert` 若开着 changelist） |
+> | **C. depot 里也没有 / 项目从未 bootstrap** —— 全新仓库、或 depot 副本也丢了 | 走本节 Step 1 → Step 7 手工搭 + 提交 | Step 7 的 `git add` + `commit` | Step 7 的 `p4 add` + `submit` |
+>
+> **重要：** 场景 B 用 `git pull` / `p4 sync`（不带 `-f`）是错的命令 —— `git pull` 只拉 new commits 不恢复 working-tree deletion；`p4 sync` 在 head 已同步状态下报 "up-to-date" 不会重新下发文件。
+>
+> **判断自己处于哪种情况：** Editor 打开 UI 后空白 + Output Log 一大片 `A required widget binding "<name>" of type <type> was not found.` → 本地没拿到 BP。先看工作目录：
+> - `Content/Blueprints/BP_PostRenderToolWidget.uasset` **从未存在过** → 场景 A，初次 sync
+> - **最近还在** 但现在没了 / 大小异常 → 场景 B，强制恢复
+> - depot 里查了也没有（`git log` / `p4 files` 都查不到该路径） → 场景 C，走本节
 >
 > **为什么只能手动搭建（决策背景，一次性记录）：** UE 5.7 的 `UWidgetBlueprint::WidgetTree` 在源码里是 `UPROPERTY(Instanced)`，既没有 `BlueprintReadable` 也没有 `EditAnywhere` flag，按 `PyGenUtil.cpp::IsScriptExposedProperty` 规则对 Python 反射完全不可见 —— 纯 Python 脚本无法触及 widget tree，`get_editor_property("widget_tree")` 会抛 "Failed to find property"。写 C++ `UBlueprintFunctionLibrary` 桥接虽然技术上可行，但要完整还原 Figma 设计（容器嵌套 + slot padding + widget styling）需要 600~1000 行 Python + 200~400 行 C++ helper，而且每次 UE 版本升级都要跟 widget slot API 漂移，投入产出比低于 Designer 可视化调整 + 提交 `.uasset` 到版本控制 + 团队 sync 共享这个方案。所以本项目明确选择 bootstrap-once + sync-forever 的路径，决策详见 commit `bd140d7`。
 
@@ -219,7 +227,13 @@ importlib.reload(w); importlib.reload(wb)
 wb.rebuild_widget()
 ```
 
-> **注意：** Blueprint 资产 `BP_PostRenderToolWidget` **不在 plugin 源码仓库里**（见 1.3 节开头说明），bootstrap 完成后由**项目仓库**承载。第一个 bootstrap 的人提交一次之后，团队其他成员 `git pull` / `p4 sync` 直接拿、不用自己搭。Content Browser 里随便删了本地 `.uasset` 的情况：depot 里还在就 sync 回来（秒级恢复）；depot 里也没有才按 1.3 重新 bootstrap（几十分钟的手工工作）。
+> **注意：** Blueprint 资产 `BP_PostRenderToolWidget` **不在 plugin 源码仓库里**（见 1.3 节开头说明），bootstrap 完成后由**项目仓库**承载。第一个 bootstrap 的人提交一次之后，团队其他成员初次拉取用 `git pull` / `p4 sync` 直接拿。
+>
+> Content Browser 里误删本地 `.uasset` 的恢复命令和"初次拉取"不一样：
+> - git：`git restore Content/Blueprints/BP_PostRenderToolWidget.uasset`（`git pull` 对 working-tree 删除无效）
+> - p4：`p4 sync -f //.../BP_PostRenderToolWidget.uasset`（`p4 sync` 在 head 已同步状态下不会重发文件）
+>
+> depot 也没有 / 项目从未 bootstrap 才按 1.3 重新搭（几十分钟的手工工作）。详见 1.3 节开头的场景 A/B/C 表。
 >
 > **C++ UPROPERTY 变更**（在 `PostRenderToolWidget.h` 里增/删/改 BindWidget 属性）**不支持 Live Coding**，必须关闭 Editor 完整重编 plugin，然后重新 compile Blueprint。
 >
@@ -242,7 +256,7 @@ from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_
 
 open_widget()      # 加载 BP_PostRenderToolWidget + spawn tab + 绑定 callback
 rebuild_widget()   # 重新打开（释放缓存 UI 引用，不删 Blueprint 资产）
-delete_widget()    # 销毁性：删除项目仓库里的 Blueprint 资产——不是 plugin 自带的，删了优先 git/p4 sync 回来；sync 不到才按 1.3 重新 bootstrap
+delete_widget()    # 销毁性：删除项目仓库里的 Blueprint 资产——不是 plugin 自带的。恢复命令：git `git restore <.uasset>`、p4 `p4 sync -f <depot-path>`；depot 里也没有才按 1.3 重 bootstrap
 ```
 
 ### 故障排查
