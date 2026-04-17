@@ -9,48 +9,32 @@
 
 #define LOCTEXT_NAMESPACE "FPostRenderToolModule"
 
-static const TCHAR* GOpenWidgetPython =
-    TEXT("from post_render_tool.widget_builder import open_widget; open_widget()");
-
 void FPostRenderToolModule::StartupModule()
 {
     UE_LOG(LogTemp, Log, TEXT("[PostRenderTool] Plugin module started."));
 
-    const bool bUIEnabled = UToolMenus::IsToolMenuUIEnabled();
-    UToolMenus* ToolMenusPtr = UToolMenus::TryGet();
-    UE_LOG(LogTemp, Log,
-        TEXT("[PostRenderTool] UToolMenus state: IsToolMenuUIEnabled=%s, TryGet=%s"),
-        bUIEnabled ? TEXT("true") : TEXT("false"),
-        ToolMenusPtr ? TEXT("non-null") : TEXT("null"));
-
-    if (bUIEnabled && ToolMenusPtr)
-    {
-        UE_LOG(LogTemp, Log, TEXT("[PostRenderTool] Calling RegisterMenus() synchronously."));
-        RegisterMenus();
-    }
-    else
-    {
-        UE_LOG(LogTemp, Log, TEXT("[PostRenderTool] Deferring RegisterMenus() via RegisterStartupCallback."));
-        ToolMenusStartupHandle = UToolMenus::RegisterStartupCallback(
-            FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FPostRenderToolModule::RegisterMenus));
-    }
+    ToolMenusStartupHandle = UToolMenus::RegisterStartupCallback(
+        FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FPostRenderToolModule::RegisterMenus));
 }
 
 void FPostRenderToolModule::ShutdownModule()
 {
-    UToolMenus::UnRegisterStartupCallback(ToolMenusStartupHandle);
+    if (ToolMenusStartupHandle.IsValid())
+    {
+        UToolMenus::UnRegisterStartupCallback(ToolMenusStartupHandle);
+        ToolMenusStartupHandle.Reset();
+    }
     UToolMenus::UnregisterOwner(this);
-
-    UE_LOG(LogTemp, Log, TEXT("[PostRenderTool] Plugin module shut down."));
 }
 
 void FPostRenderToolModule::RegisterMenus()
 {
     FToolMenuOwnerScoped OwnerScoped(this);
 
-    static const FName MenuName(TEXT("LevelEditor.LevelEditorToolBar.PlayToolBar"));
+    const FName MenuName(TEXT("LevelEditor.LevelEditorToolBar.PlayToolBar"));
 
-    UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu(MenuName);
+    UToolMenus* ToolMenus = UToolMenus::Get();
+    UToolMenu* ToolbarMenu = ToolMenus->ExtendMenu(MenuName);
     if (!ToolbarMenu)
     {
         UE_LOG(LogTemp, Warning,
@@ -63,24 +47,19 @@ void FPostRenderToolModule::RegisterMenus()
         TEXT("VPPostRenderTool"),
         LOCTEXT("VPSectionLabel", "VP Post-Render Tool"));
 
-    FToolMenuEntry Entry = FToolMenuEntry::InitToolBarButton(
+    Section.AddEntry(FToolMenuEntry::InitToolBarButton(
         TEXT("VPPostRenderToolButton"),
         FUIAction(FExecuteAction::CreateRaw(this, &FPostRenderToolModule::OpenToolWidget)),
         LOCTEXT("VPToolButtonLabel", "VPTool"),
         LOCTEXT("VPToolButtonTooltip",
             "Open the VP Post-Render Tool (Disguise CSV Dense → UE import)."),
-        FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("LevelEditor.OpenCinematic")));
+        FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("LevelEditor.OpenCinematic"))));
 
-    Section.AddEntry(Entry);
-
-    // Force a rebuild of any already-displayed toolbar widgets, otherwise the
-    // new entry is stored but invisible because Slate snapshots the widget
-    // tree when it first builds the toolbar.
-    UToolMenus::Get()->RefreshAllWidgets();
-
-    UE_LOG(LogTemp, Log,
-        TEXT("[PostRenderTool] Toolbar button registered at %s / section 'VPPostRenderTool' (widgets refreshed)."),
-        *MenuName.ToString());
+    // If the Level Editor toolbar was already built before this plugin loaded
+    // (LoadingPhase=Default runs after editor UI init), the new entry sits in
+    // the data layer but the live Slate snapshot ignores it. Force a targeted
+    // rebuild of just this menu's widget; no-op if it hasn't been generated.
+    ToolMenus->RefreshMenuWidget(MenuName);
 }
 
 void FPostRenderToolModule::OpenToolWidget()
@@ -88,7 +67,8 @@ void FPostRenderToolModule::OpenToolWidget()
     IPythonScriptPlugin* Python = IPythonScriptPlugin::Get();
     if (Python && Python->IsPythonAvailable())
     {
-        Python->ExecPythonCommand(GOpenWidgetPython);
+        Python->ExecPythonCommand(
+            TEXT("from post_render_tool.widget_builder import open_widget; open_widget()"));
     }
     else
     {
