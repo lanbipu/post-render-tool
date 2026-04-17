@@ -31,95 +31,55 @@ Copy-Item -Recurse "C:\path\to\post_render_tool" "C:\path\to\MyVPProject\Plugins
 
 **编译失败时**：检查 `Saved/Logs/` 下的 UBT 日志，或确认系统已装 Xcode（macOS）/ Visual Studio 2022（Windows）。
 
-### 1.3 首次 Bootstrap：创建 Blueprint 资产并手动搭建 UI（**只做一次**，不是每个部署都要做）
+### 1.3 首次 Bootstrap：创建 Blueprint 资产（**只做一次**，不是每个部署都要做）
 
 > **谁应该走这一节（按场景选恢复命令，别走错）：**
 >
 > | 场景 | 你该做什么 | git 命令 | p4 命令 |
 > |---|---|---|---|
 > | **A. 全新 clone / 从未拿过这个 asset** —— 团队已有人 bootstrap，你是新机器/新同事 | 初次拉取 | `git pull` | `p4 sync` |
-> | **B. 本地曾有但被删 / 损坏，depot 还健康** —— 误 `rm`、merge 冲突选错、cache 损坏 | 恢复工作区 | `git restore Content/Blueprints/BP_PostRenderToolWidget.uasset`（或 `git checkout HEAD -- <path>`） | `p4 sync -f //.../BP_PostRenderToolWidget.uasset`（或 `p4 revert` 若开着 changelist） |
-> | **C. depot 里也没有 / 项目从未 bootstrap** —— 全新仓库、或 depot 副本也丢了 | 走本节 Step 1 → Step 7 手工搭 + 提交 | Step 7 的 `git add` + `commit` | Step 7 的 `p4 add` + `submit` |
+> | **B. 本地曾有但被删 / 损坏，depot 还健康** —— 误 `rm`、merge 冲突选错、cache 损坏 | 恢复工作区 | `git restore Content/Blueprints/BP_PostRenderToolWidget.uasset` | `p4 sync -f //.../BP_PostRenderToolWidget.uasset` |
+> | **C. depot 里也没有 / 项目从未 bootstrap** —— 全新仓库、或 depot 副本也丢了 | 走下方 "推荐路径" 或 "备份路径" | 最终 `git add` + `commit` | 最终 `p4 add` + `submit` |
 >
 > **重要：** 场景 B 用 `git pull` / `p4 sync`（不带 `-f`）是错的命令 —— `git pull` 只拉 new commits 不恢复 working-tree deletion；`p4 sync` 在 head 已同步状态下报 "up-to-date" 不会重新下发文件。
->
-> **判断自己处于哪种情况：** Editor 打开 UI 后空白 + Output Log 一大片 `A required widget binding "<name>" of type <type> was not found.` → 本地没拿到 BP。先看工作目录：
-> - `Content/Blueprints/BP_PostRenderToolWidget.uasset` **从未存在过** → 场景 A，初次 sync
-> - **最近还在** 但现在没了 / 大小异常 → 场景 B，强制恢复
-> - depot 里查了也没有（`git log` / `p4 files` 都查不到该路径） → 场景 C，走本节
->
-> **为什么只能手动搭建（决策背景，一次性记录）：** UE 5.7 的 `UWidgetBlueprint::WidgetTree` 在源码里是 `UPROPERTY(Instanced)`，既没有 `BlueprintReadable` 也没有 `EditAnywhere` flag，按 `PyGenUtil.cpp::IsScriptExposedProperty` 规则对 Python 反射完全不可见 —— 纯 Python 脚本无法触及 widget tree，`get_editor_property("widget_tree")` 会抛 "Failed to find property"。写 C++ `UBlueprintFunctionLibrary` 桥接虽然技术上可行，但要完整还原 Figma 设计（容器嵌套 + slot padding + widget styling）需要 600~1000 行 Python + 200~400 行 C++ helper，而且每次 UE 版本升级都要跟 widget slot API 漂移，投入产出比低于 Designer 可视化调整 + 提交 `.uasset` 到版本控制 + 团队 sync 共享这个方案。所以本项目明确选择 bootstrap-once + sync-forever 的路径，决策详见 commit `bd140d7`。
 
-**Step 1：创建 Blueprint 外壳**
+**推荐路径 —— 自动化**（需要 plugin 已编译：`unreal.PostRenderToolBuildHelper` 对 Python 可见；UE 5.7 `UWidgetBlueprint::WidgetTree` 在 `BaseWidgetBlueprint.h:16-17` 无 `BlueprintVisible` flag，Python 无法直接操作，脚本通过 `UPostRenderToolBuildHelper` 的 3 个 UFUNCTION 桥接）：
 
-1. 启动 Editor，**Content Browser** → 左侧 "Plugins" 区 → **VP Post-Render Tool Content** → `Blueprints/`
-2. 右键 → **Blueprint Class** → 底部 "ALL CLASSES" 搜 `PostRenderToolWidget`
-3. 选中 `UPostRenderToolWidget` → **Select**
-4. 命名 **`BP_PostRenderToolWidget`**（必须一字不差，C++ 与 Python binder 都按这个名字查）
-5. 双击进 Widget Designer
+1. Content Browser → `VP Post-Render Tool Content/Blueprints/` → 右键 → Blueprint Class → ALL CLASSES 搜 `PostRenderToolWidget` → 选父类 → 命名 `BP_PostRenderToolWidget` → Save（空壳即可）
+2. UE Python 控制台：
 
-**Step 2：替换根节点为 VerticalBox**
+   ```python
+   from post_render_tool import build_widget_blueprint
+   build_widget_blueprint.run_build()
+   ```
 
-6. Hierarchy 面板删除默认 `CanvasPanel_0`
-7. Palette 拖一个 **Vertical Box** 到 Hierarchy 作为新根，命名 `RootPanel`
+3. 脚本读取 `docs/widget-tree-spec.json`，把 41 个契约 widget + 装饰嵌套结构 + 属性 + slot padding 一次性填入 BP，compile + save
+4. 打开 BP 校验：6 个 Section 全部出现、`Compile Succeeded`、Hierarchy 面板和 Figma 一致
+5. 在 Designer 里按需美化 —— 脚本 rerun 不会回滚用户已做的视觉美化（idempotent 契约详见 `build_widget_blueprint.py` 顶部注释）
+6. 提交 `.uasset`（见 Phase F 下方）
 
-**Step 3：按 BindWidget contract 拖 33 个必需控件**
+**备份路径 —— 手动**（plugin 尚未编译、或 C++ helper 不可用时）：
 
-8. 另开 `docs/bindwidget-contract.md`，对照 "Required widgets (33)" 表
-9. 每一行对应一个 widget：
-   - 拖 `Type` 列指定的控件类型到 `RootPanel` 内：
-     - `UButton` → Palette 的 **Button**
-     - `UTextBlock` → **Text**
-     - `USpinBox` → **Spin Box**
-     - `UComboBoxString` → **Combo Box (String)**
-     - `UMultiLineEditableText` → **Editable Text (Multi-Line)**
-   - 右侧 Details 面板顶部把 widget 命名为 `Name` 列的字符串（例如 `btn_browse`、`txt_file_path`）
-   - **名字必须一字不差** —— 大小写、下划线都不能错，C++ UPROPERTY `meta=(BindWidget)` 精确匹配
-   - **保持 "Is Variable" 勾选**（默认已勾，不要取消）—— Python binder 依赖它
-10. 视觉布局第一次可以扁平摆放 —— BindWidget 合约只认 widget 名字 + 类型，不看嵌套层级。等 compile 通过后再 Step 6 美化
+走 `docs/bootstrap-checklist.md` 的 Phase A–F —— 共 6 阶段约 15 分钟。
 
-**Step 4（建议）：加 8 个 optional 控件**
+**历史决策与回退理由（存档）：** commit `bd140d7` 曾以维护成本理由删除 Python 自动化，改为纯手动。本次（commit `<自动化重启>`）基于新目标重新启用：JSON spec 作为单一真相来源、C++ 桥接收敛到 3 个 UFUNCTION（~170 行）、Python 端 idempotent rerun 保护用户美化。C++ 辅助类比 `ac8b918` 版更精简 —— 删掉了 `SetWidgetIsVariable`（`UWidget::bIsVariable` 是 `Widget.h:318` 的 private 位域无法外部写，但构造函数默认 true 恰好满足契约）与 `GetPanelSlot`（`UPanelWidget::AddChild` 直接返回 `UPanelSlot*`）。
 
-11. 同表 "Optional widgets (8)"：`prereq_label_0` ~ `prereq_label_5`、`prereq_summary`、`txt_frame_hint`，都是 `UTextBlock`
-12. 缺这些不会让 BP compile 失败，但 UI 里对应功能会静默降级；建议一次加齐
-
-**Step 5：编译 + 保存**
-
-13. 左上角 **Compile**（Ctrl+B）
-14. Compiler Results：
-    - **通过** → 无红字、"Compile Succeeded" → 下一步
-    - **失败** → 每条 `A required widget binding "X" of type Y was not found` 精确指出缺哪个 / 类型不符，按错误补 / 改、再 Compile
-15. **Save**（Ctrl+S）
-
-**Step 6：按 Figma 设计美化（可选，但推荐）**
-
-Compile 通过后可以任意重组 Hierarchy 还原 Figma 视觉设计：
-
-- 按 `docs/bindwidget-contract.md` 的 `Section` 列把 41 个 widget 搬进 6 个分组容器（Prerequisites / CSV File / CSV Preview / Coordinate Verification / Axis Mapping / Actions + Results），每组用 `Border` → `VerticalBox` 嵌套
-- 颜色 / padding / 字号的参考值可直接看 `Content/Python/post_render_tool/widget_programmatic.py.bak`（旧的 runtime 构建脚本 archived 版本），里面定义了：
-  - `_CARD_BG = LinearColor(0.141, 0.141, 0.141)`（card Border BrushColor，对应 `#242424`）
-  - `_SUBCARD_BG = LinearColor(0.102, 0.102, 0.102)`（sub-card，对应 `#1A1A1A`）
-  - `_ACCENT = LinearColor(0.0, 0.749, 0.647)`（accent `#00BFA5`，用于 section header / primary button）
-  - `_CARD_PADDING = Margin(12, 10, 12, 10)`
-  - `_SUBCARD_PADDING = Margin(10, 8, 10, 8)`
-- **绝对不要改 widget 的 `Name` 或 `Is Variable` 勾选** —— 改了就断 binding，下次启动时 Python 端 `get_editor_property("<name>")` 会返回 None
-- Designer 支持的 Figma 原语：纯色块 / padding / Auto Layout / 字体字号 / Alignment / hover-pressed 三态按钮都能 1:1 还原
-- Designer **不直接支持**：`border-radius` 圆角、`box-shadow` 阴影、`linear-gradient` 渐变 —— 如 Figma 用到这些，需从 Figma 导出 9-slice PNG 再作为 `SlateBrush` 引用。**本项目当前 Figma 设计是纯色 flat 风格，无以上三件套**，Designer 100% 能还原
-- 调完 Compile + Save
-
-**Step 7：提交资产（bootstrap 的关键一步）**
-
-Content Browser 右键 `BP_PostRenderToolWidget` → Source Control submit；或在 git / p4 命令行里 add 该 `.uasset`。**这一步提交是本次 bootstrap 的唯一产物**：资产一旦进 depot，团队其他成员 `git pull` / `p4 sync` 自动拿到同一份，再也不用走 Step 1~6。忘了提交 = 下一个同事还得重做一遍、且你两份 BP 的 GUID 可能冲突。
+**Bootstrap-once 模型不变：** 资产提交一次进 depot，团队成员 `git pull` / `p4 sync` 自动拿到同一份。C++ 契约变动（加删 `UPROPERTY(BindWidget)`）时由任一持写权限的人跑 `build_widget_blueprint.run_build()` 补差 → compile → save → 提交更新的 `.uasset`。
 
 ---
 
 **后续维护（不是每个部署都做，只在下面这几种情况触发）：**
 
-- **C++ 增 / 删 / 改 `UPROPERTY(BindWidget)`**：原始 bootstrap 者（或任何持有写权限的人）在 Designer 里对齐 binding（老的变 unused 可留着不管，新的按 Step 3 拖一个同名 widget），Compile → Save → 提交更新的 `.uasset`。其他同事照常 sync。
-- **BP 在 depot 中意外被删 / 损坏**（例如误 `p4 delete`、合并冲突选错）：任何有权恢复的人先从 depot 历史版本回滚；回滚不了才重新走 Step 1~7 bootstrap。
-- **BP 仅本地被删 / 损坏 , depot 还完好**：`git restore Content/Blueprints/BP_PostRenderToolWidget.uasset` 或 `p4 sync -f` 强制覆盖本地，**不要**走 Step 1~7。
+- **C++ 增 / 删 / 改 `UPROPERTY(BindWidget)`**：
+  1. 改 `.h` → 关闭 Editor → 重建 plugin → 重开（Live Coding 不支持 UPROPERTY 变更）
+  2. 同步更新 `docs/widget-tree-spec.json`（新增节点 / 删除节点）与 `Content/Python/post_render_tool/widget.py` 的 `_REQUIRED_CONTROLS` / `_OPTIONAL_CONTROLS`
+  3. 跑 `python -m unittest post_render_tool.tests.test_spec_drift` 验证三方一致
+  4. 在 Editor 里 `build_widget_blueprint.run_build()` 补新 widget（老的保留不动；若老 widget 被 C++ 删了 BP 里会残留，可手动删）
+  5. Compile → Save → 提交 `.h` + `.json` + `widget.py` + `.uasset` 四个文件为一个逻辑单元
+- **BP 在 depot 中意外被删 / 损坏**：任何有权恢复的人先从 depot 历史版本回滚；回滚不了才跑 `build_widget_blueprint.run_build()` 重建（比手动 15 分钟更快，且保证和 spec 一致）
+- **BP 仅本地被删 / 损坏 , depot 还完好**：`git restore Content/Blueprints/BP_PostRenderToolWidget.uasset` 或 `p4 sync -f` 强制覆盖本地，**不要**跑 `run_build()`（否则可能覆盖团队的最新美化）
 
-完整排错见 `docs/plugin-setup.md` 与 `docs/bindwidget-contract.md`。
+完整排错见 `docs/plugin-setup.md`、`docs/bindwidget-contract.md`、`docs/bootstrap-checklist.md`。
 
 ### 1.4 启动工具
 
