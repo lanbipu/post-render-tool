@@ -73,8 +73,13 @@ void FPostRenderToolModule::RegisterMenus()
 
     Section.AddEntry(Entry);
 
+    // Force a rebuild of any already-displayed toolbar widgets, otherwise the
+    // new entry is stored but invisible because Slate snapshots the widget
+    // tree when it first builds the toolbar.
+    UToolMenus::Get()->RefreshAllWidgets();
+
     UE_LOG(LogTemp, Log,
-        TEXT("[PostRenderTool] Toolbar button registered at %s / section 'VPPostRenderTool'."),
+        TEXT("[PostRenderTool] Toolbar button registered at %s / section 'VPPostRenderTool' (widgets refreshed)."),
         *MenuName.ToString());
 }
 
