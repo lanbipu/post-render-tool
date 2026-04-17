@@ -1,0 +1,2076 @@
+{
+  "blueprint": {
+    "asset_path": "/PostRenderTool/Blueprints/BP_PostRenderToolWidget",
+    "parent_class": "/Script/PostRenderTool.PostRenderToolWidget",
+    "root_panel": {
+      "type": "VerticalBox",
+      "name": "RootPanel"
+    }
+  },
+  "root_children": [
+    {
+      "type": "ScrollBox",
+      "name": "lbl_root_scroll",
+      "role": "decorative",
+      "properties": {
+        "Orientation": "Vertical"
+      },
+      "slot": {
+        "fill_size": 1.0,
+        "size_rule": "Fill",
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "children": [
+        {
+          "type": "VerticalBox",
+          "name": "lbl_sections",
+          "role": "decorative",
+          "slot": {
+            "padding": [
+              12,
+              12,
+              12,
+              12
+            ]
+          },
+          "children": [
+            {
+              "type": "Border",
+              "name": "lbl_card_prereq",
+              "role": "decorative",
+              "properties": {
+                "BrushColor": [
+                  0.141,
+                  0.141,
+                  0.141,
+                  1.0
+                ],
+                "Padding": [
+                  12,
+                  10,
+                  12,
+                  10
+                ]
+              },
+              "slot": {
+                "padding": [
+                  0,
+                  0,
+                  0,
+                  8
+                ]
+              },
+              "children": [
+                {
+                  "type": "VerticalBox",
+                  "name": "lbl_prereq_vbox",
+                  "role": "decorative",
+                  "children": [
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_prereq_header",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_prereq_arrow",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "▶"
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ],
+                            "v_align": "Center"
+                          }
+                        },
+                        {
+                          "type": "SizeBox",
+                          "name": "lbl_prereq_accent",
+                          "role": "decorative",
+                          "properties": {
+                            "WidthOverride": 3,
+                            "HeightOverride": 13
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ],
+                            "v_align": "Center"
+                          },
+                          "children": [
+                            {
+                              "type": "Image",
+                              "name": "lbl_prereq_accent_img",
+                              "role": "decorative",
+                              "properties": {
+                                "Tint": [
+                                  0.909,
+                                  0.439,
+                                  0.302,
+                                  1.0
+                                ],
+                                "ImageSize": [
+                                  3,
+                                  13
+                                ],
+                                "DrawAs": "Box"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_prereq_title",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "Prerequisites"
+                          },
+                          "slot": {
+                            "v_align": "Center"
+                          }
+                        },
+                        {
+                          "type": "Spacer",
+                          "name": "lbl_prereq_header_spacer",
+                          "role": "decorative",
+                          "slot": {
+                            "fill_size": 1.0,
+                            "size_rule": "Fill"
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "prereq_summary",
+                          "role": "optional",
+                          "properties": {
+                            "Text": ""
+                          },
+                          "slot": {
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "VerticalBox",
+                      "name": "lbl_prereq_body",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_prereq_row_0",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "SizeBox",
+                              "name": "lbl_prereq_dot_0",
+                              "role": "decorative",
+                              "properties": {
+                                "WidthOverride": 8,
+                                "HeightOverride": 8
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  0,
+                                  8,
+                                  0
+                                ],
+                                "v_align": "Center"
+                              },
+                              "children": [
+                                {
+                                  "type": "Image",
+                                  "name": "lbl_prereq_dot_0_img",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Tint": [
+                                      0.8,
+                                      0.8,
+                                      0.8,
+                                      1.0
+                                    ],
+                                    "ImageSize": [
+                                      8,
+                                      8
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "prereq_label_0",
+                              "role": "optional",
+                              "properties": {
+                                "Text": ""
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_prereq_row_1",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "SizeBox",
+                              "name": "lbl_prereq_dot_1",
+                              "role": "decorative",
+                              "properties": {
+                                "WidthOverride": 8,
+                                "HeightOverride": 8
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  0,
+                                  8,
+                                  0
+                                ],
+                                "v_align": "Center"
+                              },
+                              "children": [
+                                {
+                                  "type": "Image",
+                                  "name": "lbl_prereq_dot_1_img",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Tint": [
+                                      0.8,
+                                      0.8,
+                                      0.8,
+                                      1.0
+                                    ],
+                                    "ImageSize": [
+                                      8,
+                                      8
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "prereq_label_1",
+                              "role": "optional",
+                              "properties": {
+                                "Text": ""
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_prereq_row_2",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "SizeBox",
+                              "name": "lbl_prereq_dot_2",
+                              "role": "decorative",
+                              "properties": {
+                                "WidthOverride": 8,
+                                "HeightOverride": 8
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  0,
+                                  8,
+                                  0
+                                ],
+                                "v_align": "Center"
+                              },
+                              "children": [
+                                {
+                                  "type": "Image",
+                                  "name": "lbl_prereq_dot_2_img",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Tint": [
+                                      0.8,
+                                      0.8,
+                                      0.8,
+                                      1.0
+                                    ],
+                                    "ImageSize": [
+                                      8,
+                                      8
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "prereq_label_2",
+                              "role": "optional",
+                              "properties": {
+                                "Text": ""
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_prereq_row_3",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "SizeBox",
+                              "name": "lbl_prereq_dot_3",
+                              "role": "decorative",
+                              "properties": {
+                                "WidthOverride": 8,
+                                "HeightOverride": 8
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  0,
+                                  8,
+                                  0
+                                ],
+                                "v_align": "Center"
+                              },
+                              "children": [
+                                {
+                                  "type": "Image",
+                                  "name": "lbl_prereq_dot_3_img",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Tint": [
+                                      0.8,
+                                      0.8,
+                                      0.8,
+                                      1.0
+                                    ],
+                                    "ImageSize": [
+                                      8,
+                                      8
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "prereq_label_3",
+                              "role": "optional",
+                              "properties": {
+                                "Text": ""
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_prereq_row_4",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "SizeBox",
+                              "name": "lbl_prereq_dot_4",
+                              "role": "decorative",
+                              "properties": {
+                                "WidthOverride": 8,
+                                "HeightOverride": 8
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  0,
+                                  8,
+                                  0
+                                ],
+                                "v_align": "Center"
+                              },
+                              "children": [
+                                {
+                                  "type": "Image",
+                                  "name": "lbl_prereq_dot_4_img",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Tint": [
+                                      0.8,
+                                      0.8,
+                                      0.8,
+                                      1.0
+                                    ],
+                                    "ImageSize": [
+                                      8,
+                                      8
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "prereq_label_4",
+                              "role": "optional",
+                              "properties": {
+                                "Text": ""
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_prereq_row_5",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "SizeBox",
+                              "name": "lbl_prereq_dot_5",
+                              "role": "decorative",
+                              "properties": {
+                                "WidthOverride": 8,
+                                "HeightOverride": 8
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  0,
+                                  8,
+                                  0
+                                ],
+                                "v_align": "Center"
+                              },
+                              "children": [
+                                {
+                                  "type": "Image",
+                                  "name": "lbl_prereq_dot_5_img",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Tint": [
+                                      0.8,
+                                      0.8,
+                                      0.8,
+                                      1.0
+                                    ],
+                                    "ImageSize": [
+                                      8,
+                                      8
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "prereq_label_5",
+                              "role": "optional",
+                              "properties": {
+                                "Text": ""
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_prereq_bottom_row",
+                          "role": "decorative",
+                          "slot": {
+                            "padding": [
+                              0,
+                              8,
+                              0,
+                              0
+                            ]
+                          },
+                          "children": [
+                            {
+                              "type": "Button",
+                              "name": "btn_recheck",
+                              "role": "required",
+                              "children": [
+                                {
+                                  "type": "TextBlock",
+                                  "name": "lbl_btn_recheck_text",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Text": "Recheck"
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      14,
+                                      6,
+                                      14,
+                                      6
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Border",
+              "name": "lbl_card_csv_file",
+              "role": "decorative",
+              "properties": {
+                "BrushColor": [
+                  0.141,
+                  0.141,
+                  0.141,
+                  1.0
+                ],
+                "Padding": [
+                  12,
+                  10,
+                  12,
+                  10
+                ]
+              },
+              "slot": {
+                "padding": [
+                  0,
+                  0,
+                  0,
+                  8
+                ]
+              },
+              "children": [
+                {
+                  "type": "VerticalBox",
+                  "name": "lbl_csv_file_vbox",
+                  "role": "decorative",
+                  "children": [
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_csv_file_header",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "SizeBox",
+                          "name": "lbl_csv_file_accent",
+                          "role": "decorative",
+                          "properties": {
+                            "WidthOverride": 3,
+                            "HeightOverride": 13
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ],
+                            "v_align": "Center"
+                          },
+                          "children": [
+                            {
+                              "type": "Image",
+                              "name": "lbl_csv_file_accent_img",
+                              "role": "decorative",
+                              "properties": {
+                                "Tint": [
+                                  0.909,
+                                  0.439,
+                                  0.302,
+                                  1.0
+                                ],
+                                "ImageSize": [
+                                  3,
+                                  13
+                                ],
+                                "DrawAs": "Box"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_csv_file_title",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "CSV File"
+                          },
+                          "slot": {
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_csv_file_row",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "Button",
+                          "name": "btn_browse",
+                          "role": "required",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_btn_browse_text",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Browse..."
+                              },
+                              "slot": {
+                                "padding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_file_path",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          },
+                          "slot": {
+                            "padding": [
+                              10,
+                              6,
+                              0,
+                              6
+                            ],
+                            "fill_size": 1.0,
+                            "size_rule": "Fill",
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Border",
+              "name": "lbl_card_csv_preview",
+              "role": "decorative",
+              "properties": {
+                "BrushColor": [
+                  0.141,
+                  0.141,
+                  0.141,
+                  1.0
+                ],
+                "Padding": [
+                  12,
+                  10,
+                  12,
+                  10
+                ]
+              },
+              "slot": {
+                "padding": [
+                  0,
+                  0,
+                  0,
+                  8
+                ]
+              },
+              "children": [
+                {
+                  "type": "VerticalBox",
+                  "name": "lbl_csv_preview_vbox",
+                  "role": "decorative",
+                  "children": [
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_csv_preview_header",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "SizeBox",
+                          "name": "lbl_csv_preview_accent",
+                          "role": "decorative",
+                          "properties": {
+                            "WidthOverride": 3,
+                            "HeightOverride": 13
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ],
+                            "v_align": "Center"
+                          },
+                          "children": [
+                            {
+                              "type": "Image",
+                              "name": "lbl_csv_preview_accent_img",
+                              "role": "decorative",
+                              "properties": {
+                                "Tint": [
+                                  0.909,
+                                  0.439,
+                                  0.302,
+                                  1.0
+                                ],
+                                "ImageSize": [
+                                  3,
+                                  13
+                                ],
+                                "DrawAs": "Box"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_csv_preview_title",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "CSV Preview"
+                          },
+                          "slot": {
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "VerticalBox",
+                      "name": "lbl_csv_preview_stat",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_frame_count",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_focal_range",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_timecode",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_sensor_width",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_csv_preview_fps_row",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_fps",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "FPS"
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              6,
+                              10,
+                              6
+                            ],
+                            "v_align": "Center"
+                          }
+                        },
+                        {
+                          "type": "SpinBox",
+                          "name": "spn_fps",
+                          "role": "required",
+                          "properties": {
+                            "MinValue": 0.0,
+                            "MaxValue": 120.0,
+                            "Value": 0.0,
+                            "MinFractionalDigits": 1
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_detected_fps",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          },
+                          "slot": {
+                            "padding": [
+                              10,
+                              6,
+                              0,
+                              6
+                            ],
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Border",
+              "name": "lbl_card_coord",
+              "role": "decorative",
+              "properties": {
+                "BrushColor": [
+                  0.141,
+                  0.141,
+                  0.141,
+                  1.0
+                ],
+                "Padding": [
+                  12,
+                  10,
+                  12,
+                  10
+                ]
+              },
+              "slot": {
+                "padding": [
+                  0,
+                  0,
+                  0,
+                  8
+                ]
+              },
+              "children": [
+                {
+                  "type": "VerticalBox",
+                  "name": "lbl_coord_vbox",
+                  "role": "decorative",
+                  "children": [
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_coord_header",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "SizeBox",
+                          "name": "lbl_coord_accent",
+                          "role": "decorative",
+                          "properties": {
+                            "WidthOverride": 3,
+                            "HeightOverride": 13
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ],
+                            "v_align": "Center"
+                          },
+                          "children": [
+                            {
+                              "type": "Image",
+                              "name": "lbl_coord_accent_img",
+                              "role": "decorative",
+                              "properties": {
+                                "Tint": [
+                                  0.909,
+                                  0.439,
+                                  0.302,
+                                  1.0
+                                ],
+                                "ImageSize": [
+                                  3,
+                                  13
+                                ],
+                                "DrawAs": "Box"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_coord_title",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "Coordinate Verification"
+                          },
+                          "slot": {
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_coord_frame_row",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_frame",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "Frame"
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              6,
+                              10,
+                              6
+                            ],
+                            "v_align": "Center"
+                          }
+                        },
+                        {
+                          "type": "SpinBox",
+                          "name": "spn_frame",
+                          "role": "required",
+                          "properties": {
+                            "MinValue": 0.0,
+                            "MaxValue": 0.0,
+                            "Value": 0.0
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_frame_hint",
+                          "role": "optional",
+                          "properties": {
+                            "Text": ""
+                          },
+                          "slot": {
+                            "padding": [
+                              10,
+                              6,
+                              0,
+                              6
+                            ],
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "VerticalBox",
+                      "name": "lbl_coord_pair",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_designer_header",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "DESIGNER (source)",
+                            "ColorAndOpacity": [
+                              0.7,
+                              0.7,
+                              0.7,
+                              1.0
+                            ]
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_designer_pos",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_designer_rot",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        },
+                        {
+                          "type": "Border",
+                          "name": "lbl_coord_separator",
+                          "role": "decorative",
+                          "properties": {
+                            "BrushColor": [
+                              0.227,
+                              0.227,
+                              0.227,
+                              1.0
+                            ],
+                            "Padding": [
+                              0,
+                              0,
+                              0,
+                              0
+                            ]
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              6,
+                              0,
+                              6
+                            ]
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_ue_header",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "→ UE (result)",
+                            "ColorAndOpacity": [
+                              0.7,
+                              0.7,
+                              0.7,
+                              1.0
+                            ]
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_ue_pos",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "txt_ue_rot",
+                          "role": "required",
+                          "properties": {
+                            "Text": ""
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Button",
+                      "name": "btn_spawn_cam",
+                      "role": "required",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ],
+                        "h_align": "Left"
+                      },
+                      "children": [
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_btn_spawn_cam_text",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "Spawn Test Camera"
+                          },
+                          "slot": {
+                            "padding": [
+                              14,
+                              6,
+                              14,
+                              6
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Border",
+              "name": "lbl_card_axis",
+              "role": "decorative",
+              "properties": {
+                "BrushColor": [
+                  0.141,
+                  0.141,
+                  0.141,
+                  1.0
+                ],
+                "Padding": [
+                  12,
+                  10,
+                  12,
+                  10
+                ]
+              },
+              "slot": {
+                "padding": [
+                  0,
+                  0,
+                  0,
+                  8
+                ]
+              },
+              "children": [
+                {
+                  "type": "VerticalBox",
+                  "name": "lbl_axis_vbox",
+                  "role": "decorative",
+                  "children": [
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_axis_header",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "SizeBox",
+                          "name": "lbl_axis_accent",
+                          "role": "decorative",
+                          "properties": {
+                            "WidthOverride": 3,
+                            "HeightOverride": 13
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ],
+                            "v_align": "Center"
+                          },
+                          "children": [
+                            {
+                              "type": "Image",
+                              "name": "lbl_axis_accent_img",
+                              "role": "decorative",
+                              "properties": {
+                                "Tint": [
+                                  0.909,
+                                  0.439,
+                                  0.302,
+                                  1.0
+                                ],
+                                "ImageSize": [
+                                  3,
+                                  13
+                                ],
+                                "DrawAs": "Box"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_axis_title",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "Axis Mapping"
+                          },
+                          "slot": {
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "TextBlock",
+                      "name": "lbl_pos_subheader",
+                      "role": "decorative",
+                      "properties": {
+                        "Text": "POSITION (m → cm)",
+                        "ColorAndOpacity": [
+                          0.7,
+                          0.7,
+                          0.7,
+                          1.0
+                        ]
+                      },
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          4
+                        ]
+                      }
+                    },
+                    {
+                      "type": "VerticalBox",
+                      "name": "lbl_pos_rows",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_row_ue_x",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_x",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "UE.X"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_x_arrow",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "←"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "ComboBoxString",
+                              "name": "cmb_pos_x_src",
+                              "role": "required",
+                              "properties": {
+                                "DefaultOptions": []
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_x_mul",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "×"
+                              },
+                              "slot": {
+                                "padding": [
+                                  8,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "SpinBox",
+                              "name": "spn_pos_x_scale",
+                              "role": "required",
+                              "properties": {
+                                "Value": 0.0
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_row_ue_y",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_y",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "UE.Y"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_y_arrow",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "←"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "ComboBoxString",
+                              "name": "cmb_pos_y_src",
+                              "role": "required",
+                              "properties": {
+                                "DefaultOptions": []
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_y_mul",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "×"
+                              },
+                              "slot": {
+                                "padding": [
+                                  8,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "SpinBox",
+                              "name": "spn_pos_y_scale",
+                              "role": "required",
+                              "properties": {
+                                "Value": 0.0
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_row_ue_z",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_z",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "UE.Z"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_z_arrow",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "←"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "ComboBoxString",
+                              "name": "cmb_pos_z_src",
+                              "role": "required",
+                              "properties": {
+                                "DefaultOptions": []
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_ue_z_mul",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "×"
+                              },
+                              "slot": {
+                                "padding": [
+                                  8,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "SpinBox",
+                              "name": "spn_pos_z_scale",
+                              "role": "required",
+                              "properties": {
+                                "Value": 0.0
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "TextBlock",
+                      "name": "lbl_rot_subheader",
+                      "role": "decorative",
+                      "properties": {
+                        "Text": "ROTATION (deg)",
+                        "ColorAndOpacity": [
+                          0.7,
+                          0.7,
+                          0.7,
+                          1.0
+                        ]
+                      },
+                      "slot": {
+                        "padding": [
+                          0,
+                          12,
+                          0,
+                          4
+                        ]
+                      }
+                    },
+                    {
+                      "type": "VerticalBox",
+                      "name": "lbl_rot_rows",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_row_pitch",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_pitch",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Pitch"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_pitch_arrow",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "←"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "ComboBoxString",
+                              "name": "cmb_rot_pitch_src",
+                              "role": "required",
+                              "properties": {
+                                "DefaultOptions": []
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_pitch_mul",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "×"
+                              },
+                              "slot": {
+                                "padding": [
+                                  8,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "SpinBox",
+                              "name": "spn_rot_pitch_scale",
+                              "role": "required",
+                              "properties": {
+                                "Value": 0.0
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_row_yaw",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_yaw",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Yaw"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_yaw_arrow",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "←"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "ComboBoxString",
+                              "name": "cmb_rot_yaw_src",
+                              "role": "required",
+                              "properties": {
+                                "DefaultOptions": []
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_yaw_mul",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "×"
+                              },
+                              "slot": {
+                                "padding": [
+                                  8,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "SpinBox",
+                              "name": "spn_rot_yaw_scale",
+                              "role": "required",
+                              "properties": {
+                                "Value": 0.0
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HorizontalBox",
+                          "name": "lbl_row_roll",
+                          "role": "decorative",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_roll",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Roll"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_roll_arrow",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "←"
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "ComboBoxString",
+                              "name": "cmb_rot_roll_src",
+                              "role": "required",
+                              "properties": {
+                                "DefaultOptions": []
+                              }
+                            },
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_roll_mul",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "×"
+                              },
+                              "slot": {
+                                "padding": [
+                                  8,
+                                  6,
+                                  8,
+                                  6
+                                ],
+                                "v_align": "Center"
+                              }
+                            },
+                            {
+                              "type": "SpinBox",
+                              "name": "spn_rot_roll_scale",
+                              "role": "required",
+                              "properties": {
+                                "Value": 0.0
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_axis_btn_row",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "Button",
+                          "name": "btn_apply_mapping",
+                          "role": "required",
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ]
+                          },
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_btn_apply_mapping_text",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Apply Mapping"
+                              },
+                              "slot": {
+                                "padding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "Button",
+                          "name": "btn_save_mapping",
+                          "role": "required",
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_btn_save_mapping_text",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Save to config.py"
+                              },
+                              "slot": {
+                                "padding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Border",
+              "name": "lbl_card_actions",
+              "role": "decorative",
+              "properties": {
+                "BrushColor": [
+                  0.141,
+                  0.141,
+                  0.141,
+                  1.0
+                ],
+                "Padding": [
+                  12,
+                  10,
+                  12,
+                  10
+                ]
+              },
+              "slot": {
+                "padding": [
+                  0,
+                  0,
+                  0,
+                  8
+                ]
+              },
+              "children": [
+                {
+                  "type": "VerticalBox",
+                  "name": "lbl_actions_vbox",
+                  "role": "decorative",
+                  "children": [
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_actions_header",
+                      "role": "decorative",
+                      "children": [
+                        {
+                          "type": "SizeBox",
+                          "name": "lbl_actions_accent",
+                          "role": "decorative",
+                          "properties": {
+                            "WidthOverride": 3,
+                            "HeightOverride": 13
+                          },
+                          "slot": {
+                            "padding": [
+                              0,
+                              0,
+                              8,
+                              0
+                            ],
+                            "v_align": "Center"
+                          },
+                          "children": [
+                            {
+                              "type": "Image",
+                              "name": "lbl_actions_accent_img",
+                              "role": "decorative",
+                              "properties": {
+                                "Tint": [
+                                  0.909,
+                                  0.439,
+                                  0.302,
+                                  1.0
+                                ],
+                                "ImageSize": [
+                                  3,
+                                  13
+                                ],
+                                "DrawAs": "Box"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_actions_title",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "Actions"
+                          },
+                          "slot": {
+                            "v_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Button",
+                      "name": "btn_import",
+                      "role": "required",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ],
+                        "h_align": "Fill"
+                      },
+                      "children": [
+                        {
+                          "type": "TextBlock",
+                          "name": "lbl_btn_import_text",
+                          "role": "decorative",
+                          "properties": {
+                            "Text": "Import"
+                          },
+                          "slot": {
+                            "padding": [
+                              14,
+                              10,
+                              14,
+                              10
+                            ],
+                            "h_align": "Center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "HorizontalBox",
+                      "name": "lbl_actions_btn_row",
+                      "role": "decorative",
+                      "slot": {
+                        "padding": [
+                          0,
+                          8,
+                          0,
+                          0
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "Button",
+                          "name": "btn_open_seq",
+                          "role": "required",
+                          "slot": {
+                            "fill_size": 1.0,
+                            "size_rule": "Fill",
+                            "padding": [
+                              0,
+                              0,
+                              4,
+                              0
+                            ]
+                          },
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_btn_open_seq_text",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Open Sequencer"
+                              },
+                              "slot": {
+                                "padding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ],
+                                "h_align": "Center"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "Button",
+                          "name": "btn_open_mrq",
+                          "role": "required",
+                          "slot": {
+                            "fill_size": 1.0,
+                            "size_rule": "Fill",
+                            "padding": [
+                              4,
+                              0,
+                              0,
+                              0
+                            ]
+                          },
+                          "children": [
+                            {
+                              "type": "TextBlock",
+                              "name": "lbl_btn_open_mrq_text",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "Open MRQ"
+                              },
+                              "slot": {
+                                "padding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ],
+                                "h_align": "Center"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "TextBlock",
+                      "name": "lbl_results_header",
+                      "role": "decorative",
+                      "properties": {
+                        "Text": "RESULTS",
+                        "ColorAndOpacity": [
+                          0.7,
+                          0.7,
+                          0.7,
+                          1.0
+                        ]
+                      },
+                      "slot": {
+                        "padding": [
+                          0,
+                          12,
+                          0,
+                          4
+                        ]
+                      }
+                    },
+                    {
+                      "type": "MultiLineEditableText",
+                      "name": "txt_results",
+                      "role": "required",
+                      "properties": {
+                        "Text": "",
+                        "IsReadOnly": true
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
