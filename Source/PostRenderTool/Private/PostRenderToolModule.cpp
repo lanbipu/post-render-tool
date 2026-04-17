@@ -2,10 +2,10 @@
 
 #include "PostRenderToolModule.h"
 
+#include "PostRenderToolCommands.h"
 #include "IPythonScriptPlugin.h"
 #include "ToolMenus.h"
-#include "Framework/MultiBox/MultiBoxBuilder.h"
-#include "Styling/AppStyle.h"
+#include "Framework/Commands/UICommandList.h"
 
 #define LOCTEXT_NAMESPACE "FPostRenderToolModule"
 
@@ -13,11 +13,18 @@ void FPostRenderToolModule::StartupModule()
 {
     UE_LOG(LogTemp, Log, TEXT("[PostRenderTool] Plugin module started."));
 
-    // RegisterStartupCallback's synchronous fast path was observed not to fire
-    // the delegate on at least one UE 5.7 Editor build under this project's
-    // LoadingPhase=Default, even with IsToolMenuUIEnabled=true and TryGet
-    // returning non-null. Manually dispatch: call RegisterMenus directly when
-    // UToolMenus is ready, otherwise defer via the official callback.
+    FPostRenderToolCommands::Register();
+
+    PluginCommands = MakeShared<FUICommandList>();
+    PluginCommands->MapAction(
+        FPostRenderToolCommands::Get().OpenToolWidget,
+        FExecuteAction::CreateRaw(this, &FPostRenderToolModule::OpenToolWidget),
+        FCanExecuteAction());
+
+    // SlimHorizontalToolBar (PlayToolBar's multi-box type) only renders buttons
+    // that flow through the command system. Direct FUIAction entries were
+    // observed to silently no-op — stick to the FUICommandInfo + FUICommandList
+    // pattern used by official UE plugins (InEditorDocumentation, PCG, etc.).
     if (UToolMenus::IsToolMenuUIEnabled() && UToolMenus::TryGet())
     {
         RegisterMenus();
@@ -37,47 +44,34 @@ void FPostRenderToolModule::ShutdownModule()
         ToolMenusStartupHandle.Reset();
     }
     UToolMenus::UnregisterOwner(this);
+
+    if (FPostRenderToolCommands::IsRegistered())
+    {
+        FPostRenderToolCommands::Unregister();
+    }
+    PluginCommands.Reset();
 }
 
 void FPostRenderToolModule::RegisterMenus()
 {
     FToolMenuOwnerScoped OwnerScoped(this);
 
-    const FName MenuName(TEXT("LevelEditor.LevelEditorToolBar.PlayToolBar"));
-
-    UToolMenus* ToolMenus = UToolMenus::Get();
-    UToolMenu* ToolbarMenu = ToolMenus->ExtendMenu(MenuName);
+    UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu(
+        TEXT("LevelEditor.LevelEditorToolBar.PlayToolBar"));
     if (!ToolbarMenu)
     {
         UE_LOG(LogTemp, Warning,
-            TEXT("[PostRenderTool] Failed to extend %s — toolbar button will not appear."),
-            *MenuName.ToString());
+            TEXT("[PostRenderTool] Failed to extend LevelEditor.LevelEditorToolBar.PlayToolBar."));
         return;
     }
 
-    FToolMenuSection& Section = ToolbarMenu->FindOrAddSection(
-        TEXT("VPPostRenderTool"),
-        LOCTEXT("VPSectionLabel", "VP Post-Render Tool"));
-
-    Section.AddEntry(FToolMenuEntry::InitToolBarButton(
-        TEXT("VPPostRenderToolButton"),
-        FUIAction(FExecuteAction::CreateRaw(this, &FPostRenderToolModule::OpenToolWidget)),
-        LOCTEXT("VPToolButtonLabel", "VPTool"),
-        LOCTEXT("VPToolButtonTooltip",
-            "Open the VP Post-Render Tool (Disguise CSV Dense → UE import)."),
-        FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("LevelEditor.OpenCinematic"))));
-
-    // If the Level Editor toolbar was already built before this plugin loaded
-    // (LoadingPhase=Default runs after editor UI init), the new entry sits in
-    // the data layer but the live Slate snapshot ignores it. RefreshAllWidgets
-    // is the broad hammer — RefreshMenuWidget(MenuName) was tried as a
-    // targeted alternative but observed to miss the generated widget (likely
-    // a key-mismatch in GeneratedMenuWidgets). Stick with the broad call.
-    ToolMenus->RefreshAllWidgets();
+    FToolMenuSection& Section = ToolbarMenu->FindOrAddSection(TEXT("PluginTools"));
+    FToolMenuEntry& Entry = Section.AddEntry(
+        FToolMenuEntry::InitToolBarButton(FPostRenderToolCommands::Get().OpenToolWidget));
+    Entry.SetCommandList(PluginCommands);
 
     UE_LOG(LogTemp, Log,
-        TEXT("[PostRenderTool] Toolbar button registered at %s (widgets refreshed)."),
-        *MenuName.ToString());
+        TEXT("[PostRenderTool] Toolbar button registered via FUICommandInfo at PlayToolBar / section 'PluginTools'."));
 }
 
 void FPostRenderToolModule::OpenToolWidget()

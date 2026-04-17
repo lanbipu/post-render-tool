@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
+class FUICommandList;
+
 class FPostRenderToolModule : public IModuleInterface
 {
 public:
@@ -16,5 +18,6 @@ private:
     void RegisterMenus();
     void OpenToolWidget();
 
+    TSharedPtr<FUICommandList> PluginCommands;
     FDelegateHandle ToolMenusStartupHandle;
 };
