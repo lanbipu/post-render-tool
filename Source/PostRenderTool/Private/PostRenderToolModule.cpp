@@ -56,7 +56,8 @@ void FPostRenderToolModule::RegisterMenus()
 {
     FToolMenuOwnerScoped OwnerScoped(this);
 
-    UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu(
+    UToolMenus* ToolMenus = UToolMenus::Get();
+    UToolMenu* ToolbarMenu = ToolMenus->ExtendMenu(
         TEXT("LevelEditor.LevelEditorToolBar.PlayToolBar"));
     if (!ToolbarMenu)
     {
@@ -69,6 +70,12 @@ void FPostRenderToolModule::RegisterMenus()
     FToolMenuEntry& Entry = Section.AddEntry(
         FToolMenuEntry::InitToolBarButton(FPostRenderToolCommands::Get().OpenToolWidget));
     Entry.SetCommandList(PluginCommands);
+
+    // LoadingPhase=Default puts this plugin's StartupModule after the Level
+    // Editor has already built its toolbar widget. Without an explicit
+    // refresh, the new entry sits in the data layer but the live Slate
+    // snapshot won't pick it up until a natural rebuild happens.
+    ToolMenus->RefreshAllWidgets();
 
     UE_LOG(LogTemp, Log,
         TEXT("[PostRenderTool] Toolbar button registered via FUICommandInfo at PlayToolBar / section 'PluginTools'."));
