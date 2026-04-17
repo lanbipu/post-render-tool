@@ -39,24 +39,24 @@ namespace
     }
 }
 
-bool UPostRenderToolBuildHelper::EnsureBindWidget(UWidgetBlueprint* Blueprint,
-                                                   FName WidgetName,
-                                                   TSubclassOf<UWidget> WidgetClass)
+EPostRenderToolEnsureResult UPostRenderToolBuildHelper::EnsureBindWidget(UWidgetBlueprint* Blueprint,
+                                                                         FName WidgetName,
+                                                                         TSubclassOf<UWidget> WidgetClass)
 {
     if (!Blueprint || !WidgetClass || WidgetName.IsNone())
     {
-        return false;
+        return EPostRenderToolEnsureResult::InvalidInput;
     }
 
     UWidgetTree* Tree = Blueprint->WidgetTree;
     if (!Tree)
     {
-        return false;
+        return EPostRenderToolEnsureResult::InvalidInput;
     }
 
     if (FindWidgetByNameRecursive(Tree->RootWidget, WidgetName))
     {
-        return false;
+        return EPostRenderToolEnsureResult::AlreadyExists;
     }
 
     UPanelWidget* RootPanel = Cast<UPanelWidget>(Tree->RootWidget);
@@ -64,13 +64,12 @@ bool UPostRenderToolBuildHelper::EnsureBindWidget(UWidgetBlueprint* Blueprint,
     {
         if (Tree->RootWidget != nullptr)
         {
-            // Root exists but isn't a panel — refuse to overwrite the user's layout.
             UE_LOG(LogTemp, Warning,
                 TEXT("[PostRenderToolBuildHelper] Root widget '%s' is %s (not a PanelWidget). "
                      "Wrap it in a VerticalBox/HorizontalBox/Overlay before re-running."),
                 *Tree->RootWidget->GetName(),
                 *Tree->RootWidget->GetClass()->GetName());
-            return false;
+            return EPostRenderToolEnsureResult::InvalidRoot;
         }
         UVerticalBox* NewRoot = Tree->ConstructWidget<UVerticalBox>(
             UVerticalBox::StaticClass(), TEXT("RootPanel"));
@@ -81,10 +80,10 @@ bool UPostRenderToolBuildHelper::EnsureBindWidget(UWidgetBlueprint* Blueprint,
     UWidget* NewWidget = Tree->ConstructWidget<UWidget>(WidgetClass, WidgetName);
     if (!NewWidget)
     {
-        return false;
+        return EPostRenderToolEnsureResult::ConstructFailed;
     }
 
     RootPanel->AddChild(NewWidget);
     Blueprint->Modify();
-    return true;
+    return EPostRenderToolEnsureResult::Added;
 }

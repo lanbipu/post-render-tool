@@ -100,7 +100,14 @@ _OPTIONAL: List[Tuple[str, Type[unreal.Widget]]] = [
 
 
 def build(include_optional: bool = True) -> bool:
-    """Populate the Blueprint via the C++ helper. Returns True on success."""
+    """Populate the Blueprint via the C++ helper.
+
+    Returns True iff every target was either newly added or already existed,
+    compile succeeded, and save succeeded. Any helper exception, hard-failure
+    return code (InvalidInput / InvalidRoot / ConstructFailed), compile error,
+    or save failure makes this return False so callers can't mistake a broken
+    BP for a successful run.
+    """
     bp = unreal.EditorAssetLibrary.load_asset(WIDGET_BP_PATH)
     if bp is None:
         unreal.log_error(
@@ -121,28 +128,61 @@ def build(include_optional: bool = True) -> bool:
         )
         return False
 
+    result_enum = getattr(unreal, "PostRenderToolEnsureResult", None)
+    if result_enum is None:
+        unreal.log_error(
+            "[build_widget_blueprint] unreal.PostRenderToolEnsureResult enum "
+            "unavailable; rebuild the plugin with the latest "
+            "PostRenderToolBuildHelper.h."
+        )
+        return False
+    added_value = result_enum.ADDED
+    exists_value = result_enum.ALREADY_EXISTS
+
     targets = list(_REQUIRED)
     if include_optional:
         targets.extend(_OPTIONAL)
 
     added = 0
+    already = 0
+    failures: list = []
     for name, cls in targets:
         try:
-            was_added = helper.ensure_bind_widget(bp, name, cls)
+            outcome = helper.ensure_bind_widget(bp, name, cls)
         except Exception as exc:  # noqa: BLE001
             unreal.log_error(
-                f"[build_widget_blueprint] ensure_bind_widget failed for "
+                f"[build_widget_blueprint] ensure_bind_widget raised for "
                 f"{name} ({cls.__name__}): {exc}"
             )
+            failures.append((name, cls.__name__, f"exception: {exc}"))
             continue
-        if was_added:
+
+        if outcome == added_value:
             added += 1
             unreal.log(f"[build_widget_blueprint]   + {name} ({cls.__name__})")
+        elif outcome == exists_value:
+            already += 1
+        else:
+            unreal.log_error(
+                f"[build_widget_blueprint] ensure_bind_widget rejected "
+                f"{name} ({cls.__name__}): outcome={outcome}"
+            )
+            failures.append((name, cls.__name__, str(outcome)))
 
-    if added == 0:
-        unreal.log("[build_widget_blueprint] No new widgets added (all bindings already present).")
-    else:
-        unreal.log(f"[build_widget_blueprint] Added {added} widget(s).")
+    unreal.log(
+        f"[build_widget_blueprint] Summary: added={added}, "
+        f"already_present={already}, failed={len(failures)}, "
+        f"total_targets={len(targets)}"
+    )
+
+    if failures:
+        unreal.log_error(
+            f"[build_widget_blueprint] {len(failures)} binding(s) could not be "
+            f"ensured; aborting compile/save so the BP is not left half-populated."
+        )
+        for name, cls_name, reason in failures:
+            unreal.log_error(f"[build_widget_blueprint]   - {name} ({cls_name}): {reason}")
+        return False
 
     try:
         unreal.BlueprintEditorLibrary.compile_blueprint(bp)
@@ -151,11 +191,13 @@ def build(include_optional: bool = True) -> bool:
         return False
 
     saved = unreal.EditorAssetLibrary.save_asset(WIDGET_BP_PATH, only_if_is_dirty=False)
-    if saved:
-        unreal.log(f"[build_widget_blueprint] Saved {WIDGET_BP_PATH}.")
-    else:
-        unreal.log_warning(
-            f"[build_widget_blueprint] save_asset returned False for {WIDGET_BP_PATH}."
+    if not saved:
+        unreal.log_error(
+            f"[build_widget_blueprint] save_asset returned False for "
+            f"{WIDGET_BP_PATH} — check file write permissions, source control "
+            f"lock state, and that the asset isn't open in another editor tab."
         )
+        return False
 
+    unreal.log(f"[build_widget_blueprint] Saved {WIDGET_BP_PATH}.")
     return True
