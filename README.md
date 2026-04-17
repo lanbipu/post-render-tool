@@ -49,7 +49,11 @@ print(result.report.format_report())
 
 **方式 2：Blueprint UI**
 
-Plugin 源码里**不包含** `BP_PostRenderToolWidget.uasset`（UE 5.7 的 `UWidgetBlueprint::WidgetTree` 对 Python 反射不可见，无法自动生成，team 决定 Designer 手工搭建）。每个部署环境首次使用要按 `docs/deployment-guide.md` §1.3 在 UMG Designer 里一次性创建 + 提交资产到 git / p4，团队 sync 后共享。
+Plugin 源码里**不包含** `BP_PostRenderToolWidget.uasset`（UE 5.7 的 `UWidgetBlueprint::WidgetTree` 对 Python 反射不可见，无法自动生成，team 决定 Designer 手工搭建）。分布流程：
+
+- **Bootstrap（仅一次）**：项目第一个部署者按 `docs/deployment-guide.md` §1.3 在 UMG Designer 里创建 BP、满足 BindWidget contract、Compile 通过、保存、`git add` / `p4 add` 该 `.uasset` 并提交。
+- **后续所有部署**：`git pull` / `p4 sync` 就能拿到同一份 `.uasset`，**不需要**重新搭建。
+- **BP 损坏 / 本地误删**：先尝试 sync 回来；sync 不到（比如别人也删了、depot 里没有）才按 §1.3 重新 bootstrap 并重新提交。
 
 ## Project Structure
 

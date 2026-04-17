@@ -68,7 +68,7 @@ post_render_tool/                               ← plugin root
 │           └── PostRenderToolWidget.cpp        ← empty NativeConstruct stub
 ├── Content/
 │   ├── Blueprints/
-│   │   └── BP_PostRenderToolWidget.uasset     ← NOT in repo; each deployment authors once via deployment-guide.md §1.3 then commits
+│   │   └── BP_PostRenderToolWidget.uasset     ← not in upstream plugin source; first bootstrap authors once via deployment-guide.md §1.3 and commits to the project repo, later clones/deployments just sync
 │   └── Python/
 │       ├── init_post_render_tool.py            ← entry point, calls widget_builder.open_widget()
 │       └── post_render_tool/

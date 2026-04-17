@@ -31,13 +31,16 @@ Copy-Item -Recurse "C:\path\to\post_render_tool" "C:\path\to\MyVPProject\Plugins
 
 **编译失败时**：检查 `Saved/Logs/` 下的 UBT 日志，或确认系统已装 Xcode（macOS）/ Visual Studio 2022（Windows）。
 
-### 1.3 创建 Blueprint 资产并手动搭建 UI（必做一次性工作）
+### 1.3 首次 Bootstrap：创建 Blueprint 资产并手动搭建 UI（**只做一次**，不是每个部署都要做）
 
-> **重要：** 当前仓库**没有**完整的 `BP_PostRenderToolWidget.uasset`（git / p4 里只跟踪 C++ 源码和 Python 文件，UMG 资产需要每个部署环境一次性补齐）。
+> **谁应该走这一节：**
+> - **项目里还没有人做过 BP 时**（全新仓库 / 从未 bootstrap）→ 第一个部署者按本节 Step 1 → Step 7 搭建并提交 `.uasset`，团队里**只需要一个人做这一次**。
+> - **BP 已经在 depot 里**（另一位同事已经 bootstrap 过）→ 不要走本节！直接 `git pull` / `p4 sync` 就能拿到同一份 `.uasset`，enable plugin 后工具即刻可用。
+> - **BP 本地被误删 / 损坏**（depot 还有）→ `git restore` / `p4 sync -f` 恢复即可，同样不需要走本节。
 >
-> 现象识别：UI 打开是空白面板 + Output Log 一大片 `A required widget binding "<name>" of type <type> was not found.` 编译错误 → 处于"空壳 BP"状态，走本节流程。
+> **判断自己处于哪种情况：** Editor 打开 UI 后如果空白面板 + Output Log 一大片 `A required widget binding "<name>" of type <type> was not found.` → 说明本地没拿到 BP。先 sync 试试；sync 不到再回本节 bootstrap。
 >
-> **为什么只能手动搭建：** UE 5.7 的 `UWidgetBlueprint::WidgetTree` 在源码里是 `UPROPERTY(Instanced)`，既没有 `BlueprintReadable` 也没有 `EditAnywhere` flag，按 `PyGenUtil.cpp::IsScriptExposedProperty` 规则对 Python 反射完全不可见 —— 纯 Python 脚本无法触及 widget tree，`get_editor_property("widget_tree")` 会抛 "Failed to find property"。写 C++ `UBlueprintFunctionLibrary` 桥接虽然技术上可行，但要完整还原 Figma 设计（容器嵌套 + slot padding + widget styling）需要 600~1000 行 Python + 200~400 行 C++ helper，而且每次 UE 版本升级都要跟 widget slot API 漂移，投入产出比低于 Designer 可视化调整。所以本项目明确选择 Designer 手动搭建。
+> **为什么只能手动搭建（决策背景，一次性记录）：** UE 5.7 的 `UWidgetBlueprint::WidgetTree` 在源码里是 `UPROPERTY(Instanced)`，既没有 `BlueprintReadable` 也没有 `EditAnywhere` flag，按 `PyGenUtil.cpp::IsScriptExposedProperty` 规则对 Python 反射完全不可见 —— 纯 Python 脚本无法触及 widget tree，`get_editor_property("widget_tree")` 会抛 "Failed to find property"。写 C++ `UBlueprintFunctionLibrary` 桥接虽然技术上可行，但要完整还原 Figma 设计（容器嵌套 + slot padding + widget styling）需要 600~1000 行 Python + 200~400 行 C++ helper，而且每次 UE 版本升级都要跟 widget slot API 漂移，投入产出比低于 Designer 可视化调整 + 提交 `.uasset` 到版本控制 + 团队 sync 共享这个方案。所以本项目明确选择 bootstrap-once + sync-forever 的路径，决策详见 commit `bd140d7`。
 
 **Step 1：创建 Blueprint 外壳**
 
@@ -96,16 +99,17 @@ Compile 通过后可以任意重组 Hierarchy 还原 Figma 视觉设计：
 - Designer **不直接支持**：`border-radius` 圆角、`box-shadow` 阴影、`linear-gradient` 渐变 —— 如 Figma 用到这些，需从 Figma 导出 9-slice PNG 再作为 `SlateBrush` 引用。**本项目当前 Figma 设计是纯色 flat 风格，无以上三件套**，Designer 100% 能还原
 - 调完 Compile + Save
 
-**Step 7：提交资产**
+**Step 7：提交资产（bootstrap 的关键一步）**
 
-Content Browser 右键 `BP_PostRenderToolWidget` → Source Control submit；或在 git / p4 命令行里 add 该 `.uasset`。二进制资产提交后团队成员 `git pull` / `p4 sync` 就能拿同一份，免得每人都重做 Step 1~6。
+Content Browser 右键 `BP_PostRenderToolWidget` → Source Control submit；或在 git / p4 命令行里 add 该 `.uasset`。**这一步提交是本次 bootstrap 的唯一产物**：资产一旦进 depot，团队其他成员 `git pull` / `p4 sync` 自动拿到同一份，再也不用走 Step 1~6。忘了提交 = 下一个同事还得重做一遍、且你两份 BP 的 GUID 可能冲突。
 
 ---
 
-**后续迭代：**
+**后续维护（不是每个部署都做，只在下面这几种情况触发）：**
 
-- C++ 增/删/改 `UPROPERTY(BindWidget)` → Blueprint 必须重 Compile 对齐：老 binding 变 unused（可留着不管），新 binding 必须在 Designer 里按同样流程补控件、Compile 通过，再提交更新的 `.uasset`
-- 如果 BP 被意外删除 / 损坏，从 Step 1 重新来一遍
+- **C++ 增 / 删 / 改 `UPROPERTY(BindWidget)`**：原始 bootstrap 者（或任何持有写权限的人）在 Designer 里对齐 binding（老的变 unused 可留着不管，新的按 Step 3 拖一个同名 widget），Compile → Save → 提交更新的 `.uasset`。其他同事照常 sync。
+- **BP 在 depot 中意外被删 / 损坏**（例如误 `p4 delete`、合并冲突选错）：任何有权恢复的人先从 depot 历史版本回滚；回滚不了才重新走 Step 1~7 bootstrap。
+- **BP 仅本地被删 / 损坏 , depot 还完好**：`git restore Content/Blueprints/BP_PostRenderToolWidget.uasset` 或 `p4 sync -f` 强制覆盖本地，**不要**走 Step 1~7。
 
 完整排错见 `docs/plugin-setup.md` 与 `docs/bindwidget-contract.md`。
 
@@ -215,7 +219,7 @@ importlib.reload(w); importlib.reload(wb)
 wb.rebuild_widget()
 ```
 
-> **注意：** Blueprint 资产 `BP_PostRenderToolWidget` **不在 plugin 源码仓库里**（见 1.3 节开头说明）。完成 1.3 流程之后的 `.uasset` 要单独 `git add` / `p4 add` 提交到版本控制，团队成员 `git pull` / `p4 sync` 才能拿到。不要在 Content Browser 里随便删除本地 `.uasset`，否则得重新 sync 或按 1.3 从头再搭。
+> **注意：** Blueprint 资产 `BP_PostRenderToolWidget` **不在 plugin 源码仓库里**（见 1.3 节开头说明），bootstrap 完成后由**项目仓库**承载。第一个 bootstrap 的人提交一次之后，团队其他成员 `git pull` / `p4 sync` 直接拿、不用自己搭。Content Browser 里随便删了本地 `.uasset` 的情况：depot 里还在就 sync 回来（秒级恢复）；depot 里也没有才按 1.3 重新 bootstrap（几十分钟的手工工作）。
 >
 > **C++ UPROPERTY 变更**（在 `PostRenderToolWidget.h` 里增/删/改 BindWidget 属性）**不支持 Live Coding**，必须关闭 Editor 完整重编 plugin，然后重新 compile Blueprint。
 >
@@ -238,7 +242,7 @@ from post_render_tool.widget_builder import open_widget, rebuild_widget, delete_
 
 open_widget()      # 加载 BP_PostRenderToolWidget + spawn tab + 绑定 callback
 rebuild_widget()   # 重新打开（释放缓存 UI 引用，不删 Blueprint 资产）
-delete_widget()    # 销毁性：删除部署环境自建的 Blueprint 资产——不是 plugin 自带的，删了必须 git/p4 sync 回来或按 1.3 重搭
+delete_widget()    # 销毁性：删除项目仓库里的 Blueprint 资产——不是 plugin 自带的，删了优先 git/p4 sync 回来；sync 不到才按 1.3 重新 bootstrap
 ```
 
 ### 故障排查
