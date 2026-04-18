@@ -91,8 +91,7 @@
                               0
                             ],
                             "v_align": "Center"
-                          },
-                          "variant": "subsection_title"
+                          }
                         },
                         {
                           "type": "SizeBox",
@@ -141,8 +140,7 @@
                           },
                           "slot": {
                             "v_align": "Center"
-                          },
-                          "variant": "section_title"
+                          }
                         },
                         {
                           "type": "Spacer",
@@ -162,8 +160,7 @@
                           },
                           "slot": {
                             "v_align": "Center"
-                          },
-                          "variant": "status_ok"
+                          }
                         }
                       ]
                     },
@@ -228,8 +225,7 @@
                               "role": "optional",
                               "properties": {
                                 "Text": ""
-                              },
-                              "variant": "body"
+                              }
                             }
                           ]
                         },
@@ -281,8 +277,7 @@
                               "role": "optional",
                               "properties": {
                                 "Text": ""
-                              },
-                              "variant": "body"
+                              }
                             }
                           ]
                         },
@@ -334,8 +329,7 @@
                               "role": "optional",
                               "properties": {
                                 "Text": ""
-                              },
-                              "variant": "body"
+                              }
                             }
                           ]
                         },
@@ -387,8 +381,7 @@
                               "role": "optional",
                               "properties": {
                                 "Text": ""
-                              },
-                              "variant": "body"
+                              }
                             }
                           ]
                         },
@@ -440,8 +433,7 @@
                               "role": "optional",
                               "properties": {
                                 "Text": ""
-                              },
-                              "variant": "body"
+                              }
                             }
                           ]
                         },
@@ -493,8 +485,7 @@
                               "role": "optional",
                               "properties": {
                                 "Text": ""
-                              },
-                              "variant": "body"
+                              }
                             }
                           ]
                         },
@@ -530,11 +521,9 @@
                                       14,
                                       6
                                     ]
-                                  },
-                                  "variant": "button_text"
+                                  }
                                 }
-                              ],
-                              "variant": "secondary"
+                              ]
                             }
                           ]
                         }
@@ -628,8 +617,7 @@
                           },
                           "slot": {
                             "v_align": "Center"
-                          },
-                          "variant": "section_title"
+                          }
                         }
                       ]
                     },
@@ -665,11 +653,9 @@
                                   14,
                                   6
                                 ]
-                              },
-                              "variant": "button_text"
+                              }
                             }
-                          ],
-                          "variant": "secondary"
+                          ]
                         },
                         {
                           "type": "TextBlock",
@@ -688,8 +674,7 @@
                             "fill_size": 1.0,
                             "size_rule": "Fill",
                             "v_align": "Center"
-                          },
-                          "variant": "body"
+                          }
                         }
                       ]
                     }
@@ -781,8 +766,7 @@
                           },
                           "slot": {
                             "v_align": "Center"
-                          },
-                          "variant": "section_title"
+                          }
                         }
                       ]
                     },
@@ -805,8 +789,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "TextBlock",
@@ -814,8 +797,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "TextBlock",
@@ -823,8 +805,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "TextBlock",
@@ -832,8 +813,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         }
                       ]
                     },
@@ -865,8 +845,7 @@
                               6
                             ],
                             "v_align": "Center"
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "SpinBox",
@@ -894,8 +873,7 @@
                               6
                             ],
                             "v_align": "Center"
-                          },
-                          "variant": "hint"
+                          }
                         }
                       ]
                     }
@@ -987,8 +965,7 @@
                           },
                           "slot": {
                             "v_align": "Center"
-                          },
-                          "variant": "section_title"
+                          }
                         }
                       ]
                     },
@@ -1020,8 +997,7 @@
                               6
                             ],
                             "v_align": "Center"
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "SpinBox",
@@ -1048,8 +1024,7 @@
                               6
                             ],
                             "v_align": "Center"
-                          },
-                          "variant": "hint"
+                          }
                         }
                       ]
                     },
@@ -1078,8 +1053,7 @@
                               0.7,
                               1.0
                             ]
-                          },
-                          "variant": "subsection_title"
+                          }
                         },
                         {
                           "type": "TextBlock",
@@ -1087,8 +1061,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "TextBlock",
@@ -1096,8 +1069,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "Border",
@@ -1138,8 +1110,7 @@
                               0.7,
                               1.0
                             ]
-                          },
-                          "variant": "subsection_title"
+                          }
                         },
                         {
                           "type": "TextBlock",
@@ -1147,8 +1118,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         },
                         {
                           "type": "TextBlock",
@@ -1156,8 +1126,7 @@
                           "role": "required",
                           "properties": {
                             "Text": ""
-                          },
-                          "variant": "body"
+                          }
                         }
                       ]
                     },
@@ -1189,11 +1158,9 @@
                               14,
                               6
                             ]
-                          },
-                          "variant": "button_text"
+                          }
                         }
-                      ],
-                      "variant": "secondary"
+                      ]
                     }
                   ]
                 }
@@ -1283,8 +1250,7 @@
                           },
                           "slot": {
                             "v_align": "Center"
-                          },
-                          "variant": "section_title"
+                          }
                         }
                       ]
                     },
@@ -1308,8 +1274,7 @@
                           0,
                           4
                         ]
-                      },
-                      "variant": "subsection_title"
+                      }
                     },
                     {
                       "type": "VerticalBox",
@@ -1336,8 +1301,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "TextBlock",
@@ -1354,8 +1318,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "ComboBoxString",
@@ -1380,8 +1343,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "SpinBox",
@@ -1413,8 +1375,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "TextBlock",
@@ -1431,8 +1392,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "ComboBoxString",
@@ -1457,8 +1417,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "SpinBox",
@@ -1490,8 +1449,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "TextBlock",
@@ -1508,8 +1466,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "ComboBoxString",
@@ -1534,8 +1491,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "SpinBox",
@@ -1569,8 +1525,7 @@
                           0,
                           4
                         ]
-                      },
-                      "variant": "subsection_title"
+                      }
                     },
                     {
                       "type": "VerticalBox",
@@ -1597,8 +1552,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "TextBlock",
@@ -1615,8 +1569,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "ComboBoxString",
@@ -1641,8 +1594,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "SpinBox",
@@ -1674,8 +1626,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "TextBlock",
@@ -1692,8 +1643,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "ComboBoxString",
@@ -1718,8 +1668,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "SpinBox",
@@ -1751,8 +1700,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "TextBlock",
@@ -1769,8 +1717,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "ComboBoxString",
@@ -1795,8 +1742,7 @@
                                   6
                                 ],
                                 "v_align": "Center"
-                              },
-                              "variant": "body"
+                              }
                             },
                             {
                               "type": "SpinBox",
@@ -1850,11 +1796,9 @@
                                   14,
                                   6
                                 ]
-                              },
-                              "variant": "button_text"
+                              }
                             }
-                          ],
-                          "variant": "secondary"
+                          ]
                         },
                         {
                           "type": "Button",
@@ -1875,11 +1819,9 @@
                                   14,
                                   6
                                 ]
-                              },
-                              "variant": "button_text"
+                              }
                             }
-                          ],
-                          "variant": "secondary"
+                          ]
                         }
                       ]
                     }
@@ -1971,8 +1913,7 @@
                           },
                           "slot": {
                             "v_align": "Center"
-                          },
-                          "variant": "section_title"
+                          }
                         }
                       ]
                     },
@@ -2005,11 +1946,9 @@
                               10
                             ],
                             "h_align": "Center"
-                          },
-                          "variant": "primary_button_text"
+                          }
                         }
-                      ],
-                      "variant": "primary"
+                      ]
                     },
                     {
                       "type": "HorizontalBox",
@@ -2054,11 +1993,9 @@
                                   6
                                 ],
                                 "h_align": "Center"
-                              },
-                              "variant": "button_text"
+                              }
                             }
-                          ],
-                          "variant": "secondary"
+                          ]
                         },
                         {
                           "type": "Button",
@@ -2090,11 +2027,9 @@
                                   6
                                 ],
                                 "h_align": "Center"
-                              },
-                              "variant": "button_text"
+                              }
                             }
-                          ],
-                          "variant": "secondary"
+                          ]
                         }
                       ]
                     },
@@ -2118,8 +2053,7 @@
                           0,
                           4
                         ]
-                      },
-                      "variant": "results_header"
+                      }
                     },
                     {
                       "type": "MultiLineEditableText",

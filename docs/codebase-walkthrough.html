@@ -646,6 +646,145 @@
     font-variation-settings: "opsz" 24;
   }
 
+  /* --------- UMG Hierarchy Tree (Designer view) --------- */
+  .hierarchy-block {
+    margin: 32px 0 20px;
+  }
+  .hierarchy-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+  }
+  .hierarchy-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+  }
+  .hierarchy-legend {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hierarchy-legend .lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hierarchy-legend .lg .mk {
+    font-size: 13px;
+    line-height: 1;
+  }
+  .hierarchy-legend .lg-req .mk { color: var(--accent); }
+  .hierarchy-legend .lg-opt .mk { color: var(--warn); }
+  .hierarchy-legend .lg-dec .mk { color: var(--ink-faint); opacity: 0.7; }
+
+  .hierarchy-tree {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.9;
+    padding: 20px 22px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--accent);
+    overflow-x: auto;
+    border-radius: 0 4px 4px 0;
+  }
+  .h-line {
+    display: grid;
+    grid-template-columns:
+      [tree] 32ch
+      [mark] 2.5ch
+      [name] 28ch
+      [props] 1fr;
+    align-items: baseline;
+    column-gap: 4px;
+    padding: 1px 0;
+    transition: background .15s;
+    white-space: nowrap;
+    min-width: max-content;
+  }
+  @media (max-width: 720px) {
+    .h-line {
+      grid-template-columns: 1fr;
+      row-gap: 2px;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--rule);
+    }
+  }
+  .h-line:hover { background: var(--surface); }
+  .h-tree {
+    white-space: pre;
+  }
+  .h-branch { color: var(--ink-faint); opacity: 0.75; }
+  .h-type { color: var(--ink); font-weight: 500; }
+  .h-mark {
+    display: inline-block;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .h-role-req { color: var(--accent); }
+  .h-role-opt { color: var(--warn); }
+  .h-role-dec { color: var(--ink-faint); opacity: 0.55; }
+  .h-name {
+    padding: 0 6px 0 8px;
+    letter-spacing: 0.01em;
+  }
+  .h-name-req { color: var(--accent-soft); font-weight: 500; }
+  .h-name-opt { color: var(--warn); font-weight: 500; }
+  .h-name-dec { color: var(--ink-muted); }
+  .h-props {
+    padding-left: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .h-effect {
+    color: var(--ink);
+    font-size: 11.5px;
+    font-weight: 500;
+  }
+  .h-sep {
+    color: var(--ink-faint);
+    opacity: 0.5;
+    margin: 0 6px;
+  }
+  .h-params {
+    color: var(--ink-faint);
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.85;
+  }
+  .h-py {
+    color: var(--accent);
+    font-style: normal;
+    opacity: 0.9;
+  }
+  .hierarchy-footnote {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    margin-top: 10px;
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+  }
+  .hierarchy-footnote code {
+    color: var(--accent-soft);
+    background: var(--surface);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
   /* --------- Diagrams --------- */
   .ascii-block {
     font-family: var(--mono);
@@ -1130,7 +1269,9 @@
   </div>
   <p class="ch-subtitle reveal" style="max-width: 62ch; margin-left:168px; margin-top:-42px; margin-bottom: 64px;">
     这块面板自上而下就是一次完整的现场回流动作——<em>Prereq ✓ → 选 CSV → 看摘要 → 验轴映射 → Import → 查报告</em>。
-    点击左侧任意一个分节，右侧展开它的 BindWidget 契约与 Python 句柄。
+    点击左侧任意一个分节，右侧展开它的 BindWidget 契约与 Python 句柄；
+    每行 widget 后面标注了 <strong>UI 视觉作用</strong> 与 <strong>Designer 推荐参数</strong>（颜色 / 字体 / 内边距 / slot-layout），
+    是手工在 UMG Designer 里调版面时的即取即用参考表。
   </p>
 
   <div class="panel-stage reveal">
@@ -1725,6 +1866,167 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
 
 <script>
 (function(){
+  /* --- UMG HIERARCHY TREE BUILDER ---
+     Each tree line is described by a 6-tuple:
+       [branch, type, role, name, effect, params]
+     branch: tree-drawing prefix string (spaces + │ ├ └ ─)
+     type: UMG class name (with U prefix stripped, matches Palette)
+     role: 'req' = required contract, 'opt' = optional contract, 'dec' = decorative
+     name: widget Name exactly as it appears in Designer Hierarchy
+     effect: 在 UI 里的视觉作用（中文），例如"段头橙色竖条" "主操作按钮"
+     params: 建议 Designer 设置的参数（Color/Font/Padding/Size 等）；
+             以 "py:" 标记的片段表示运行时由 Python 写入，Designer 可留空
+  */
+  const ROLE_MARK = { req: '\u25CF', opt: '\u25CB', dec: '\u25C7' };
+  function h(branch, type, role, name, effect, params) {
+    const mark = ROLE_MARK[role];
+    const roleCls = 'h-role-' + role;
+    const nameCls = 'h-name-' + role;
+    // Render params with "py:" segments highlighted as runtime overrides.
+    const paramsHtml = (params || '').replace(
+      /py:([^·]+)/g,
+      '<span class="h-py">← Python: $1</span>'
+    );
+    let propsInner = '';
+    if (effect && params) {
+      propsInner = `<span class="h-effect">${effect}</span>`
+        + `<span class="h-sep">·</span>`
+        + `<span class="h-params">${paramsHtml}</span>`;
+    } else if (effect) {
+      propsInner = `<span class="h-effect">${effect}</span>`;
+    } else if (params) {
+      propsInner = `<span class="h-params">${paramsHtml}</span>`;
+    }
+    return `<div class="h-line">`
+      + `<span class="h-tree"><span class="h-branch">${branch}</span><span class="h-type">${type}</span></span>`
+      + `<span class="h-mark ${roleCls}">${mark}</span>`
+      + `<span class="h-name ${nameCls}">${name}</span>`
+      + `<span class="h-props">${propsInner}</span>`
+      + `</div>`;
+  }
+  const hierarchies = {
+    "1": [
+      h('',                        'Border',                 'dec', 'lbl_card_prereq',             'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
+      h('└─ ',                     'VerticalBox',            'dec', 'lbl_prereq_vbox',             '卡内纵向排',                            ''),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_prereq_header',           '卡片头（整行可点击折叠）',              'BP OnClicked 切换 body.Visibility (Collapsed ↔ Visible)'),
+      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_prereq_arrow',            '折叠指示箭头',                          'Text="▶"（展开时 BP 改为 "▼"）, Color=#E8704D, Font=12 Bold'),
+      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_prereq_accent',           '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
+      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_prereq_accent_img',       '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
+      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_prereq_title',            '段头主标题',                            'Text="Prerequisites", Color=#F2F2F2, Font=13 Bold'),
+      h('   │  ├─ ',               'Spacer',                 'dec', 'lbl_prereq_header_spacer',    '把右侧徽章推到最右',                    'slot.FillSize=1.0'),
+      h('   │  └─ ',               'TextBlock',              'opt', 'prereq_summary',              '右侧状态徽章「N / 6 OK」',              'Color=#4CAF50 (全 OK 时) / #F44336 (有 MISSING), Font=12 Bold, py:"N / 6 OK"'),
+      h('   └─ ',                  'VerticalBox',            'dec', 'lbl_prereq_body',             '折叠体（6 行状态 + 底部按钮）',         'slot.Padding=0,8,0,0, Visibility 由 BP header OnClicked 控制'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_0',            '单行：圆点 + 状态文本',                 'slot.Padding=0,2,0,0'),
+      h('      │  ├─ ',            'SizeBox',                'dec', 'lbl_prereq_dot_0',            '圆点尺寸盒',                            'WidthOverride=8, HeightOverride=8, slot.Padding=0,0,8,0, v_align=Center'),
+      h('      │  │  └─ ',         'Image',                  'dec', 'lbl_prereq_dot_0_img',        '状态圆点',                              'Tint=#CCCCCC (OK) / #F44336 (MISSING), DrawAs=Image, ImageSize=8×8'),
+      h('      │  └─ ',            'TextBlock',              'opt', 'prereq_label_0',              '状态行文本',                            'Color=#CCCCCC (OK) / #F44336 (MISSING), Font=12, py:"OK: &lt;plugin&gt;" 或 "MISSING: &lt;plugin&gt; → &lt;hint&gt;"'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_1',            '同构 · 承载 prereq_label_1',            '—'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_2',            '同构 · 承载 prereq_label_2',            '—'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_3',            '同构 · 承载 prereq_label_3',            '—'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_4',            '同构 · 承载 prereq_label_4',            '—'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_5',            '同构 · 承载 prereq_label_5',            '—'),
+      h('      └─ ',               'HorizontalBox',          'dec', 'lbl_prereq_bottom_row',       '底部「Recheck」按钮行',                 'slot.Padding=0,8,0,0, h_align=Left'),
+      h('         └─ ',            'Button',                 'req', 'btn_recheck',                 'Recheck 次级按钮（刷新前置检查）',      'Style.Normal=#222222 / Hovered=#2E2E2E / Pressed=#1A1A1A, IsVariable=✓'),
+      h('            └─ ',         'TextBlock',              'dec', 'lbl_btn_recheck_text',        '按钮内文字',                            'Text="Recheck", Color=#F2F2F2, Font=12, slot.Padding=12,6')
+    ],
+    "2": [
+      h('',                        'Border',                 'dec', 'lbl_card_csv_file',           'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
+      h('└─ ',                     'VerticalBox',            'dec', 'lbl_csv_file_vbox',           '卡内纵向排',                            ''),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_csv_file_header',         '卡片头横排',                            ''),
+      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_csv_file_accent',         '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
+      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_csv_file_accent_img',     '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
+      h('   │  └─ ',               'TextBlock',              'dec', 'lbl_csv_file_title',          '段头主标题',                            'Text="CSV File", Color=#F2F2F2, Font=13 Bold'),
+      h('   └─ ',                  'HorizontalBox',          'dec', 'lbl_csv_file_row',            'Browse 按钮 + 路径显示行',             'slot.Padding=0,8,0,0, gap=8, v_align=Center'),
+      h('      ├─ ',               'Button',                 'req', 'btn_browse',                  'Browse... 次级按钮（触发三段降级文件对话框）',  'Style.Normal=#222222 / Hovered=#2E2E2E / Pressed=#1A1A1A'),
+      h('      │  └─ ',            'TextBlock',              'dec', 'lbl_btn_browse_text',         '按钮内文字',                            'Text="Browse...", Color=#F2F2F2, Font=12, slot.Padding=14,6'),
+      h('      └─ ',               'TextBlock',              'req', 'txt_file_path',               'CSV 绝对路径显示',                      'Color=#CCCCCC, Font=11 Mono, AutoWrapText=✓, slot.FillSize=1.0, py:".../shot_1_take_5_dense.csv"')
+    ],
+    "3": [
+      h('',                        'Border',                 'dec', 'lbl_card_csv_preview',        'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
+      h('└─ ',                     'VerticalBox',            'dec', 'lbl_csv_preview_vbox',        '卡内纵向排',                            ''),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_csv_preview_header',      '卡片头横排',                            ''),
+      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_csv_preview_accent',      '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
+      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_csv_preview_accent_img',  '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
+      h('   │  └─ ',               'TextBlock',              'dec', 'lbl_csv_preview_title',       '段头主标题',                            'Text="CSV Preview", Color=#F2F2F2, Font=13 Bold'),
+      h('   ├─ ',                  'VerticalBox',            'dec', 'lbl_csv_preview_stat',        '4 行统计信息容器',                      'slot.Padding=0,8,0,0, gap=4'),
+      h('   │  ├─ ',               'TextBlock',              'req', 'txt_frame_count',             '帧数摘要',                              'Color=#CCCCCC, Font=12, py:"Frames: 974"'),
+      h('   │  ├─ ',               'TextBlock',              'req', 'txt_focal_range',             '焦段区间摘要',                          'Color=#CCCCCC, Font=12, py:"Focal Length: 30.30 – 30.30 mm"'),
+      h('   │  ├─ ',               'TextBlock',              'req', 'txt_timecode',                '时码首尾摘要',                          'Color=#CCCCCC, Font=12, py:"Timecode: 00:00:30.00 → 00:00:30.00"'),
+      h('   │  └─ ',               'TextBlock',              'req', 'txt_sensor_width',            '传感器宽度摘要',                        'Color=#CCCCCC, Font=12, py:"Sensor Width: 35.00 mm"'),
+      h('   └─ ',                  'HorizontalBox',          'dec', 'lbl_csv_preview_fps_row',     'FPS 输入行',                            'slot.Padding=0,8,0,0, gap=8, v_align=Center'),
+      h('      ├─ ',               'TextBlock',              'dec', 'lbl_fps',                     '「FPS」标签',                           'Text="FPS", Color=#CCCCCC, Font=12, v_align=Center'),
+      h('      ├─ ',               'SpinBox',                'req', 'spn_fps',                     '用户手动覆盖 fps',                      'Value=0.0, MinValue=0.0 (py), MaxValue=120.0 (py), Width≈80'),
+      h('      └─ ',               'TextBlock',              'req', 'txt_detected_fps',            '自动检测的 fps 提示',                   'Color=#808080, Font=11 Italic, py:"Auto: 23.976 fps"')
+    ],
+    "4": [
+      h('',                        'Border',                 'dec', 'lbl_card_coord',              'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
+      h('└─ ',                     'VerticalBox',            'dec', 'lbl_coord_vbox',              '卡内纵向排',                            ''),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_coord_header',            '卡片头横排',                            ''),
+      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_coord_accent',            '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
+      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_coord_accent_img',        '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
+      h('   │  └─ ',               'TextBlock',              'dec', 'lbl_coord_title',             '段头主标题',                            'Text="Coordinate Verification", Color=#F2F2F2, Font=13 Bold'),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_coord_frame_row',         'Frame 选择行',                          'slot.Padding=0,8,0,0, gap=8, v_align=Center'),
+      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_frame',                   '「Frame」标签',                         'Text="Frame", Color=#CCCCCC, Font=12, v_align=Center'),
+      h('   │  ├─ ',               'SpinBox',                'req', 'spn_frame',                   '帧号拨动控件',                          'Value=0.0, MinValue=0 (py), MaxValue=CSV 帧数-1 (py), Width≈80'),
+      h('   │  └─ ',               'TextBlock',              'opt', 'txt_frame_hint',              '当前帧进度提示',                        'Color=#808080, Font=11, py:"15 / 974"'),
+      h('   ├─ ',                  'VerticalBox',            'dec', 'lbl_coord_pair',              'DESIGNER ↔ UE 对照卡',                  'slot.Padding=0,8,0,0, 内 gap=2'),
+      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_designer_header',         '「DESIGNER (source)」橙色小标题',       'Text="DESIGNER (source)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
+      h('   │  ├─ ',               'TextBlock',              'req', 'txt_designer_pos',            'Designer 原始位置（米）',               'Color=#CCCCCC, Font=11 Mono, py:"Pos  (1.2345, -0.5678, 2.3456) m"'),
+      h('   │  ├─ ',               'TextBlock',              'req', 'txt_designer_rot',            'Designer 原始旋转（度）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  (12.34, -56.78, 90.12)°"'),
+      h('   │  ├─ ',               'Border',                 'dec', 'lbl_coord_separator',         '灰色分隔横线',                          'BrushColor=#3A3A3A, Height=1, slot.Padding=0,6,0,6'),
+      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_ue_header',               '「→ UE (result)」橙色小标题',           'Text="→ UE (result)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
+      h('   │  ├─ ',               'TextBlock',              'req', 'txt_ue_pos',                  '转换后 UE 位置（cm）',                  'Color=#CCCCCC, Font=11 Mono, py:"Pos  (234.6, 123.5, -56.8) cm"'),
+      h('   │  └─ ',               'TextBlock',              'req', 'txt_ue_rot',                  '转换后 UE 旋转（P/Y/R）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  P=-12.34  Y=56.78  R=90.12°"'),
+      h('   └─ ',                  'Button',                 'req', 'btn_spawn_cam',               '「Spawn Test Camera」次级按钮',         'Style.Normal=#222222, slot.Padding=0,8,0,0, h_align=Left'),
+      h('      └─ ',               'TextBlock',              'dec', 'lbl_btn_spawn_cam_text',      '按钮内文字',                            'Text="Spawn Test Camera", Color=#F2F2F2, Font=12, slot.Padding=14,6')
+    ],
+    "5": [
+      h('',                        'Border',                 'dec', 'lbl_card_axis',               'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
+      h('└─ ',                     'VerticalBox',            'dec', 'lbl_axis_vbox',               '卡内纵向排',                            ''),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_axis_header',             '卡片头横排',                            ''),
+      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_axis_accent',             '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
+      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_axis_accent_img',         '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
+      h('   │  └─ ',               'TextBlock',              'dec', 'lbl_axis_title',              '段头主标题',                            'Text="Axis Mapping", Color=#F2F2F2, Font=13 Bold'),
+      h('   ├─ ',                  'TextBlock',              'dec', 'lbl_pos_subheader',           '「POSITION (m → cm)」橙色小标题',       'Text="POSITION  (m → cm)", Color=#E8704D, Font=11 Bold, slot.Padding=0,10,0,4'),
+      h('   ├─ ',                  'VerticalBox',            'dec', 'lbl_pos_rows',                'POSITION 三行容器',                     'gap=6'),
+      h('   │  ├─ ',               'HorizontalBox',          'dec', 'lbl_row_ue_x',                'UE.X 轴映射行',                         'gap=6, v_align=Center'),
+      h('   │  │  ├─ ',            'TextBlock',              'dec', 'lbl_ue_x',                    '「UE.X」目标轴标签',                    'Text="UE.X", Color=#CCCCCC, Font=12, MinWidth=30'),
+      h('   │  │  ├─ ',            'TextBlock',              'dec', 'lbl_ue_x_arrow',              '「←」方向箭头',                         'Text="←", Color=#808080, Font=12'),
+      h('   │  │  ├─ ',            'ComboBoxString',         'req', 'cmb_pos_x_src',               '源轴下拉（X/Y/Z）',                     'DefaultOptions 留空（py 填 ["X (0)","Y (1)","Z (2)"]）, Width≈90'),
+      h('   │  │  ├─ ',            'TextBlock',              'dec', 'lbl_ue_x_mul',                '「×」乘号分隔符',                       'Text="×", Color=#808080, Font=12'),
+      h('   │  │  └─ ',            'SpinBox',                'req', 'spn_pos_x_scale',             '缩放系数',                              'Value=0.0 (py config 覆盖), MinFractionalDigits=1, Width≈80'),
+      h('   │  ├─ ',               'HorizontalBox',          'dec', 'lbl_row_ue_y',                '同构 · UE.Y 轴行',                      '承载 cmb_pos_y_src / spn_pos_y_scale'),
+      h('   │  └─ ',               'HorizontalBox',          'dec', 'lbl_row_ue_z',                '同构 · UE.Z 轴行',                      '承载 cmb_pos_z_src / spn_pos_z_scale'),
+      h('   ├─ ',                  'TextBlock',              'dec', 'lbl_rot_subheader',           '「ROTATION (deg)」橙色小标题',          'Text="ROTATION  (deg)", Color=#E8704D, Font=11 Bold, slot.Padding=0,10,0,4'),
+      h('   ├─ ',                  'VerticalBox',            'dec', 'lbl_rot_rows',                'ROTATION 三行容器',                     'gap=6'),
+      h('   │  ├─ ',               'HorizontalBox',          'dec', 'lbl_row_pitch',               '同构 · Pitch 轴行',                     '承载 cmb_rot_pitch_src / spn_rot_pitch_scale'),
+      h('   │  ├─ ',               'HorizontalBox',          'dec', 'lbl_row_yaw',                 '同构 · Yaw 轴行',                       '承载 cmb_rot_yaw_src / spn_rot_yaw_scale'),
+      h('   │  └─ ',               'HorizontalBox',          'dec', 'lbl_row_roll',                '同构 · Roll 轴行',                      '承载 cmb_rot_roll_src / spn_rot_roll_scale'),
+      h('   └─ ',                  'HorizontalBox',          'dec', 'lbl_axis_btn_row',            'Apply + Save 按钮行',                   'slot.Padding=0,10,0,0, gap=8'),
+      h('      ├─ ',               'Button',                 'req', 'btn_apply_mapping',           '「Apply Mapping」次级按钮（内存生效）', 'Style.Normal=#222222, slot.FillSize=1.0'),
+      h('      │  └─ ',            'TextBlock',              'dec', 'lbl_btn_apply_mapping_text',  '按钮内文字',                            'Text="Apply Mapping", Color=#F2F2F2, Font=12'),
+      h('      └─ ',               'Button',                 'req', 'btn_save_mapping',            '「Save to config.py」次级按钮（写盘）', 'Style.Normal=#222222, slot.FillSize=1.0'),
+      h('         └─ ',            'TextBlock',              'dec', 'lbl_btn_save_mapping_text',   '按钮内文字',                            'Text="Save to config.py", Color=#F2F2F2, Font=12')
+    ],
+    "6": [
+      h('',                        'Border',                 'dec', 'lbl_card_actions',            'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
+      h('└─ ',                     'VerticalBox',            'dec', 'lbl_actions_vbox',            '卡内纵向排',                            ''),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_actions_header',          '卡片头横排',                            ''),
+      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_actions_accent',          '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
+      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_actions_accent_img',      '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
+      h('   │  └─ ',               'TextBlock',              'dec', 'lbl_actions_title',           '段头主标题',                            'Text="Actions", Color=#F2F2F2, Font=13 Bold'),
+      h('   ├─ ',                  'Button',                 'req', 'btn_import',                  '主操作：Import（唯一橙色高亮按钮）',    'Style.Normal=#E8704D / Hovered=#FF8C69 / Pressed=#C85A39, Height≈36, slot.h_align=Fill, slot.Padding=0,10,0,0'),
+      h('   │  └─ ',               'TextBlock',              'dec', 'lbl_btn_import_text',         '主按钮内文字',                          'Text="Import", Color=#FFFFFF, Font=13 Bold, h_align=Center'),
+      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_actions_btn_row',         'Open Sequencer + Open MRQ 行',          'slot.Padding=0,8,0,0, gap=8'),
+      h('   │  ├─ ',               'Button',                 'req', 'btn_open_seq',                '「Open Sequencer」次级按钮',            'Style.Normal=#222222, slot.FillSize=1.0'),
+      h('   │  │  └─ ',            'TextBlock',              'dec', 'lbl_btn_open_seq_text',       '按钮内文字',                            'Text="Open Sequencer", Color=#F2F2F2, Font=12'),
+      h('   │  └─ ',               'Button',                 'req', 'btn_open_mrq',                '「Open MRQ」次级按钮',                  'Style.Normal=#222222, slot.FillSize=1.0'),
+      h('   │     └─ ',            'TextBlock',              'dec', 'lbl_btn_open_mrq_text',       '按钮内文字',                            'Text="Open MRQ", Color=#F2F2F2, Font=12'),
+      h('   ├─ ',                  'TextBlock',              'dec', 'lbl_results_header',          '「RESULTS」小标题',                     'Text="RESULTS", Color=#B3B3B3, Font=11 Bold, slot.Padding=0,14,0,4'),
+      h('   └─ ',                  'MultiLineEditableText',  'req', 'txt_results',                 '日志面板（Python 追加运行报告）',       'IsReadOnly=✓, BackgroundColor=#141414, Font=11 Mono, MinLines≈8, py:"[OK] CSV parsed: 974 frames ..."')
+    ]
+  };
+
   /* --- SECTION DETAIL CONTENT --- */
   const details = {
     "1": {
@@ -1849,6 +2151,29 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       </tr>`;
     }).join('');
 
+    const treeLines = (hierarchies[key] || []).join('');
+    const hierarchyBlock = treeLines ? `
+      <div class="hierarchy-block">
+        <div class="hierarchy-header">
+          <span class="hierarchy-label">UMG Hierarchy · Designer Tree</span>
+          <span class="hierarchy-legend">
+            <span class="lg lg-req"><span class="mk">&#9679;</span>Required contract</span>
+            <span class="lg lg-opt"><span class="mk">&#9675;</span>Optional contract</span>
+            <span class="lg lg-dec"><span class="mk">&#9671;</span>Decorative (lbl_*)</span>
+          </span>
+        </div>
+        <div class="hierarchy-tree">${treeLines}</div>
+        <p class="hierarchy-footnote">
+          契约名必须精确 · 装饰 <code>lbl_*</code> 命名仅为建议 ·
+          每行格式：<code>Type · 契约标记 · Name · UI 作用 · Designer 参数</code>
+          <br>
+          <code>py:</code> 段代表<strong>运行时由 Python 写入</strong>（Designer 可留空）；
+          颜色以 HEX 给出，Font 数字是 Size（Bold 表 typeface=Bold）；
+          <code>slot.*</code> 指父容器赋予的 slot-layout（Padding / FillSize / h_align / v_align）
+        </p>
+      </div>
+    ` : '';
+
     const html = `
       <div class="sd-num">${d.num}</div>
       <h3 class="sd-title">${d.title}</h3>
@@ -1858,6 +2183,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
         <thead><tr><th>Control</th><th>Type</th><th>Contract</th><th>Python handler</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
+      ${hierarchyBlock}
       <div class="design-principle">
         <span class="label">Design principle</span>
         <div class="text">${d.principle}</div>
