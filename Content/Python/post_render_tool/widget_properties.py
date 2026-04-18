@@ -19,6 +19,7 @@ WIDGET_CLASS_MAP: Dict[str, type] = {
     "Border": unreal.Border,
     "SizeBox": unreal.SizeBox,
     "Button": unreal.Button,
+    "ExpandableArea": unreal.ExpandableArea,
     "Image": unreal.Image,
     "TextBlock": unreal.TextBlock,
     "Spacer": unreal.Spacer,
@@ -171,6 +172,22 @@ def _apply_spacer_size(w, v):
     w.set_editor_property("size", _vec2(v))
 
 
+def _apply_expandable_is_expanded(w, v):
+    w.set_editor_property("is_expanded", bool(v))
+
+
+def _apply_expandable_header_padding(w, v):
+    w.set_editor_property("header_padding", _margin(v))
+
+
+def _apply_expandable_area_padding(w, v):
+    w.set_editor_property("area_padding", _margin(v))
+
+
+def _apply_expandable_max_height(w, v):
+    w.set_editor_property("max_height", float(v))
+
+
 def _apply_textblock_font(w, v):
     """Mutate the TextBlock's FSlateFontInfo in place.
 
@@ -239,6 +256,10 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "Orientation": _apply_scrollbox_orientation,
     "Size": _apply_spacer_size,
     "Font": _apply_textblock_font,
+    "IsExpanded": _apply_expandable_is_expanded,
+    "HeaderPadding": _apply_expandable_header_padding,
+    "AreaPadding": _apply_expandable_area_padding,
+    "MaxHeight": _apply_expandable_max_height,
 }
 
 

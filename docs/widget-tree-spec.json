@@ -72,123 +72,38 @@
                   "role": "decorative",
                   "children": [
                     {
-                      "type": "HorizontalBox",
-                      "name": "lbl_prereq_header",
+                      "type": "ExpandableArea",
+                      "name": "expandable_prereqs",
                       "role": "decorative",
-                      "children": [
-                        {
-                          "type": "TextBlock",
-                          "name": "lbl_prereq_arrow",
-                          "role": "decorative",
-                          "properties": {
-                            "Text": "▶"
-                          },
-                          "slot": {
-                            "padding": [
-                              0,
-                              0,
-                              8,
-                              0
-                            ],
-                            "v_align": "Center"
-                          }
-                        },
-                        {
-                          "type": "SizeBox",
-                          "name": "lbl_prereq_accent",
-                          "role": "decorative",
-                          "properties": {
-                            "WidthOverride": 3,
-                            "HeightOverride": 13
-                          },
-                          "slot": {
-                            "padding": [
-                              0,
-                              0,
-                              8,
-                              0
-                            ],
-                            "v_align": "Center"
-                          },
-                          "children": [
-                            {
-                              "type": "Image",
-                              "name": "lbl_prereq_accent_img",
-                              "role": "decorative",
-                              "properties": {
-                                "Tint": [
-                                  0.909,
-                                  0.439,
-                                  0.302,
-                                  1.0
-                                ],
-                                "ImageSize": [
-                                  3,
-                                  13
-                                ],
-                                "DrawAs": "Box"
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "TextBlock",
-                          "name": "lbl_prereq_title",
-                          "role": "decorative",
-                          "properties": {
-                            "Text": "Prerequisites"
-                          },
-                          "slot": {
-                            "v_align": "Center"
-                          }
-                        },
-                        {
-                          "type": "Spacer",
-                          "name": "lbl_prereq_header_spacer",
-                          "role": "decorative",
-                          "slot": {
-                            "fill_size": 1.0,
-                            "size_rule": "Fill"
-                          }
-                        },
-                        {
-                          "type": "TextBlock",
-                          "name": "prereq_summary",
-                          "role": "optional",
-                          "properties": {
-                            "Text": ""
-                          },
-                          "slot": {
-                            "v_align": "Center"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "VerticalBox",
-                      "name": "lbl_prereq_body",
-                      "role": "decorative",
-                      "slot": {
-                        "padding": [
+                      "properties": {
+                        "IsExpanded": true,
+                        "HeaderPadding": [
+                          0,
+                          0,
+                          0,
+                          0
+                        ],
+                        "AreaPadding": [
                           0,
                           8,
                           0,
                           0
-                        ]
+                        ],
+                        "MaxHeight": 0.0
                       },
                       "children": [
                         {
                           "type": "HorizontalBox",
-                          "name": "lbl_prereq_row_0",
+                          "name": "lbl_prereq_header",
                           "role": "decorative",
                           "children": [
                             {
                               "type": "SizeBox",
-                              "name": "lbl_prereq_dot_0",
+                              "name": "lbl_prereq_accent",
                               "role": "decorative",
                               "properties": {
-                                "WidthOverride": 8,
-                                "HeightOverride": 8
+                                "WidthOverride": 3,
+                                "HeightOverride": 13
                               },
                               "slot": {
                                 "padding": [
@@ -202,326 +117,409 @@
                               "children": [
                                 {
                                   "type": "Image",
-                                  "name": "lbl_prereq_dot_0_img",
+                                  "name": "lbl_prereq_accent_img",
                                   "role": "decorative",
                                   "properties": {
                                     "Tint": [
-                                      0.8,
-                                      0.8,
-                                      0.8,
+                                      0.909,
+                                      0.439,
+                                      0.302,
                                       1.0
                                     ],
                                     "ImageSize": [
-                                      8,
-                                      8
-                                    ]
+                                      3,
+                                      13
+                                    ],
+                                    "DrawAs": "Box"
                                   }
                                 }
                               ]
                             },
                             {
                               "type": "TextBlock",
-                              "name": "prereq_label_0",
-                              "role": "optional",
-                              "properties": {
-                                "Text": ""
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_prereq_row_1",
-                          "role": "decorative",
-                          "children": [
-                            {
-                              "type": "SizeBox",
-                              "name": "lbl_prereq_dot_1",
+                              "name": "lbl_prereq_title",
                               "role": "decorative",
                               "properties": {
-                                "WidthOverride": 8,
-                                "HeightOverride": 8
+                                "Text": "Prerequisites"
                               },
                               "slot": {
-                                "padding": [
-                                  0,
-                                  0,
-                                  8,
-                                  0
-                                ],
                                 "v_align": "Center"
-                              },
-                              "children": [
-                                {
-                                  "type": "Image",
-                                  "name": "lbl_prereq_dot_1_img",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Tint": [
-                                      0.8,
-                                      0.8,
-                                      0.8,
-                                      1.0
-                                    ],
-                                    "ImageSize": [
-                                      8,
-                                      8
-                                    ]
-                                  }
-                                }
-                              ]
+                              }
                             },
                             {
-                              "type": "TextBlock",
-                              "name": "prereq_label_1",
-                              "role": "optional",
-                              "properties": {
-                                "Text": ""
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_prereq_row_2",
-                          "role": "decorative",
-                          "children": [
-                            {
-                              "type": "SizeBox",
-                              "name": "lbl_prereq_dot_2",
+                              "type": "Spacer",
+                              "name": "lbl_prereq_header_spacer",
                               "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 8,
-                                "HeightOverride": 8
-                              },
                               "slot": {
-                                "padding": [
-                                  0,
-                                  0,
-                                  8,
-                                  0
-                                ],
-                                "v_align": "Center"
-                              },
-                              "children": [
-                                {
-                                  "type": "Image",
-                                  "name": "lbl_prereq_dot_2_img",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Tint": [
-                                      0.8,
-                                      0.8,
-                                      0.8,
-                                      1.0
-                                    ],
-                                    "ImageSize": [
-                                      8,
-                                      8
-                                    ]
-                                  }
-                                }
-                              ]
+                                "fill_size": 1.0,
+                                "size_rule": "Fill"
+                              }
                             },
                             {
                               "type": "TextBlock",
-                              "name": "prereq_label_2",
+                              "name": "prereq_summary",
                               "role": "optional",
                               "properties": {
                                 "Text": ""
+                              },
+                              "slot": {
+                                "v_align": "Center"
                               }
                             }
                           ]
                         },
                         {
-                          "type": "HorizontalBox",
-                          "name": "lbl_prereq_row_3",
+                          "type": "VerticalBox",
+                          "name": "lbl_prereq_body",
                           "role": "decorative",
                           "children": [
                             {
-                              "type": "SizeBox",
-                              "name": "lbl_prereq_dot_3",
+                              "type": "HorizontalBox",
+                              "name": "lbl_prereq_row_0",
                               "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 8,
-                                "HeightOverride": 8
-                              },
-                              "slot": {
-                                "padding": [
-                                  0,
-                                  0,
-                                  8,
-                                  0
-                                ],
-                                "v_align": "Center"
-                              },
                               "children": [
                                 {
-                                  "type": "Image",
-                                  "name": "lbl_prereq_dot_3_img",
+                                  "type": "SizeBox",
+                                  "name": "lbl_prereq_dot_0",
                                   "role": "decorative",
                                   "properties": {
-                                    "Tint": [
-                                      0.8,
-                                      0.8,
-                                      0.8,
-                                      1.0
-                                    ],
-                                    "ImageSize": [
-                                      8,
-                                      8
-                                    ]
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "TextBlock",
-                              "name": "prereq_label_3",
-                              "role": "optional",
-                              "properties": {
-                                "Text": ""
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_prereq_row_4",
-                          "role": "decorative",
-                          "children": [
-                            {
-                              "type": "SizeBox",
-                              "name": "lbl_prereq_dot_4",
-                              "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 8,
-                                "HeightOverride": 8
-                              },
-                              "slot": {
-                                "padding": [
-                                  0,
-                                  0,
-                                  8,
-                                  0
-                                ],
-                                "v_align": "Center"
-                              },
-                              "children": [
-                                {
-                                  "type": "Image",
-                                  "name": "lbl_prereq_dot_4_img",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Tint": [
-                                      0.8,
-                                      0.8,
-                                      0.8,
-                                      1.0
-                                    ],
-                                    "ImageSize": [
-                                      8,
-                                      8
-                                    ]
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "TextBlock",
-                              "name": "prereq_label_4",
-                              "role": "optional",
-                              "properties": {
-                                "Text": ""
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_prereq_row_5",
-                          "role": "decorative",
-                          "children": [
-                            {
-                              "type": "SizeBox",
-                              "name": "lbl_prereq_dot_5",
-                              "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 8,
-                                "HeightOverride": 8
-                              },
-                              "slot": {
-                                "padding": [
-                                  0,
-                                  0,
-                                  8,
-                                  0
-                                ],
-                                "v_align": "Center"
-                              },
-                              "children": [
-                                {
-                                  "type": "Image",
-                                  "name": "lbl_prereq_dot_5_img",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Tint": [
-                                      0.8,
-                                      0.8,
-                                      0.8,
-                                      1.0
-                                    ],
-                                    "ImageSize": [
-                                      8,
-                                      8
-                                    ]
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "TextBlock",
-                              "name": "prereq_label_5",
-                              "role": "optional",
-                              "properties": {
-                                "Text": ""
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_prereq_bottom_row",
-                          "role": "decorative",
-                          "slot": {
-                            "padding": [
-                              0,
-                              8,
-                              0,
-                              0
-                            ]
-                          },
-                          "children": [
-                            {
-                              "type": "Button",
-                              "name": "btn_recheck",
-                              "role": "required",
-                              "children": [
-                                {
-                                  "type": "TextBlock",
-                                  "name": "lbl_btn_recheck_text",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Text": "Recheck"
+                                    "WidthOverride": 8,
+                                    "HeightOverride": 8
                                   },
                                   "slot": {
                                     "padding": [
-                                      14,
-                                      6,
-                                      14,
-                                      6
-                                    ]
+                                      0,
+                                      0,
+                                      8,
+                                      0
+                                    ],
+                                    "v_align": "Center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "Image",
+                                      "name": "lbl_prereq_dot_0_img",
+                                      "role": "decorative",
+                                      "properties": {
+                                        "Tint": [
+                                          0.8,
+                                          0.8,
+                                          0.8,
+                                          1.0
+                                        ],
+                                        "ImageSize": [
+                                          8,
+                                          8
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "prereq_label_0",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Text": ""
                                   }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "HorizontalBox",
+                              "name": "lbl_prereq_row_1",
+                              "role": "decorative",
+                              "children": [
+                                {
+                                  "type": "SizeBox",
+                                  "name": "lbl_prereq_dot_1",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "WidthOverride": 8,
+                                    "HeightOverride": 8
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      0,
+                                      0,
+                                      8,
+                                      0
+                                    ],
+                                    "v_align": "Center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "Image",
+                                      "name": "lbl_prereq_dot_1_img",
+                                      "role": "decorative",
+                                      "properties": {
+                                        "Tint": [
+                                          0.8,
+                                          0.8,
+                                          0.8,
+                                          1.0
+                                        ],
+                                        "ImageSize": [
+                                          8,
+                                          8
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "prereq_label_1",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Text": ""
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "HorizontalBox",
+                              "name": "lbl_prereq_row_2",
+                              "role": "decorative",
+                              "children": [
+                                {
+                                  "type": "SizeBox",
+                                  "name": "lbl_prereq_dot_2",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "WidthOverride": 8,
+                                    "HeightOverride": 8
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      0,
+                                      0,
+                                      8,
+                                      0
+                                    ],
+                                    "v_align": "Center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "Image",
+                                      "name": "lbl_prereq_dot_2_img",
+                                      "role": "decorative",
+                                      "properties": {
+                                        "Tint": [
+                                          0.8,
+                                          0.8,
+                                          0.8,
+                                          1.0
+                                        ],
+                                        "ImageSize": [
+                                          8,
+                                          8
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "prereq_label_2",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Text": ""
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "HorizontalBox",
+                              "name": "lbl_prereq_row_3",
+                              "role": "decorative",
+                              "children": [
+                                {
+                                  "type": "SizeBox",
+                                  "name": "lbl_prereq_dot_3",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "WidthOverride": 8,
+                                    "HeightOverride": 8
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      0,
+                                      0,
+                                      8,
+                                      0
+                                    ],
+                                    "v_align": "Center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "Image",
+                                      "name": "lbl_prereq_dot_3_img",
+                                      "role": "decorative",
+                                      "properties": {
+                                        "Tint": [
+                                          0.8,
+                                          0.8,
+                                          0.8,
+                                          1.0
+                                        ],
+                                        "ImageSize": [
+                                          8,
+                                          8
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "prereq_label_3",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Text": ""
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "HorizontalBox",
+                              "name": "lbl_prereq_row_4",
+                              "role": "decorative",
+                              "children": [
+                                {
+                                  "type": "SizeBox",
+                                  "name": "lbl_prereq_dot_4",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "WidthOverride": 8,
+                                    "HeightOverride": 8
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      0,
+                                      0,
+                                      8,
+                                      0
+                                    ],
+                                    "v_align": "Center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "Image",
+                                      "name": "lbl_prereq_dot_4_img",
+                                      "role": "decorative",
+                                      "properties": {
+                                        "Tint": [
+                                          0.8,
+                                          0.8,
+                                          0.8,
+                                          1.0
+                                        ],
+                                        "ImageSize": [
+                                          8,
+                                          8
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "prereq_label_4",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Text": ""
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "HorizontalBox",
+                              "name": "lbl_prereq_row_5",
+                              "role": "decorative",
+                              "children": [
+                                {
+                                  "type": "SizeBox",
+                                  "name": "lbl_prereq_dot_5",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "WidthOverride": 8,
+                                    "HeightOverride": 8
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      0,
+                                      0,
+                                      8,
+                                      0
+                                    ],
+                                    "v_align": "Center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "Image",
+                                      "name": "lbl_prereq_dot_5_img",
+                                      "role": "decorative",
+                                      "properties": {
+                                        "Tint": [
+                                          0.8,
+                                          0.8,
+                                          0.8,
+                                          1.0
+                                        ],
+                                        "ImageSize": [
+                                          8,
+                                          8
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "prereq_label_5",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Text": ""
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "HorizontalBox",
+                              "name": "lbl_prereq_bottom_row",
+                              "role": "decorative",
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  8,
+                                  0,
+                                  0
+                                ]
+                              },
+                              "children": [
+                                {
+                                  "type": "Button",
+                                  "name": "btn_recheck",
+                                  "role": "required",
+                                  "children": [
+                                    {
+                                      "type": "TextBlock",
+                                      "name": "lbl_btn_recheck_text",
+                                      "role": "decorative",
+                                      "properties": {
+                                        "Text": "Recheck"
+                                      },
+                                      "slot": {
+                                        "padding": [
+                                          14,
+                                          6,
+                                          14,
+                                          6
+                                        ]
+                                      }
+                                    }
+                                  ]
                                 }
                               ]
                             }

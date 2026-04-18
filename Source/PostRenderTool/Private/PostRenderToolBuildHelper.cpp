@@ -7,6 +7,7 @@
 #include "Components/Widget.h"
 #include "Components/PanelWidget.h"
 #include "Components/ContentWidget.h"
+#include "Components/NamedSlotInterface.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace
@@ -35,7 +36,82 @@ namespace
         {
             return FindWidgetByNameRecursive(ContentW->GetContent(), TargetName);
         }
+        // INamedSlotInterface (ExpandableArea, NamedSlot): descend into each named slot.
+        // Without this, widgets placed in ExpandableArea.HeaderContent/BodyContent slots
+        // become invisible to idempotency checks, so rerun() recreates them every time.
+        if (INamedSlotInterface* NamedSlot = Cast<INamedSlotInterface>(Root))
+        {
+            TArray<FName> SlotNames;
+            NamedSlot->GetSlotNames(SlotNames);
+            for (FName SlotName : SlotNames)
+            {
+                if (UWidget* Found = FindWidgetByNameRecursive(NamedSlot->GetContentForSlot(SlotName), TargetName))
+                {
+                    return Found;
+                }
+            }
+        }
         return nullptr;
+    }
+
+    // Detach a widget from whatever parent currently holds it, so it can be
+    // re-parented into a new slot. Covers three cases:
+    //  - UPanelWidget parent → RemoveChild(widget)
+    //  - INamedSlotInterface parent → FindSlotForContent + SetContentForSlot(nullptr)
+    //  - UContentWidget parent → SetContent(nullptr)
+    // UWidget::GetParent only returns UPanelWidget parents, so the other two
+    // require a tree walk to find the holder.
+    bool DetachFromAnyParent(UWidget* Root, UWidget* Target)
+    {
+        if (!Root || !Target || Root == Target)
+        {
+            return false;
+        }
+        if (UPanelWidget* Panel = Cast<UPanelWidget>(Root))
+        {
+            for (int32 Index = 0; Index < Panel->GetChildrenCount(); ++Index)
+            {
+                UWidget* Child = Panel->GetChildAt(Index);
+                if (Child == Target)
+                {
+                    Panel->RemoveChildAt(Index);
+                    return true;
+                }
+                if (DetachFromAnyParent(Child, Target))
+                {
+                    return true;
+                }
+            }
+        }
+        else if (UContentWidget* ContentW = Cast<UContentWidget>(Root))
+        {
+            UWidget* Inner = ContentW->GetContent();
+            if (Inner == Target)
+            {
+                ContentW->SetContent(nullptr);
+                return true;
+            }
+            return DetachFromAnyParent(Inner, Target);
+        }
+        if (INamedSlotInterface* NamedSlot = Cast<INamedSlotInterface>(Root))
+        {
+            TArray<FName> SlotNames;
+            NamedSlot->GetSlotNames(SlotNames);
+            for (FName SlotName : SlotNames)
+            {
+                UWidget* Inner = NamedSlot->GetContentForSlot(SlotName);
+                if (Inner == Target)
+                {
+                    NamedSlot->SetContentForSlot(SlotName, nullptr);
+                    return true;
+                }
+                if (DetachFromAnyParent(Inner, Target))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
 
@@ -168,5 +244,73 @@ EEnsureWidgetResult UPostRenderToolBuildHelper::EnsureWidgetUnderParent(
     // every widget we just constructed is automatically a Variable — exactly what
     // BindWidget / BindWidgetOptional contract widgets need for reflection. Decorative
     // widgets inherit the same default (minor overhead on generated class, harmless).
+    return EEnsureWidgetResult::Created;
+}
+
+EEnsureWidgetResult UPostRenderToolBuildHelper::EnsureWidgetInNamedSlot(
+    UWidgetBlueprint* Blueprint,
+    FName WidgetName,
+    TSubclassOf<UWidget> WidgetClass,
+    UWidget* NamedSlotParent,
+    FName SlotName,
+    UWidget*& OutWidget)
+{
+    OutWidget = nullptr;
+    if (!Blueprint || !WidgetClass || WidgetName.IsNone() || !NamedSlotParent || SlotName.IsNone())
+    {
+        return EEnsureWidgetResult::InvalidInput;
+    }
+    UWidgetTree* Tree = Blueprint->WidgetTree;
+    if (!Tree)
+    {
+        return EEnsureWidgetResult::InvalidInput;
+    }
+    INamedSlotInterface* NamedSlot = Cast<INamedSlotInterface>(NamedSlotParent);
+    if (!NamedSlot)
+    {
+        UE_LOG(LogTemp, Warning,
+            TEXT("[PostRenderToolBuildHelper] Parent '%s' (%s) does not implement INamedSlotInterface."),
+            *NamedSlotParent->GetName(),
+            *NamedSlotParent->GetClass()->GetName());
+        return EEnsureWidgetResult::ParentCannotHoldChildren;
+    }
+
+    // Idempotency across the whole tree — FindWidgetByNameRecursive now descends into
+    // named slots, so a widget already placed in Header/Body is detected.
+    if (UWidget* Existing = FindWidgetByNameRecursive(Tree->RootWidget, WidgetName))
+    {
+        if (!Existing->IsA(WidgetClass))
+        {
+            UE_LOG(LogTemp, Warning,
+                TEXT("[PostRenderToolBuildHelper] Widget '%s' exists as %s, spec wants %s — type mismatch."),
+                *WidgetName.ToString(),
+                *Existing->GetClass()->GetName(),
+                *WidgetClass->GetName());
+            return EEnsureWidgetResult::TypeMismatch;
+        }
+        // Already in the expected slot? No-op (idempotency preserves user tweaks).
+        if (NamedSlot->GetContentForSlot(SlotName) == Existing)
+        {
+            OutWidget = Existing;
+            return EEnsureWidgetResult::AlreadyExisted;
+        }
+        // Exists elsewhere in the tree → migration path: detach from old parent,
+        // move into the requested named slot. Covers "old spec had header/body as
+        // direct VerticalBox children, new spec wraps them in ExpandableArea."
+        DetachFromAnyParent(Tree->RootWidget, Existing);
+        NamedSlot->SetContentForSlot(SlotName, Existing);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        OutWidget = Existing;
+        return EEnsureWidgetResult::AlreadyExisted;
+    }
+
+    UWidget* NewWidget = Tree->ConstructWidget<UWidget>(WidgetClass, WidgetName);
+    if (!NewWidget)
+    {
+        return EEnsureWidgetResult::InvalidInput;
+    }
+    NamedSlot->SetContentForSlot(SlotName, NewWidget);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    OutWidget = NewWidget;
     return EEnsureWidgetResult::Created;
 }

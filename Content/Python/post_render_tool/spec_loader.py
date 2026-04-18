@@ -16,11 +16,14 @@ VALID_ROLES = {"required", "optional", "decorative"}
 # Widget types that can hold children. Builder walks into these.
 PANEL_TYPES = {"CanvasPanel", "ScrollBox", "VerticalBox", "HorizontalBox"}
 CONTENT_TYPES = {"Border", "SizeBox", "Button"}
+# ExpandableArea: UWidget with two named widget-valued properties (HeaderContent,
+# BodyContent). Spec convention: exactly 2 children; [0] → HeaderContent, [1] → BodyContent.
+EXPANDABLE_TYPES = {"ExpandableArea"}
 LEAF_TYPES = {
     "Image", "TextBlock", "Spacer",
     "SpinBox", "ComboBoxString", "MultiLineEditableText",
 }
-ALL_TYPES = PANEL_TYPES | CONTENT_TYPES | LEAF_TYPES
+ALL_TYPES = PANEL_TYPES | CONTENT_TYPES | EXPANDABLE_TYPES | LEAF_TYPES
 
 
 class SpecValidationError(Exception):
@@ -125,6 +128,11 @@ def _validate_node(
                 errors.append(
                     f"{path}: type {type_name!r} accepts at most 1 child, "
                     f"got {len(children)}"
+                )
+            if type_name in EXPANDABLE_TYPES and len(children) != 2:
+                errors.append(
+                    f"{path}: type {type_name!r} requires exactly 2 children "
+                    f"([0]=HeaderContent, [1]=BodyContent), got {len(children)}"
                 )
             for ci, child in enumerate(children):
                 _validate_node(child, f"{path}.children[{ci}]", seen_names, errors)

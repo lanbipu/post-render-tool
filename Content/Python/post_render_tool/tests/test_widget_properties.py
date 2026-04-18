@@ -141,6 +141,7 @@ _unreal_stub.VerticalBox = type("VerticalBox", (_StubWidgetBase,), {})
 _unreal_stub.HorizontalBox = type("HorizontalBox", (_StubWidgetBase,), {})
 _unreal_stub.ScrollBox = type("ScrollBox", (_StubWidgetBase,), {})
 _unreal_stub.CanvasPanel = type("CanvasPanel", (_StubWidgetBase,), {})
+_unreal_stub.ExpandableArea = type("ExpandableArea", (_StubWidgetBase,), {})
 
 _unreal_stub.SlateBrushDrawType = types.SimpleNamespace(
     BOX="Box", IMAGE="Image", NO_DRAW_TYPE="NoDrawType"

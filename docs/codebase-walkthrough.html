@@ -715,8 +715,8 @@
   .hierarchy-tree {
     font-family: var(--mono);
     font-size: 12px;
-    line-height: 1.9;
-    padding: 20px 22px;
+    line-height: 1.55;
+    padding: 18px 20px;
     background: var(--paper-2);
     border: 1px solid var(--rule);
     border-left: 2px solid var(--accent);
@@ -726,28 +726,35 @@
   .h-line {
     display: grid;
     grid-template-columns:
-      [tree] 32ch
+      [tree] 28ch
       [mark] 2.5ch
-      [name] 28ch
-      [props] 1fr;
-    align-items: baseline;
-    column-gap: 4px;
-    padding: 1px 0;
+      [name] 26ch
+      [props] minmax(0, 1fr);
+    align-items: start;
+    column-gap: 8px;
+    padding: 4px 0;
     transition: background .15s;
-    white-space: nowrap;
-    min-width: max-content;
   }
-  @media (max-width: 720px) {
+  @media (max-width: 960px) {
     .h-line {
       grid-template-columns: 1fr;
       row-gap: 2px;
-      padding: 6px 0;
+      padding: 8px 0;
       border-bottom: 1px dashed var(--rule);
     }
+    .h-props { padding-left: 0; }
   }
-  .h-line:hover { background: var(--surface); }
+  .h-line + .h-line {
+    border-top: 1px dashed rgba(255, 255, 255, 0.04);
+  }
+  .h-line:hover {
+    background: var(--surface);
+    border-radius: 2px;
+  }
   .h-tree {
     white-space: pre;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .h-branch { color: var(--ink-faint); opacity: 0.75; }
   .h-type { color: var(--ink); font-weight: 500; }
@@ -755,7 +762,7 @@
     display: inline-block;
     text-align: center;
     font-size: 11px;
-    line-height: 1;
+    line-height: 1.55;
     padding: 0 2px;
   }
   .h-role-req { color: var(--accent); }
@@ -764,31 +771,36 @@
   .h-name {
     padding: 0 6px 0 8px;
     letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .h-name-req { color: var(--accent-soft); font-weight: 500; }
   .h-name-opt { color: var(--warn); font-weight: 500; }
   .h-name-dec { color: var(--ink-muted); }
   .h-props {
-    padding-left: 12px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding-left: 8px;
     min-width: 0;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
   .h-effect {
+    display: block;
     color: var(--ink);
     font-size: 11.5px;
     font-weight: 500;
   }
   .h-sep {
-    color: var(--ink-faint);
-    opacity: 0.5;
-    margin: 0 6px;
+    display: none;
   }
   .h-params {
+    display: block;
+    margin-top: 1px;
     color: var(--ink-faint);
     font-size: 11px;
     font-style: italic;
     opacity: 0.85;
+    line-height: 1.5;
   }
   .h-py {
     color: var(--accent);
@@ -1349,11 +1361,11 @@
 
     <div class="panel" id="panel">
 
-      <!-- Section 1: Prerequisites (click to toggle ▶ collapsed ↔ ▼ expanded) -->
+      <!-- Section 1: Prerequisites — UExpandableArea (native toggle, auto ▶ ↔ ▼) -->
       <div class="psec collapsed" data-section="1" data-w="lbl_card_prereq">
         <div class="psec-head" data-w="lbl_prereq_header">
           <div class="left">
-            <span class="chev-toggle" data-w="lbl_prereq_arrow" aria-hidden="true"></span>
+            <span class="chev-toggle" data-w="expandable_prereqs" aria-hidden="true" title="UExpandableArea Style.CollapsedImage / ExpandedImage"></span>
             <span class="bar" data-w="lbl_prereq_accent_img"></span>
             <span data-w="lbl_prereq_title">Prerequisites</span>
           </div>
@@ -1979,26 +1991,26 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     "1": [
       h('',                        'Border',                 'dec', 'lbl_card_prereq',             'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
       h('└─ ',                     'VerticalBox',            'dec', 'lbl_prereq_vbox',             '卡内纵向排',                            ''),
-      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_prereq_header',           '卡片头（整行可点击折叠）',              'BP OnClicked 切换 body.Visibility (Collapsed ↔ Visible)'),
-      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_prereq_arrow',            '折叠指示箭头',                          'Text="▶"（展开时 BP 改为 "▼"）, Color=#E8704D, Font=12 Bold'),
-      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_prereq_accent',           '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
-      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_prereq_accent_img',       '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
-      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_prereq_title',            '段头主标题',                            'Text="Prerequisites", Color=#F2F2F2, Font=13 Bold'),
-      h('   │  ├─ ',               'Spacer',                 'dec', 'lbl_prereq_header_spacer',    '把右侧徽章推到最右',                    'slot.FillSize=1.0'),
-      h('   │  └─ ',               'TextBlock',              'opt', 'prereq_summary',              '右侧状态徽章「N / 6 OK」',              'Color=#4CAF50 (全 OK 时) / #F44336 (有 MISSING), Font=12 Bold, py:"N / 6 OK"'),
-      h('   └─ ',                  'VerticalBox',            'dec', 'lbl_prereq_body',             '折叠体（6 行状态 + 底部按钮）',         'slot.Padding=0,8,0,0, Visibility 由 BP header OnClicked 控制'),
-      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_0',            '单行：圆点 + 状态文本',                 'slot.Padding=0,2,0,0'),
-      h('      │  ├─ ',            'SizeBox',                'dec', 'lbl_prereq_dot_0',            '圆点尺寸盒',                            'WidthOverride=8, HeightOverride=8, slot.Padding=0,0,8,0, v_align=Center'),
-      h('      │  │  └─ ',         'Image',                  'dec', 'lbl_prereq_dot_0_img',        '状态圆点',                              'Tint=#CCCCCC (OK) / #F44336 (MISSING), DrawAs=Image, ImageSize=8×8'),
-      h('      │  └─ ',            'TextBlock',              'opt', 'prereq_label_0',              '状态行文本',                            'Color=#CCCCCC (OK) / #F44336 (MISSING), Font=12, py:"OK: &lt;plugin&gt;" 或 "MISSING: &lt;plugin&gt; → &lt;hint&gt;"'),
-      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_1',            '同构 · 承载 prereq_label_1',            '—'),
-      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_2',            '同构 · 承载 prereq_label_2',            '—'),
-      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_3',            '同构 · 承载 prereq_label_3',            '—'),
-      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_4',            '同构 · 承载 prereq_label_4',            '—'),
-      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_row_5',            '同构 · 承载 prereq_label_5',            '—'),
-      h('      └─ ',               'HorizontalBox',          'dec', 'lbl_prereq_bottom_row',       '底部「Recheck」按钮行',                 'slot.Padding=0,8,0,0, h_align=Left'),
-      h('         └─ ',            'Button',                 'req', 'btn_recheck',                 'Recheck 次级按钮（刷新前置检查）',      'Style.Normal=#222222 / Hovered=#2E2E2E / Pressed=#1A1A1A, IsVariable=✓'),
-      h('            └─ ',         'TextBlock',              'dec', 'lbl_btn_recheck_text',        '按钮内文字',                            'Text="Recheck", Color=#F2F2F2, Font=12, slot.Padding=12,6')
+      h('   └─ ',                  'ExpandableArea',         'dec', 'expandable_prereqs',          '原生折叠容器（点击 header 自动切换）',   'IsExpanded=true, HeaderPadding=0,0,0,0, AreaPadding=0,8,0,0, MaxHeight=0（=无限）; 自带三角箭头图标, Style.CollapsedImage/ExpandedImage 可换 PNG'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_header',           '填入 HeaderContent slot',               'spec 约定 children[0] → HeaderContent; 自身无点击逻辑，只负责横排 4 个子控件'),
+      h('      │  ├─ ',            'SizeBox',                'dec', 'lbl_prereq_accent',           '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
+      h('      │  │  └─ ',         'Image',                  'dec', 'lbl_prereq_accent_img',       '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
+      h('      │  ├─ ',            'TextBlock',              'dec', 'lbl_prereq_title',            '段头主标题',                            'Text="Prerequisites", Color=#F2F2F2, Font=13 Bold'),
+      h('      │  ├─ ',            'Spacer',                 'dec', 'lbl_prereq_header_spacer',    '把右侧徽章推到最右',                    'slot.FillSize=1.0'),
+      h('      │  └─ ',            'TextBlock',              'opt', 'prereq_summary',              '右侧状态徽章「N / 6 OK」',              'Color=#4CAF50 (全 OK 时) / #F44336 (有 MISSING), Font=12 Bold, py:"N / 6 OK"'),
+      h('      └─ ',               'VerticalBox',            'dec', 'lbl_prereq_body',             '填入 BodyContent slot（6 行状态 + 底部按钮）', 'spec 约定 children[1] → BodyContent; Visibility 由 ExpandableArea 原生控制，无需任何 BP 节点'),
+      h('         ├─ ',            'HorizontalBox',          'dec', 'lbl_prereq_row_0',            '单行：圆点 + 状态文本',                 'slot.Padding=0,2,0,0'),
+      h('         │  ├─ ',         'SizeBox',                'dec', 'lbl_prereq_dot_0',            '圆点尺寸盒',                            'WidthOverride=8, HeightOverride=8, slot.Padding=0,0,8,0, v_align=Center'),
+      h('         │  │  └─ ',      'Image',                  'dec', 'lbl_prereq_dot_0_img',        '状态圆点',                              'Tint=#CCCCCC (OK) / #F44336 (MISSING), DrawAs=Image, ImageSize=8×8'),
+      h('         │  └─ ',         'TextBlock',              'opt', 'prereq_label_0',              '状态行文本',                            'Color=#CCCCCC (OK) / #F44336 (MISSING), Font=12, py:"OK: &lt;plugin&gt;" 或 "MISSING: &lt;plugin&gt; → &lt;hint&gt;"'),
+      h('         ├─ ',            'HorizontalBox',          'dec', 'lbl_prereq_row_1',            '同构 · 承载 prereq_label_1',            '—'),
+      h('         ├─ ',            'HorizontalBox',          'dec', 'lbl_prereq_row_2',            '同构 · 承载 prereq_label_2',            '—'),
+      h('         ├─ ',            'HorizontalBox',          'dec', 'lbl_prereq_row_3',            '同构 · 承载 prereq_label_3',            '—'),
+      h('         ├─ ',            'HorizontalBox',          'dec', 'lbl_prereq_row_4',            '同构 · 承载 prereq_label_4',            '—'),
+      h('         ├─ ',            'HorizontalBox',          'dec', 'lbl_prereq_row_5',            '同构 · 承载 prereq_label_5',            '—'),
+      h('         └─ ',            'HorizontalBox',          'dec', 'lbl_prereq_bottom_row',       '底部「Recheck」按钮行',                 'slot.Padding=0,8,0,0, h_align=Left'),
+      h('            └─ ',         'Button',                 'req', 'btn_recheck',                 'Recheck 次级按钮（刷新前置检查）',      'Style.Normal=#222222 / Hovered=#2E2E2E / Pressed=#1A1A1A, IsVariable=✓'),
+      h('               └─ ',      'TextBlock',              'dec', 'lbl_btn_recheck_text',        '按钮内文字',                            'Text="Recheck", Color=#F2F2F2, Font=12, slot.Padding=12,6')
     ],
     "2": [
       h('',                        'Border',                 'dec', 'lbl_card_csv_file',           'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
@@ -2112,6 +2124,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
           <li style="padding-left:18px; position:relative;"><span style="position:absolute; left:0; color:var(--accent); font-family:var(--mono);">▼</span> <strong>State B</strong>&nbsp;展开（用户点击）：6 行绿点 + <em>OK: &lt;插件名&gt;</em>；底部 <em>Recheck</em> 按钮 + <em>Last checked: 2026-04-17 10:23</em> 时间戳。</li>
         </ul>
         <p style="color: var(--ink-muted); font-size: 13.5px;">👉 点左侧面板的 <em>Prerequisites</em> 区就能在 A / B 两态之间切换；点 <em>Recheck</em> 会刷新时间戳但不会把面板折叠（<code>stopPropagation</code>）。</p>
+        <p style="color: var(--ink-muted); font-size: 13.5px;">🔧 <strong>UE 里怎么实现折叠？</strong> 用 UMG 原生 <code>UExpandableArea</code> 控件（<code>expandable_prereqs</code>）包住 header + body：控件自带"点击切换 + 箭头图标翻转"逻辑，<strong>零 BP 事件连线</strong>。<code>HeaderContent</code> slot 放横排的 accent 竖条 + 标题 + 徽章；<code>BodyContent</code> slot 放 6 行状态 + Recheck 按钮。JSON spec 约定 <code>ExpandableArea.children[0]=Header</code>、<code>children[1]=Body</code>，由 <code>build_widget_blueprint._ensure_expandable_slot</code> 调 C++ helper 的 <code>EnsureWidgetInNamedSlot</code> UFUNCTION 桥接 <code>INamedSlotInterface::SetContentForSlot</code>（因为 <code>UExpandableArea.HeaderContent/BodyContent</code> 是裸 UPROPERTY，Python 反射看不见）。<code>FindWidgetByNameRecursive</code> 也扩展为下钻 <code>INamedSlotInterface</code> 所有 slot，保证 rerun 幂等 + 自动迁移旧 BP。想换箭头样式：Designer 里改 <code>Style.CollapsedImage</code> / <code>ExpandedImage</code>。详见 <code>docs/bindwidget-contract.md §7.1</code>。</p>
       `,
       table: [
         ["prereq_summary", "UTextBlock", "opt", "_check_and_display_prereqs"],
@@ -2227,6 +2240,9 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     'lbl_axis_accent':          'lbl_axis_accent_img',
     'lbl_actions_accent':       'lbl_actions_accent_img',
     'lbl_prereq_header_spacer': 'lbl_prereq_header',
+    // ExpandableArea is the container; its chevron sits inside the header row,
+    // so hovering the ExpandableArea hierarchy row points at the header strip.
+    'expandable_prereqs': 'lbl_prereq_header',
   };
   function resolveTargetName(name) {
     if (WIDGET_TARGET_MAP[name]) return WIDGET_TARGET_MAP[name];

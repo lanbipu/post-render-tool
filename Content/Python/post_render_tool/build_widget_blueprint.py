@@ -60,20 +60,107 @@ def _load_blueprint(asset_path: str) -> "unreal.WidgetBlueprint":
     return bp
 
 
-def _resolve_widget_uclass(widget_type: str):
-    """Given a JSON-spec type string, return the concrete UClass to hand to the
-    C++ helper's TSubclassOf<UWidget> parameter.
+def _resolve_widget_classes(widget_type: str):
+    """Return (py_cls, u_cls) for a spec type string.
 
-    unreal.* Python classes have a static_class() method that returns the UE
-    UClass object. Fall back to the class itself for any odd binding case.
+    - py_cls: the `unreal.<Type>` Python class (for isinstance checks).
+    - u_cls:  the UE UClass object from `py_cls.static_class()` (for
+              TSubclassOf<UWidget> UFUNCTION args — C++ helper expects this).
+
+    Don't conflate them: isinstance(widget, u_cls) raises TypeError because a
+    UClass is not a Python type.
     """
     py_cls = widget_properties.WIDGET_CLASS_MAP.get(widget_type)
     if py_cls is None:
-        return None
+        return None, None
     try:
-        return py_cls.static_class()
+        u_cls = py_cls.static_class()
     except AttributeError:
-        return py_cls
+        u_cls = py_cls
+    return py_cls, u_cls
+
+
+def _resolve_widget_uclass(widget_type: str):
+    """Back-compat shim returning only the UClass (used by EnsureRootPanel)."""
+    _, u_cls = _resolve_widget_classes(widget_type)
+    return u_cls
+
+
+def _apply_spec_props(widget, slot, node, force_reapply: bool, is_newly_created: bool):
+    """Shared prop/slot application used by both panel and ExpandableArea paths."""
+    if not (is_newly_created or force_reapply):
+        return
+    widget_type = node["type"]
+    variant = node.get("variant")
+    variant_props = widget_variants.resolve(widget_type, variant) if variant else {}
+    explicit_props = node.get("properties") or {}
+    props = {**variant_props, **explicit_props}
+    if props:
+        widget_properties.apply_widget_properties(widget, props)
+    slot_props = node.get("slot") or {}
+    if slot_props and slot is not None:
+        widget_properties.apply_slot_properties(slot, slot_props)
+
+
+_SLOT_KIND_TO_NAME = {"header": "Header", "body": "Body"}
+
+
+def _ensure_expandable_slot(bp, expandable, node: dict, slot_kind: str, force_reapply: bool):
+    """Ensure a widget sits in an ExpandableArea's Header or Body named slot.
+
+    `UExpandableArea` implements `INamedSlotInterface`. Its `HeaderContent` /
+    `BodyContent` UPROPERTYs are plain `UPROPERTY()` (no BP visibility, no
+    editor-only flag), and `SetContentForSlot` is a bare C++ virtual — none of
+    them are reachable from Python reflection. The C++ helper's new
+    `EnsureWidgetInNamedSlot` UFUNCTION bridges this gap: it dispatches through
+    `INamedSlotInterface::SetContentForSlot(FName, UWidget*)` and also handles:
+
+      - idempotency: re-uses widgets already in the slot (preserving user tweaks)
+      - migration: if a same-named widget lives elsewhere in the tree (e.g. old
+        spec had `lbl_prereq_header` as a direct VerticalBox child), the helper
+        detaches it from its old parent and re-parents into the named slot.
+    """
+    widget_type = node["type"]
+    name = node["name"]
+    py_cls, u_cls = _resolve_widget_classes(widget_type)
+    if u_cls is None:
+        unreal.log_error(
+            f"[build_widget_blueprint] unknown widget type {widget_type!r} in "
+            f"ExpandableArea.{slot_kind}_content slot; skipped"
+        )
+        return
+
+    slot_fname = _SLOT_KIND_TO_NAME.get(slot_kind)
+    if slot_fname is None:
+        raise RuntimeError(f"Unknown slot_kind {slot_kind!r}; expected 'header' or 'body'")
+
+    result, widget = unreal.PostRenderToolBuildHelper.ensure_widget_in_named_slot(
+        bp, unreal.Name(name), u_cls, expandable, unreal.Name(slot_fname)
+    )
+
+    if result == unreal.EnsureWidgetResult.TYPE_MISMATCH:
+        raise RuntimeError(
+            f"Widget '{name}' exists but type mismatches; abort. "
+            f"Delete the widget in Designer then rerun, or rename the spec entry."
+        )
+    if result == unreal.EnsureWidgetResult.INVALID_INPUT:
+        raise RuntimeError(f"Invalid input for widget '{name}' — check expandable / slot name.")
+    if result == unreal.EnsureWidgetResult.PARENT_CANNOT_HOLD_CHILDREN:
+        raise RuntimeError(
+            f"Parent of '{name}' does not implement INamedSlotInterface — spec tree invalid."
+        )
+
+    is_newly_created = (result == unreal.EnsureWidgetResult.CREATED)
+
+    # ExpandableArea named slots have no UPanelSlot; slot layout is governed by
+    # the ExpandableArea's own HeaderPadding / AreaPadding.
+    _apply_spec_props(widget, None, node, force_reapply, is_newly_created)
+
+    # Recurse — the content widget is typically a UPanelWidget (HorizontalBox /
+    # VerticalBox); its children go through the normal C++ helper, whose
+    # FindWidgetByNameRecursive now descends into named slots for idempotency.
+    for child in node.get("children") or []:
+        _build_node(bp, widget, child, force_reapply=force_reapply)
 
 
 def _build_node(bp, parent_widget, node: dict, *, force_reapply: bool = False) -> None:
@@ -114,26 +201,21 @@ def _build_node(bp, parent_widget, node: dict, *, force_reapply: bool = False) -
         )
 
     is_newly_created = (result == unreal.EnsureWidgetResult.CREATED)
-    should_apply = is_newly_created or force_reapply
 
-    # Apply properties on newly-created widgets, or on existing widgets when
-    # force_reapply is True (spec-level theme sync).
-    # Widget.cpp:195 sets bIsVariable=true on every new widget by default — no
-    # explicit call needed to make contract widgets Variable. Decorative widgets
-    # inherit the same default (minor overhead; accepted trade-off).
-    if should_apply:
-        # Merge variant-resolved props with explicit props. Explicit wins so
-        # per-widget overrides (e.g. a custom Tint) always trump the variant.
-        variant = node.get("variant")
-        variant_props = widget_variants.resolve(widget_type, variant) if variant else {}
-        explicit_props = node.get("properties") or {}
-        props = {**variant_props, **explicit_props}
-        if props:
-            widget_properties.apply_widget_properties(widget, props)
+    _apply_spec_props(widget, slot, node, force_reapply, is_newly_created)
 
-        slot_props = node.get("slot") or {}
-        if slot_props and slot is not None:
-            widget_properties.apply_slot_properties(slot, slot_props)
+    # ExpandableArea children go into HeaderContent / BodyContent slots, NOT into
+    # a UPanelWidget.AddChild list. Spec convention: children[0]=Header, [1]=Body.
+    if widget_type == "ExpandableArea":
+        children = node.get("children") or []
+        if len(children) != 2:
+            raise RuntimeError(
+                f"ExpandableArea {name!r} requires exactly 2 children "
+                f"([0]=Header, [1]=Body); got {len(children)}"
+            )
+        _ensure_expandable_slot(bp, widget, children[0], "header", force_reapply)
+        _ensure_expandable_slot(bp, widget, children[1], "body", force_reapply)
+        return
 
     # Recurse into children regardless of whether this widget was new or old.
     for child in node.get("children") or []:

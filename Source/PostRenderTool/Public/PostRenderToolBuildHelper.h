@@ -89,4 +89,31 @@ public:
                                                       UWidget* ParentWidget,
                                                       UWidget*& OutWidget,
                                                       UPanelSlot*& OutSlot);
+
+    /**
+     * Variant of EnsureWidgetUnderParent for parents that implement INamedSlotInterface
+     * (UExpandableArea, UNamedSlot, …). Those do NOT expose their slot widgets via
+     * UPanelWidget::AddChild or UContentWidget::SetContent — the only way to fill them
+     * in C++ is INamedSlotInterface::SetContentForSlot(FName, UWidget*), which is a
+     * plain virtual (not UFUNCTION) and therefore unreachable from Python.
+     *
+     * Slot-name convention (from each widget's GetSlotNames):
+     *   - UExpandableArea → "Header", "Body"
+     *   - UNamedSlot      → the single name authored in Designer
+     *
+     * Returns the same enum set as EnsureWidgetUnderParent. Idempotency: FindWidgetByName
+     * now descends into named slots too, so a widget already placed in some named slot
+     * is correctly detected as AlreadyExisted. If the widget exists elsewhere in the
+     * tree (migration scenario), it is re-parented into the requested slot.
+     *
+     * No UPanelSlot is returned — named-slot content widgets don't have one; their
+     * layout is governed by the parent's Header/AreaPadding, not a per-child slot.
+     */
+    UFUNCTION(BlueprintCallable, Category = "VP Post-Render Tool|Build")
+    static EEnsureWidgetResult EnsureWidgetInNamedSlot(UWidgetBlueprint* Blueprint,
+                                                      FName WidgetName,
+                                                      TSubclassOf<UWidget> WidgetClass,
+                                                      UWidget* NamedSlotParent,
+                                                      FName SlotName,
+                                                      UWidget*& OutWidget);
 };
