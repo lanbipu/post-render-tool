@@ -770,6 +770,52 @@
     font-style: normal;
     opacity: 0.9;
   }
+  /* --------- Hierarchy ↔ UI cross-highlight + arrow overlay --------- */
+  .h-line[data-ui-ref] {
+    cursor: crosshair;
+    transition: background .15s;
+  }
+  .h-line[data-ui-ref]:hover {
+    background: rgba(232, 112, 77, 0.10);
+  }
+  .ui-arrow-svg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none;
+    z-index: 9998;
+    overflow: visible;
+    display: none;
+  }
+  .ui-arrow-svg.active {
+    display: block;
+  }
+  .ui-arrow-svg path.arrow-line {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.6;
+    stroke-dasharray: 5 3;
+    stroke-linecap: round;
+    opacity: 0.92;
+    filter: drop-shadow(0 0 3px rgba(232, 112, 77, 0.45));
+    animation: arrow-dash 1.2s linear infinite;
+  }
+  @keyframes arrow-dash {
+    to { stroke-dashoffset: -16; }
+  }
+  .ui-highlight {
+    outline: 2px solid var(--accent) !important;
+    outline-offset: 3px;
+    box-shadow: 0 0 14px rgba(232, 112, 77, 0.45);
+    border-radius: 3px;
+    position: relative;
+    z-index: 5;
+    animation: ui-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes ui-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(232, 112, 77, 0.35); }
+    50%      { box-shadow: 0 0 18px rgba(232, 112, 77, 0.65); }
+  }
   .hierarchy-footnote {
     font-family: var(--mono);
     font-size: 10.5px;
@@ -1279,151 +1325,151 @@
     <div class="panel" id="panel">
 
       <!-- Section 1: Prerequisites (click to toggle ▶ collapsed ↔ ▼ expanded) -->
-      <div class="psec collapsed" data-section="1">
-        <div class="psec-head">
+      <div class="psec collapsed" data-section="1" data-w="lbl_card_prereq">
+        <div class="psec-head" data-w="lbl_prereq_header">
           <div class="left">
-            <span class="chev-toggle" aria-hidden="true"></span>
-            <span class="bar"></span>
-            <span>Prerequisites</span>
+            <span class="chev-toggle" data-w="lbl_prereq_arrow" aria-hidden="true"></span>
+            <span class="bar" data-w="lbl_prereq_accent_img"></span>
+            <span data-w="lbl_prereq_title">Prerequisites</span>
           </div>
-          <span class="chip-ok">6 / 6 OK</span>
+          <span class="chip-ok" data-w="prereq_summary">6 / 6 OK</span>
         </div>
-        <div class="prereq-body">
-          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: Python Editor Script Plugin</span></div>
-          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: Editor Scripting Utilities</span></div>
-          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: Camera Calibration</span></div>
-          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: CineCameraActor</span></div>
-          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: LevelSequence</span></div>
-          <div class="prereq-row"><span class="prereq-dot"></span><span>OK: EditorUtilitySubsystem</span></div>
+        <div class="prereq-body" data-w="lbl_prereq_body">
+          <div class="prereq-row" data-w="lbl_prereq_row_0"><span class="prereq-dot" data-w="lbl_prereq_dot_0_img"></span><span data-w="prereq_label_0">OK: Python Editor Script Plugin</span></div>
+          <div class="prereq-row" data-w="lbl_prereq_row_1"><span class="prereq-dot" data-w="lbl_prereq_dot_1_img"></span><span data-w="prereq_label_1">OK: Editor Scripting Utilities</span></div>
+          <div class="prereq-row" data-w="lbl_prereq_row_2"><span class="prereq-dot" data-w="lbl_prereq_dot_2_img"></span><span data-w="prereq_label_2">OK: Camera Calibration</span></div>
+          <div class="prereq-row" data-w="lbl_prereq_row_3"><span class="prereq-dot" data-w="lbl_prereq_dot_3_img"></span><span data-w="prereq_label_3">OK: CineCameraActor</span></div>
+          <div class="prereq-row" data-w="lbl_prereq_row_4"><span class="prereq-dot" data-w="lbl_prereq_dot_4_img"></span><span data-w="prereq_label_4">OK: LevelSequence</span></div>
+          <div class="prereq-row" data-w="lbl_prereq_row_5"><span class="prereq-dot" data-w="lbl_prereq_dot_5_img"></span><span data-w="prereq_label_5">OK: EditorUtilitySubsystem</span></div>
         </div>
-        <div class="prereq-footer">
-          <div class="btn" data-action="recheck">Recheck</div>
+        <div class="prereq-footer" data-w="lbl_prereq_bottom_row">
+          <div class="btn" data-action="recheck" data-w="btn_recheck">Recheck</div>
           <span class="last-checked">Last checked: 2026-04-17 10:23</span>
         </div>
       </div>
 
       <!-- Section 2: CSV File -->
-      <div class="psec" data-section="2">
-        <div class="psec-head">
-          <div class="left"><span class="bar"></span><span>CSV File</span></div>
+      <div class="psec" data-section="2" data-w="lbl_card_csv_file">
+        <div class="psec-head" data-w="lbl_csv_file_header">
+          <div class="left"><span class="bar" data-w="lbl_csv_file_accent_img"></span><span data-w="lbl_csv_file_title">CSV File</span></div>
         </div>
-        <div class="row">
-          <div class="btn">Browse...</div>
-          <div class="path-disp">E:/d3 Projects/…/shot_1_take_5_dense.csv</div>
+        <div class="row" data-w="lbl_csv_file_row">
+          <div class="btn" data-w="btn_browse">Browse...</div>
+          <div class="path-disp" data-w="txt_file_path">E:/d3 Projects/…/shot_1_take_5_dense.csv</div>
         </div>
       </div>
 
       <!-- Section 3: CSV Preview -->
-      <div class="psec" data-section="3">
-        <div class="psec-head">
-          <div class="left"><span class="bar"></span><span>CSV Preview</span></div>
+      <div class="psec" data-section="3" data-w="lbl_card_csv_preview">
+        <div class="psec-head" data-w="lbl_csv_preview_header">
+          <div class="left"><span class="bar" data-w="lbl_csv_preview_accent_img"></span><span data-w="lbl_csv_preview_title">CSV Preview</span></div>
         </div>
-        <div class="stats">
-          <div>Frames: 974</div>
-          <div>Focal Length: 30.30 – 30.30 mm</div>
-          <div>Timecode: 00:00:30.00 → 00:00:30.00</div>
-          <div>Sensor Width: 35.00 mm</div>
+        <div class="stats" data-w="lbl_csv_preview_stat">
+          <div data-w="txt_frame_count">Frames: 974</div>
+          <div data-w="txt_focal_range">Focal Length: 30.30 – 30.30 mm</div>
+          <div data-w="txt_timecode">Timecode: 00:00:30.00 → 00:00:30.00</div>
+          <div data-w="txt_sensor_width">Sensor Width: 35.00 mm</div>
         </div>
-        <div class="row">
-          <span class="label">FPS</span>
-          <div class="spn"><span>24.0</span><span class="arrows">▲<br>▼</span></div>
-          <span class="dim">Auto: 23.976 fps</span>
+        <div class="row" data-w="lbl_csv_preview_fps_row">
+          <span class="label" data-w="lbl_fps">FPS</span>
+          <div class="spn" data-w="spn_fps"><span>24.0</span><span class="arrows">▲<br>▼</span></div>
+          <span class="dim" data-w="txt_detected_fps">Auto: 23.976 fps</span>
         </div>
       </div>
 
       <!-- Section 4: Coordinate Verification -->
-      <div class="psec" data-section="4">
-        <div class="psec-head">
-          <div class="left"><span class="bar"></span><span>Coordinate Verification</span></div>
+      <div class="psec" data-section="4" data-w="lbl_card_coord">
+        <div class="psec-head" data-w="lbl_coord_header">
+          <div class="left"><span class="bar" data-w="lbl_coord_accent_img"></span><span data-w="lbl_coord_title">Coordinate Verification</span></div>
         </div>
-        <div class="row">
-          <span class="label">Frame</span>
-          <div class="spn"><span>0</span><span class="arrows">▲<br>▼</span></div>
-          <span class="dim">0 / 973</span>
+        <div class="row" data-w="lbl_coord_frame_row">
+          <span class="label" data-w="lbl_frame">Frame</span>
+          <div class="spn" data-w="spn_frame"><span>0</span><span class="arrows">▲<br>▼</span></div>
+          <span class="dim" data-w="txt_frame_hint">0 / 973</span>
         </div>
-        <div class="pair-box">
-          <span class="tag-src">DESIGNER (source)</span>
-          <span>Pos&nbsp;&nbsp;(1.2345, -0.5678, 2.3456) m</span>
-          <span>Rot&nbsp;&nbsp;(12.34, -56.78, 90.12)°</span>
-          <div class="sep"></div>
-          <span class="tag-dst">→ UE (result)</span>
-          <span>Pos&nbsp;&nbsp;(234.6, 123.5, -56.8) cm</span>
-          <span>Rot&nbsp;&nbsp;P=-12.34&nbsp;&nbsp;Y=56.78&nbsp;&nbsp;R=90.12°</span>
+        <div class="pair-box" data-w="lbl_coord_pair">
+          <span class="tag-src" data-w="lbl_designer_header">DESIGNER (source)</span>
+          <span data-w="txt_designer_pos">Pos&nbsp;&nbsp;(1.2345, -0.5678, 2.3456) m</span>
+          <span data-w="txt_designer_rot">Rot&nbsp;&nbsp;(12.34, -56.78, 90.12)°</span>
+          <div class="sep" data-w="lbl_coord_separator"></div>
+          <span class="tag-dst" data-w="lbl_ue_header">→ UE (result)</span>
+          <span data-w="txt_ue_pos">Pos&nbsp;&nbsp;(234.6, 123.5, -56.8) cm</span>
+          <span data-w="txt_ue_rot">Rot&nbsp;&nbsp;P=-12.34&nbsp;&nbsp;Y=56.78&nbsp;&nbsp;R=90.12°</span>
         </div>
-        <div class="btn">Spawn Test Camera</div>
+        <div class="btn" data-w="btn_spawn_cam">Spawn Test Camera</div>
       </div>
 
       <!-- Section 5: Axis Mapping -->
-      <div class="psec" data-section="5">
-        <div class="psec-head">
-          <div class="left"><span class="bar"></span><span>Axis Mapping</span></div>
+      <div class="psec" data-section="5" data-w="lbl_card_axis">
+        <div class="psec-head" data-w="lbl_axis_header">
+          <div class="left"><span class="bar" data-w="lbl_axis_accent_img"></span><span data-w="lbl_axis_title">Axis Mapping</span></div>
         </div>
-        <span class="tag-sub">POSITION&nbsp;&nbsp;(m → cm)</span>
-        <div class="pos-rows" style="display:flex; flex-direction:column; gap:6px;">
-          <div class="row">
-            <span class="label" style="min-width:30px;">UE.X</span>
-            <span class="chev">←</span>
-            <div class="cmb"><span>Z (2)</span><span class="caret">▾</span></div>
-            <span class="dim">×</span>
-            <div class="spn"><span>-100.0</span><span class="arrows">▲<br>▼</span></div>
+        <span class="tag-sub" data-w="lbl_pos_subheader">POSITION&nbsp;&nbsp;(m → cm)</span>
+        <div class="pos-rows" data-w="lbl_pos_rows" style="display:flex; flex-direction:column; gap:6px;">
+          <div class="row" data-w="lbl_row_ue_x">
+            <span class="label" data-w="lbl_ue_x" style="min-width:30px;">UE.X</span>
+            <span class="chev" data-w="lbl_ue_x_arrow">←</span>
+            <div class="cmb" data-w="cmb_pos_x_src"><span>Z (2)</span><span class="caret">▾</span></div>
+            <span class="dim" data-w="lbl_ue_x_mul">×</span>
+            <div class="spn" data-w="spn_pos_x_scale"><span>-100.0</span><span class="arrows">▲<br>▼</span></div>
           </div>
-          <div class="row">
-            <span class="label" style="min-width:30px;">UE.Y</span>
-            <span class="chev">←</span>
-            <div class="cmb"><span>X (0)</span><span class="caret">▾</span></div>
-            <span class="dim">×</span>
-            <div class="spn"><span>100.0</span><span class="arrows">▲<br>▼</span></div>
+          <div class="row" data-w="lbl_row_ue_y">
+            <span class="label" data-w="lbl_ue_y" style="min-width:30px;">UE.Y</span>
+            <span class="chev" data-w="lbl_ue_y_arrow">←</span>
+            <div class="cmb" data-w="cmb_pos_y_src"><span>X (0)</span><span class="caret">▾</span></div>
+            <span class="dim" data-w="lbl_ue_y_mul">×</span>
+            <div class="spn" data-w="spn_pos_y_scale"><span>100.0</span><span class="arrows">▲<br>▼</span></div>
           </div>
-          <div class="row">
-            <span class="label" style="min-width:30px;">UE.Z</span>
-            <span class="chev">←</span>
-            <div class="cmb"><span>Y (1)</span><span class="caret">▾</span></div>
-            <span class="dim">×</span>
-            <div class="spn"><span>100.0</span><span class="arrows">▲<br>▼</span></div>
-          </div>
-        </div>
-        <span class="tag-sub">ROTATION&nbsp;&nbsp;(deg)</span>
-        <div class="rot-rows" style="display:flex; flex-direction:column; gap:6px;">
-          <div class="row">
-            <span class="label" style="min-width:30px;">Pitch</span>
-            <span class="chev">←</span>
-            <div class="cmb"><span>X (0)</span><span class="caret">▾</span></div>
-            <span class="dim">×</span>
-            <div class="spn"><span>-1.0</span><span class="arrows">▲<br>▼</span></div>
-          </div>
-          <div class="row">
-            <span class="label" style="min-width:30px;">Yaw</span>
-            <span class="chev">←</span>
-            <div class="cmb"><span>Y (1)</span><span class="caret">▾</span></div>
-            <span class="dim">×</span>
-            <div class="spn"><span>-1.0</span><span class="arrows">▲<br>▼</span></div>
-          </div>
-          <div class="row">
-            <span class="label" style="min-width:30px;">Roll</span>
-            <span class="chev">←</span>
-            <div class="cmb"><span>Z (2)</span><span class="caret">▾</span></div>
-            <span class="dim">×</span>
-            <div class="spn"><span>1.0</span><span class="arrows">▲<br>▼</span></div>
+          <div class="row" data-w="lbl_row_ue_z">
+            <span class="label" data-w="lbl_ue_z" style="min-width:30px;">UE.Z</span>
+            <span class="chev" data-w="lbl_ue_z_arrow">←</span>
+            <div class="cmb" data-w="cmb_pos_z_src"><span>Y (1)</span><span class="caret">▾</span></div>
+            <span class="dim" data-w="lbl_ue_z_mul">×</span>
+            <div class="spn" data-w="spn_pos_z_scale"><span>100.0</span><span class="arrows">▲<br>▼</span></div>
           </div>
         </div>
-        <div class="row">
-          <div class="btn">Apply Mapping</div>
-          <div class="btn">Save to config.py</div>
+        <span class="tag-sub" data-w="lbl_rot_subheader">ROTATION&nbsp;&nbsp;(deg)</span>
+        <div class="rot-rows" data-w="lbl_rot_rows" style="display:flex; flex-direction:column; gap:6px;">
+          <div class="row" data-w="lbl_row_pitch">
+            <span class="label" data-w="lbl_pitch" style="min-width:30px;">Pitch</span>
+            <span class="chev" data-w="lbl_pitch_arrow">←</span>
+            <div class="cmb" data-w="cmb_rot_pitch_src"><span>X (0)</span><span class="caret">▾</span></div>
+            <span class="dim" data-w="lbl_pitch_mul">×</span>
+            <div class="spn" data-w="spn_rot_pitch_scale"><span>-1.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+          <div class="row" data-w="lbl_row_yaw">
+            <span class="label" data-w="lbl_yaw" style="min-width:30px;">Yaw</span>
+            <span class="chev" data-w="lbl_yaw_arrow">←</span>
+            <div class="cmb" data-w="cmb_rot_yaw_src"><span>Y (1)</span><span class="caret">▾</span></div>
+            <span class="dim" data-w="lbl_yaw_mul">×</span>
+            <div class="spn" data-w="spn_rot_yaw_scale"><span>-1.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+          <div class="row" data-w="lbl_row_roll">
+            <span class="label" data-w="lbl_roll" style="min-width:30px;">Roll</span>
+            <span class="chev" data-w="lbl_roll_arrow">←</span>
+            <div class="cmb" data-w="cmb_rot_roll_src"><span>Z (2)</span><span class="caret">▾</span></div>
+            <span class="dim" data-w="lbl_roll_mul">×</span>
+            <div class="spn" data-w="spn_rot_roll_scale"><span>1.0</span><span class="arrows">▲<br>▼</span></div>
+          </div>
+        </div>
+        <div class="row" data-w="lbl_axis_btn_row">
+          <div class="btn" data-w="btn_apply_mapping">Apply Mapping</div>
+          <div class="btn" data-w="btn_save_mapping">Save to config.py</div>
         </div>
       </div>
 
       <!-- Section 6: Actions + RESULTS -->
-      <div class="psec" data-section="6">
-        <div class="psec-head">
-          <div class="left"><span class="bar"></span><span>Actions</span></div>
+      <div class="psec" data-section="6" data-w="lbl_card_actions">
+        <div class="psec-head" data-w="lbl_actions_header">
+          <div class="left"><span class="bar" data-w="lbl_actions_accent_img"></span><span data-w="lbl_actions_title">Actions</span></div>
         </div>
-        <div class="btn primary">Import</div>
-        <div class="row" style="gap:8px;">
-          <div class="btn" style="flex:1; text-align:center;">Open Sequencer</div>
-          <div class="btn" style="flex:1; text-align:center;">Open MRQ</div>
+        <div class="btn primary" data-w="btn_import">Import</div>
+        <div class="row" data-w="lbl_actions_btn_row" style="gap:8px;">
+          <div class="btn" data-w="btn_open_seq" style="flex:1; text-align:center;">Open Sequencer</div>
+          <div class="btn" data-w="btn_open_mrq" style="flex:1; text-align:center;">Open MRQ</div>
         </div>
-        <span class="tag-sub">RESULTS</span>
-        <div class="results">[OK] CSV parsed:  974 frames @ 23.976 fps
+        <span class="tag-sub" data-w="lbl_results_header">RESULTS</span>
+        <div class="results" data-w="txt_results">[OK] CSV parsed:  974 frames @ 23.976 fps
 [OK] Validator:   FOV Δ max 0.12°   (0 anomalies)
 [OK] LensFile:    /Game/PostRenderTool/LF_shot1.ulens
 [OK] Camera:      BP_CineCamera_shot1
@@ -1897,7 +1943,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     } else if (params) {
       propsInner = `<span class="h-params">${paramsHtml}</span>`;
     }
-    return `<div class="h-line">`
+    return `<div class="h-line" data-ui-ref="${name}">`
       + `<span class="h-tree"><span class="h-branch">${branch}</span><span class="h-type">${type}</span></span>`
       + `<span class="h-mark ${roleCls}">${mark}</span>`
       + `<span class="h-name ${nameCls}">${name}</span>`
@@ -2136,6 +2182,94 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     }
   };
 
+  /* --- UI ↔ HIERARCHY ARROW OVERLAY --- */
+  // Set up SVG once; draw an arrow from hovered hierarchy line to the
+  // corresponding UI mockup element. Widgets without a direct [data-w] in
+  // the mockup fall back via WIDGET_TARGET_MAP + pattern rules.
+  const WIDGET_TARGET_MAP = {
+    // VerticalBox containers inside each card → the whole card
+    'lbl_prereq_vbox':          'lbl_card_prereq',
+    'lbl_csv_file_vbox':        'lbl_card_csv_file',
+    'lbl_csv_preview_vbox':     'lbl_card_csv_preview',
+    'lbl_coord_vbox':           'lbl_card_coord',
+    'lbl_axis_vbox':            'lbl_card_axis',
+    'lbl_actions_vbox':         'lbl_card_actions',
+    // Accent SizeBoxes → inner Image (the actual visible bar)
+    'lbl_prereq_accent':        'lbl_prereq_accent_img',
+    'lbl_csv_file_accent':      'lbl_csv_file_accent_img',
+    'lbl_csv_preview_accent':   'lbl_csv_preview_accent_img',
+    'lbl_coord_accent':         'lbl_coord_accent_img',
+    'lbl_axis_accent':          'lbl_axis_accent_img',
+    'lbl_actions_accent':       'lbl_actions_accent_img',
+    'lbl_prereq_header_spacer': 'lbl_prereq_header',
+  };
+  function resolveTargetName(name) {
+    if (WIDGET_TARGET_MAP[name]) return WIDGET_TARGET_MAP[name];
+    // lbl_prereq_dot_N (SizeBox) → lbl_prereq_dot_N_img (Image)
+    const dotMatch = name.match(/^(lbl_prereq_dot_\d+)$/);
+    if (dotMatch) return dotMatch[1] + '_img';
+    // lbl_btn_*_text (inner TextBlock) → btn_* (the button)
+    const btnTextMatch = name.match(/^lbl_(btn_.+)_text$/);
+    if (btnTextMatch) return btnTextMatch[1];
+    return name;
+  }
+
+  // Inject SVG overlay once (attached to <body> so fixed positioning works).
+  const arrowSvg = (() => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'ui-arrow-svg');
+    svg.innerHTML =
+      '<defs>' +
+        '<marker id="uiArrowHead" viewBox="0 0 10 10" refX="9" refY="5" ' +
+                'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+          '<path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)" />' +
+        '</marker>' +
+      '</defs>' +
+      '<path class="arrow-line" id="uiArrowPath" d="M 0 0" marker-end="url(#uiArrowHead)" />';
+    document.body.appendChild(svg);
+    return svg;
+  })();
+  const arrowPath = arrowSvg.querySelector('#uiArrowPath');
+  let currentHighlight = null;
+
+  function showArrow(fromEl, toEl) {
+    const fb = fromEl.getBoundingClientRect();
+    const tb = toEl.getBoundingClientRect();
+    if (tb.width === 0 || tb.height === 0) return;
+    // hierarchy line sits to the RIGHT of the mockup → arrow goes right-to-left.
+    const x1 = fb.left;
+    const y1 = fb.top + fb.height / 2;
+    const x2 = tb.right + 4;
+    const y2 = tb.top + tb.height / 2;
+    const midX = (x1 + x2) / 2;
+    const path = `M ${x1},${y1} C ${midX},${y1} ${midX},${y2} ${x2},${y2}`;
+    arrowPath.setAttribute('d', path);
+    arrowSvg.classList.add('active');
+    toEl.classList.add('ui-highlight');
+    currentHighlight = toEl;
+  }
+  function hideArrow() {
+    arrowSvg.classList.remove('active');
+    if (currentHighlight) {
+      currentHighlight.classList.remove('ui-highlight');
+      currentHighlight = null;
+    }
+  }
+  function attachHierarchyHoverHandlers() {
+    document.querySelectorAll('.hierarchy-tree .h-line[data-ui-ref]').forEach(line => {
+      line.addEventListener('mouseenter', () => {
+        const ref = line.dataset.uiRef;
+        const targetName = resolveTargetName(ref);
+        const target = document.querySelector('[data-w="' + targetName + '"]');
+        if (!target) return;
+        showArrow(line, target);
+      });
+      line.addEventListener('mouseleave', hideArrow);
+    });
+  }
+  // Hide arrow on scroll (viewport change would otherwise leave it stranded).
+  window.addEventListener('scroll', hideArrow, { passive: true });
+
   function renderDetail(key){
     const d = details[key];
     if (!d) return;
@@ -2170,6 +2304,9 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
           <code>py:</code> 段代表<strong>运行时由 Python 写入</strong>（Designer 可留空）；
           颜色以 HEX 给出，Font 数字是 Size（Bold 表 typeface=Bold）；
           <code>slot.*</code> 指父容器赋予的 slot-layout（Padding / FillSize / h_align / v_align）
+          <br>
+          <strong style="color: var(--accent);">💡 鼠标悬停任意一行</strong> —— 左侧 UI 对应位置会高亮并出现曲线指向箭头；
+          纯容器类（VerticalBox / HorizontalBox）自动回退到其所属的 Section 卡片
         </p>
       </div>
     ` : '';
@@ -2197,6 +2334,8 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       target.style.transition = 'opacity .35s ease, transform .35s ease';
       target.style.opacity = '1';
       target.style.transform = 'translateY(0)';
+      // Re-wire hover → arrow after DOM swap (hierarchy lines are fresh nodes).
+      attachHierarchyHoverHandlers();
     }, 120);
   }
 
