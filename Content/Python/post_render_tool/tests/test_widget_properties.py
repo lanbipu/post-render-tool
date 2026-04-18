@@ -63,6 +63,37 @@ class _StubSlateBrush:
         return self.props.get(name)
 
 
+class _StubSlateColor:
+    def __init__(self) -> None:
+        self.props = {}
+    def set_editor_property(self, name: str, value: Any) -> None:
+        self.props[name] = value
+    def get_editor_property(self, name: str) -> Any:
+        return self.props.get(name)
+
+
+class _StubFontInfo:
+    def __init__(self) -> None:
+        self.props = {"size": 24}
+    def set_editor_property(self, name: str, value: Any) -> None:
+        self.props[name] = value
+    def get_editor_property(self, name: str) -> Any:
+        return self.props.get(name)
+
+
+class _StubButtonStyle:
+    def __init__(self) -> None:
+        self.props = {
+            "normal": _StubSlateBrush(),
+            "hovered": _StubSlateBrush(),
+            "pressed": _StubSlateBrush(),
+        }
+    def set_editor_property(self, name: str, value: Any) -> None:
+        self.props[name] = value
+    def get_editor_property(self, name: str) -> Any:
+        return self.props.get(name)
+
+
 class _StubWidgetBase:
     widget_type = "Widget"
 
@@ -94,6 +125,8 @@ _unreal_stub.LinearColor = _StubLinearColor
 _unreal_stub.Vector2D = _StubVector2D
 _unreal_stub.Margin = _StubMargin
 _unreal_stub.SlateBrush = _StubSlateBrush
+_unreal_stub.SlateColor = _StubSlateColor
+_unreal_stub.Name = lambda s: s  # FName stub — pass-through string
 
 _unreal_stub.TextBlock = _StubTextBlock
 _unreal_stub.ComboBoxString = _StubComboBoxString
@@ -122,6 +155,9 @@ _unreal_stub.VerticalAlignment = types.SimpleNamespace(
 )
 _unreal_stub.SlateSizeRule = types.SimpleNamespace(AUTOMATIC="Auto", FILL="Fill")
 _unreal_stub.SlateVisibility = types.SimpleNamespace(VISIBLE="Visible")
+_unreal_stub.Orientation = types.SimpleNamespace(
+    ORIENT_VERTICAL="Vertical", ORIENT_HORIZONTAL="Horizontal",
+)
 
 
 def _log(*args, **kwargs):

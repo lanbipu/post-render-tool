@@ -23,7 +23,7 @@ from typing import Optional
 
 import unreal
 
-from . import spec_loader, widget_properties
+from . import spec_loader, widget_properties, widget_variants
 
 
 DEFAULT_SPEC_PATH = "docs/widget-tree-spec.json"
@@ -76,8 +76,14 @@ def _resolve_widget_uclass(widget_type: str):
         return py_cls
 
 
-def _build_node(bp, parent_widget, node: dict) -> None:
-    """Recursive builder for a single spec node + its children."""
+def _build_node(bp, parent_widget, node: dict, *, force_reapply: bool = False) -> None:
+    """Recursive builder for a single spec node + its children.
+
+    If ``force_reapply=True``, properties + slot are re-applied on widgets that
+    already exist (by name). Use this after spec-level theme changes (variant
+    updates, color tweaks) so the BP reflects the latest spec even though the
+    tree structure is unchanged. User tweaks inside Designer WILL be overwritten.
+    """
     widget_type = node["type"]
     name = node["name"]
     role = node["role"]
@@ -108,13 +114,20 @@ def _build_node(bp, parent_widget, node: dict) -> None:
         )
 
     is_newly_created = (result == unreal.EnsureWidgetResult.CREATED)
+    should_apply = is_newly_created or force_reapply
 
-    # Apply properties ONLY on newly-created widgets (preserve user tweaks).
+    # Apply properties on newly-created widgets, or on existing widgets when
+    # force_reapply is True (spec-level theme sync).
     # Widget.cpp:195 sets bIsVariable=true on every new widget by default — no
     # explicit call needed to make contract widgets Variable. Decorative widgets
     # inherit the same default (minor overhead; accepted trade-off).
-    if is_newly_created:
-        props = node.get("properties") or {}
+    if should_apply:
+        # Merge variant-resolved props with explicit props. Explicit wins so
+        # per-widget overrides (e.g. a custom Tint) always trump the variant.
+        variant = node.get("variant")
+        variant_props = widget_variants.resolve(widget_type, variant) if variant else {}
+        explicit_props = node.get("properties") or {}
+        props = {**variant_props, **explicit_props}
         if props:
             widget_properties.apply_widget_properties(widget, props)
 
@@ -124,7 +137,7 @@ def _build_node(bp, parent_widget, node: dict) -> None:
 
     # Recurse into children regardless of whether this widget was new or old.
     for child in node.get("children") or []:
-        _build_node(bp, widget, child)
+        _build_node(bp, widget, child, force_reapply=force_reapply)
 
 
 def run_build(
@@ -132,8 +145,14 @@ def run_build(
     *,
     save: bool = True,
     compile_bp: bool = True,
+    force_reapply: bool = False,
 ) -> "unreal.WidgetBlueprint":
-    """Top-level entry — load spec, walk tree, compile + save BP."""
+    """Top-level entry — load spec, walk tree, compile + save BP.
+
+    ``force_reapply=True`` re-applies properties + slots on widgets that already
+    exist, overwriting any Designer tweaks. Use it after spec theme/variant
+    changes to resync the BP visually. Default False preserves user edits.
+    """
     spec_path = _resolve_spec_path(spec_path)
     unreal.log(f"[build_widget_blueprint] loading spec from {spec_path}")
 
@@ -164,7 +183,7 @@ def run_build(
 
     # Walk root_children under the root panel.
     for child_spec in spec.get("root_children") or []:
-        _build_node(bp, root, child_spec)
+        _build_node(bp, root, child_spec, force_reapply=force_reapply)
 
     if compile_bp:
         unreal.log("[build_widget_blueprint] compiling blueprint…")

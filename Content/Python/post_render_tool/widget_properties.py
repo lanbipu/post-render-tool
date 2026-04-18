@@ -34,7 +34,27 @@ def _linear_color(rgba) -> "unreal.LinearColor":
     return unreal.LinearColor(r, g, b, a)
 
 
+def _slate_color(rgba) -> "unreal.SlateColor":
+    """Build an FSlateColor from an RGBA list/tuple.
+
+    FSlateBrush.TintColor and UTextBlock.ColorAndOpacity are both FSlateColor,
+    NOT FLinearColor. Passing a LinearColor directly triggers a Python TypeError
+    at set_editor_property time. The safe construction path is:
+
+        sc = unreal.SlateColor()
+        sc.set_editor_property("specified_color", linear)
+
+    This works even when the positional ctor `unreal.SlateColor(linear)` is
+    missing from a given UE Python binding.
+    """
+    sc = unreal.SlateColor()
+    sc.set_editor_property("specified_color", _linear_color(rgba))
+    return sc
+
+
 def _vec2(xy) -> "unreal.Vector2D":
+    # FDeprecateSlateVector2D is exposed to Python as Vector2D (see UE 5.7
+    # SlateVector2.h:123 USTRUCT(DisplayName="Vector2D"))
     return unreal.Vector2D(float(xy[0]), float(xy[1]))
 
 
@@ -62,9 +82,15 @@ def _apply_color_prop(prop_name: str):
     return _apply
 
 
+def _apply_textblock_color_and_opacity(w, v):
+    # UTextBlock.ColorAndOpacity is FSlateColor, not FLinearColor.
+    w.set_editor_property("color_and_opacity", _slate_color(v))
+
+
 def _apply_image_tint(w, v):
+    # FSlateBrush.TintColor is FSlateColor.
     brush = w.get_editor_property("brush") or unreal.SlateBrush()
-    brush.set_editor_property("tint_color", _linear_color(v))
+    brush.set_editor_property("tint_color", _slate_color(v))
     w.set_editor_property("brush", brush)
 
 
@@ -131,20 +157,72 @@ def _apply_multiline_hint(w, v):
 
 
 def _apply_scrollbox_orientation(w, v):
-    # Leaves value as string; UMG reflection accepts the enum identifier.
-    mapping = {"Vertical": "Vertical", "Horizontal": "Horizontal"}
-    w.set_editor_property("orientation", mapping.get(v, "Vertical"))
+    # ScrollBox.Orientation is TEnumAsByte<EOrientation>; cannot accept a string.
+    mapping = {
+        "Vertical": unreal.Orientation.ORIENT_VERTICAL,
+        "Horizontal": unreal.Orientation.ORIENT_HORIZONTAL,
+    }
+    w.set_editor_property(
+        "orientation", mapping.get(v, unreal.Orientation.ORIENT_VERTICAL)
+    )
 
 
 def _apply_spacer_size(w, v):
     w.set_editor_property("size", _vec2(v))
 
 
+def _apply_textblock_font(w, v):
+    """Mutate the TextBlock's FSlateFontInfo in place.
+
+    v is {"size": int, "type_face": "Regular"|"Bold"|"Light"|"Mono"|...}.
+    Unknown type_face falls through to whatever the default font provides.
+    """
+    font = w.get_editor_property("font")
+    if font is None:
+        return
+    if "size" in v:
+        font.set_editor_property("size", int(v["size"]))
+    if "type_face" in v:
+        font.set_editor_property(
+            "typeface_font_name", unreal.Name(str(v["type_face"]))
+        )
+    w.set_editor_property("font", font)
+
+
+def _apply_button_background_color(w, v):
+    """Tint FButtonStyle's Normal/Hovered/Pressed brushes.
+
+    UE Button has no direct `background_color` property — its fill comes from
+    `WidgetStyle: FButtonStyle` which holds three FSlateBrush states (Normal,
+    Hovered, Pressed, Disabled). Tinting them all keeps the rounded-corner
+    default button texture but recolors it.
+    """
+    slate = _slate_color(v)
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    for brush_name in ("normal", "hovered", "pressed"):
+        brush = style.get_editor_property(brush_name)
+        if brush is None:
+            continue
+        brush.set_editor_property("tint_color", slate)
+        style.set_editor_property(brush_name, brush)
+    w.set_editor_property("widget_style", style)
+
+
+def _apply_background_color(w, v):
+    """Dispatch BackgroundColor — Buttons tint widget_style, others set prop directly."""
+    if isinstance(w, unreal.Button):
+        _apply_button_background_color(w, v)
+    else:
+        w.set_editor_property("background_color", _linear_color(v))
+
+
 _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "Text": _apply_textblock_text,
     "BrushColor": _apply_color_prop("brush_color"),
-    "ColorAndOpacity": _apply_color_prop("color_and_opacity"),
-    "BackgroundColor": _apply_color_prop("background_color"),
+    "ColorAndOpacity": _apply_textblock_color_and_opacity,
+    "BackgroundColor": _apply_background_color,
     "Tint": _apply_image_tint,
     "ImageSize": _apply_image_size,
     "DrawAs": _apply_image_draw_as,
@@ -160,6 +238,7 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "HintText": _apply_multiline_hint,
     "Orientation": _apply_scrollbox_orientation,
     "Size": _apply_spacer_size,
+    "Font": _apply_textblock_font,
 }
 
 

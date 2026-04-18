@@ -257,19 +257,25 @@ def rebuild_widget() -> None:
     open_widget()
 
 
-def rebuild_from_spec() -> object:
+def rebuild_from_spec(*, force_reapply: bool = False) -> object:
     """Re-populate BP_PostRenderToolWidget from docs/widget-tree-spec.json.
 
-    Idempotent: existing widgets (with user tweaks) are preserved; only missing
-    contract widgets + their spec'd properties are added. After C++ UPROPERTY
-    changes, a full Editor restart + plugin rebuild is still required — this
-    command only operates on the WidgetBlueprint asset, not the C++ reflection
-    metadata.
+    Default (force_reapply=False): idempotent — existing widgets (with user
+    tweaks) are preserved; only missing contract widgets are created and their
+    spec'd properties applied.
+
+    force_reapply=True: re-applies every widget's properties + slots from the
+    spec, overwriting Designer tweaks. Use this after editing variants, colors,
+    fonts, or any spec-level theme change to resync the BP visually.
+
+    After C++ UPROPERTY changes, a full Editor restart + plugin rebuild is still
+    required — this command only operates on the WidgetBlueprint asset, not the
+    C++ reflection metadata.
 
     Re-opens the tab after rebuilding so the running Python UI picks up the
     regenerated bindings immediately.
     """
     from . import build_widget_blueprint
-    bp = build_widget_blueprint.run_build()
+    bp = build_widget_blueprint.run_build(force_reapply=force_reapply)
     rebuild_widget()
     return bp
