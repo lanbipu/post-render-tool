@@ -332,13 +332,22 @@
   /* --------- PANEL REPRODUCTION --------- */
   .panel-stage {
     display: grid;
-    grid-template-columns: minmax(340px, 400px) 1fr;
+    grid-template-columns: 360px 1fr;
     gap: 48px;
     align-items: start;
   }
   @media (max-width: 1000px) { .panel-stage { grid-template-columns: 1fr; } }
 
+  /* Panel mockup: pixel-matched to UE-side SizeBox lbl_stage_size (360 × 720).
+     This is the Figma canvas — NOT a responsive container. When the page
+     viewport is wider than the canvas, the surrounding layout flexes around
+     it, but the canvas itself holds its exact design dimensions. */
   .panel {
+    position: sticky;
+    top: 24px;
+    width: 360px;
+    height: 720px;
+    box-sizing: border-box;
     background: #1a1a1a;
     border: 1px solid #2a2a2a;
     padding: 12px;
@@ -350,11 +359,31 @@
     color: #e0e0e0;
     border-radius: 4px;
     box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(232,112,77,0.06);
-    position: sticky;
-    top: 24px;
-    max-height: calc(100vh - 48px);
     overflow-y: auto;
   }
+  .panel-wrap {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-self: start;
+  }
+  .panel-wrap .canvas-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    opacity: 0.7;
+    padding-left: 2px;
+  }
+  .panel-wrap .canvas-label strong {
+    color: var(--accent-soft);
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  /* Override the previous `.panel { position: sticky }` — wrapper handles stickiness now. */
+  .panel-stage > .panel-wrap > .panel { position: static; top: auto; }
   /* Subtle scrollbar for sticky mockup when it overflows viewport */
   .panel::-webkit-scrollbar { width: 6px; }
   .panel::-webkit-scrollbar-track { background: transparent; }
@@ -1389,9 +1418,33 @@
     每行 widget 后面标注了 <strong>UI 视觉作用</strong> 与 <strong>Designer 推荐参数</strong>（颜色 / 字体 / 内边距 / slot-layout），
     是手工在 UMG Designer 里调版面时的即取即用参考表。
   </p>
+  <p class="ch-subtitle reveal" style="max-width: 62ch; margin-left:168px; margin-top:-40px; margin-bottom: 48px; font-size: 13px; color: var(--ink-faint); border-left: 2px solid var(--accent); padding-left: 12px;">
+    📐 <strong>固定画布：360 × 720 px</strong>。UE 端根布局用 <code>VerticalBox → ScaleBox(ScaleToFit, Both) → SizeBox(360×720) → ScrollBox → VerticalBox lbl_sections</code>，
+    无论 EUW tab 拉多大/多小，<code>ScaleBox</code> 以 ScaleToFit 等比缩放内层 SizeBox 固定画布，Figma 比例永远 1:1 还原。内容超过 720px 时由内层 ScrollBox 画布内滚动。
+    想切严格像素 1:1（不缩放）→ spec 里改 <code>lbl_stage_scale.properties.Stretch="None"</code>；想换画布尺寸 → 改 <code>lbl_stage_size.WidthOverride/HeightOverride</code>。
+    见 <code>docs/bindwidget-contract.md §5.3</code>。
+  </p>
+
+  <div class="root-tree reveal" style="max-width: 820px; margin: 0 auto 56px auto; padding: 16px 22px; background: var(--paper-2); border: 1px solid var(--rule); border-left: 2px solid var(--accent); border-radius: 0 4px 4px 0; font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink);">
+    <div style="color: var(--accent); font-size: 10.5px; letter-spacing: 0.12em; margin-bottom: 10px; text-transform: uppercase;">§ 0 · Root layout · 固定尺寸策略</div>
+    <pre style="margin: 0; color: var(--ink); white-space: pre-wrap; font-family: var(--mono);"><span style="color: var(--ink-faint);">VerticalBox</span>    <span style="color: var(--accent-soft);">RootPanel</span>             <span style="color: var(--ink-faint); font-style: italic;">EUW 强制根（C++ EnsureRootPanel 接受 UPanelWidget 作 RootWidget）</span>
+└─ <span style="color: var(--ink);">ScaleBox</span>    <span style="color: var(--accent-soft);">lbl_stage_scale</span>        <span style="color: var(--ink-faint); font-style: italic;">Stretch=<span style="color: var(--accent);">ScaleToFit</span>, StretchDirection=Both, UserSpecifiedScale=1.0 · slot.fill=Fill</span>
+   └─ <span style="color: var(--ink);">SizeBox</span>    <span style="color: var(--accent-soft);">lbl_stage_size</span>         <span style="color: var(--ink-faint); font-style: italic;">WidthOverride=<span style="color: var(--accent);">360</span>, HeightOverride=<span style="color: var(--accent);">720</span>  ← Figma 画布尺寸</span>
+      └─ <span style="color: var(--ink);">ScrollBox</span>    <span style="color: var(--accent-soft);">lbl_root_scroll</span>    <span style="color: var(--ink-faint); font-style: italic;">Orientation=Vertical（内容超 720px 时在画布内滚动，不撑破画布）</span>
+         └─ <span style="color: var(--ink);">VerticalBox</span>    <span style="color: var(--accent-soft);">lbl_sections</span>   <span style="color: var(--ink-faint); font-style: italic;">slot.Padding=12,12,12,12 → 6 个 Section Border（下面 mockup）</span></pre>
+    <div style="margin-top: 12px; font-size: 11px; color: var(--ink-faint); line-height: 1.6;">
+      <strong style="color: var(--ink-muted);">策略表：</strong>
+      <code>Stretch="ScaleToFit"</code>（当前）等比缩放 Figma 比例 1:1 还原 ·
+      <code>"None"</code> 严格像素 1:1 超出裁剪 ·
+      <code>"Fill"</code> 非等比拉伸（变形，不推荐） ·
+      <code>"UserSpecified"</code> 按 <code>UserSpecifiedScale</code> 固定倍率。
+    </div>
+  </div>
 
   <div class="panel-stage reveal">
 
+    <div class="panel-wrap">
+      <div class="canvas-label"><strong>Fixed canvas</strong> 360 × 720 px · UE 端 SizeBox <code>lbl_stage_size</code> · ScaleBox=ScaleToFit 等比缩放填满 EUW tab</div>
     <div class="panel" id="panel">
 
       <!-- Section 1: Prerequisites — UExpandableArea (native toggle, auto ▶ ↔ ▼) -->
@@ -1548,6 +1601,7 @@
 Import finished in 3.42s.</div>
       </div>
     </div>
+    </div><!-- /panel-wrap -->
 
     <!-- Detail panel (right side) -->
     <div class="section-detail" id="detail">
