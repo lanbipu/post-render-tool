@@ -352,7 +352,13 @@
     box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(232,112,77,0.06);
     position: sticky;
     top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
   }
+  /* Subtle scrollbar for sticky mockup when it overflows viewport */
+  .panel::-webkit-scrollbar { width: 6px; }
+  .panel::-webkit-scrollbar-track { background: transparent; }
+  .panel::-webkit-scrollbar-thumb { background: rgba(232, 112, 77, 0.3); border-radius: 3px; }
   .panel .psec {
     background: #242424;
     border: 1px solid #333;
@@ -563,21 +569,37 @@
     font-size: 18px;
     color: var(--accent);
   }
+  .sd-compact-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .sd-compact-header .sd-num {
+    font-size: 11px;
+    margin: 0;
+    color: var(--accent);
+    letter-spacing: 0.22em;
+  }
+  .sd-compact-header .sd-num::before { display: none; }
   .sd-title {
     font-family: var(--serif);
-    font-weight: 340;
-    font-size: 44px;
-    line-height: 1.05;
-    letter-spacing: -0.02em;
-    margin-bottom: 10px;
-    font-variation-settings: "opsz" 96;
+    font-weight: 360;
+    font-size: 22px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0;
+    font-variation-settings: "opsz" 48;
   }
-  .sd-title em { font-style: italic; color: var(--accent); font-variation-settings: "opsz" 96, "WONK" 1; }
+  .sd-title em { font-style: italic; color: var(--accent); font-variation-settings: "opsz" 48, "WONK" 1; }
   .sd-figma {
     font-family: var(--mono);
     font-size: 11px;
     color: var(--ink-faint);
-    margin-bottom: 24px;
+    margin: 0 0 0 auto;
     letter-spacing: 0.04em;
   }
   .sd-figma code { color: var(--accent-soft); }
@@ -648,7 +670,10 @@
 
   /* --------- UMG Hierarchy Tree (Designer view) --------- */
   .hierarchy-block {
-    margin: 32px 0 20px;
+    margin: 0 0 28px;
+  }
+  .sd-body {
+    margin-top: 8px;
   }
   .hierarchy-header {
     display: flex;
@@ -2312,15 +2337,17 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     ` : '';
 
     const html = `
-      <div class="sd-num">${d.num}</div>
-      <h3 class="sd-title">${d.title}</h3>
-      <div class="sd-figma">${d.figma}</div>
+      <div class="sd-compact-header">
+        <div class="sd-num">${d.num}</div>
+        <h3 class="sd-title">${d.title}</h3>
+        <div class="sd-figma">${d.figma}</div>
+      </div>
+      ${hierarchyBlock}
       <div class="sd-body">${d.body}</div>
       <table class="contract">
         <thead><tr><th>Control</th><th>Type</th><th>Contract</th><th>Python handler</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      ${hierarchyBlock}
       <div class="design-principle">
         <span class="label">Design principle</span>
         <div class="text">${d.principle}</div>
