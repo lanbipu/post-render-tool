@@ -807,6 +807,39 @@
     font-style: normal;
     opacity: 0.9;
   }
+  /* Slot banner — groups widgets under INamedSlotInterface parents (e.g.
+     UExpandableArea's HeaderContent / BodyContent). Makes it visually explicit
+     which widgets live in which slot since the tree indentation alone can't
+     distinguish them from normal panel children. */
+  .h-slot-banner {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 6px 0 2px 0;
+    padding: 4px 0 4px 6ch;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    background: linear-gradient(90deg, rgba(232, 112, 77, 0.06) 0%, transparent 100%);
+    border-left: 2px solid rgba(232, 112, 77, 0.45);
+  }
+  .h-slot-banner.h-slot-body {
+    background: linear-gradient(90deg, rgba(76, 175, 80, 0.05) 0%, transparent 100%);
+    border-left: 2px solid rgba(76, 175, 80, 0.45);
+  }
+  .h-slot-indent { width: 0; }
+  .h-slot-label {
+    color: var(--accent);
+    font-weight: 600;
+    text-transform: none;
+  }
+  .h-slot-banner.h-slot-body .h-slot-label { color: #4CAF50; }
+  .h-slot-hint {
+    color: var(--ink-faint);
+    font-size: 10.5px;
+    font-style: italic;
+    opacity: 0.85;
+  }
   /* --------- Hierarchy ↔ UI cross-highlight + arrow overlay --------- */
   .h-line[data-ui-ref] {
     cursor: crosshair;
@@ -1987,18 +2020,30 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       + `<span class="h-props">${propsInner}</span>`
       + `</div>`;
   }
+
+  // slotBanner — renders a visual divider row that labels a group of widgets as
+  // belonging to a named slot of the preceding widget (ExpandableArea Header/Body).
+  function slotBanner(kind, label, hint) {
+    return `<div class="h-slot-banner h-slot-${kind}">`
+      + `<span class="h-slot-indent"></span>`
+      + `<span class="h-slot-label">【${label}】</span>`
+      + `<span class="h-slot-hint">${hint}</span>`
+      + `</div>`;
+  }
   const hierarchies = {
     "1": [
       h('',                        'Border',                 'dec', 'lbl_card_prereq',             'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
       h('└─ ',                     'VerticalBox',            'dec', 'lbl_prereq_vbox',             '卡内纵向排',                            ''),
       h('   └─ ',                  'ExpandableArea',         'dec', 'expandable_prereqs',          '原生折叠容器（点击 header 自动切换）',   'IsExpanded=true, HeaderPadding=0,0,0,0, AreaPadding=0,8,0,0, MaxHeight=0（=无限）; 自带三角箭头图标, Style.CollapsedImage/ExpandedImage 可换 PNG'),
-      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_header',           '填入 HeaderContent slot',               'spec 约定 children[0] → HeaderContent; 自身无点击逻辑，只负责横排 4 个子控件'),
+      slotBanner('header', 'HeaderContent slot', '始终可见；点击触发折叠 + 自动画 ▶/▼ 图标'),
+      h('      ├─ ',               'HorizontalBox',          'dec', 'lbl_prereq_header',           '横排 4 个子控件',                         'spec 约定 children[0] → HeaderContent slot'),
       h('      │  ├─ ',            'SizeBox',                'dec', 'lbl_prereq_accent',           '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
       h('      │  │  └─ ',         'Image',                  'dec', 'lbl_prereq_accent_img',       '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
       h('      │  ├─ ',            'TextBlock',              'dec', 'lbl_prereq_title',            '段头主标题',                            'Text="Prerequisites", Color=#F2F2F2, Font=13 Bold'),
       h('      │  ├─ ',            'Spacer',                 'dec', 'lbl_prereq_header_spacer',    '把右侧徽章推到最右',                    'slot.FillSize=1.0'),
       h('      │  └─ ',            'TextBlock',              'opt', 'prereq_summary',              '右侧状态徽章「N / 6 OK」',              'Color=#4CAF50 (全 OK 时) / #F44336 (有 MISSING), Font=12 Bold, py:"N / 6 OK"'),
-      h('      └─ ',               'VerticalBox',            'dec', 'lbl_prereq_body',             '填入 BodyContent slot（6 行状态 + 底部按钮）', 'spec 约定 children[1] → BodyContent; Visibility 由 ExpandableArea 原生控制，无需任何 BP 节点'),
+      slotBanner('body', 'BodyContent slot', '展开时显示；收起时 ExpandableArea 原生 Collapse（不占空间）'),
+      h('      └─ ',               'VerticalBox',            'dec', 'lbl_prereq_body',             '纵排 6 行状态 + 1 行按钮',                'spec 约定 children[1] → BodyContent slot'),
       h('         ├─ ',            'HorizontalBox',          'dec', 'lbl_prereq_row_0',            '单行：圆点 + 状态文本',                 'slot.Padding=0,2,0,0'),
       h('         │  ├─ ',         'SizeBox',                'dec', 'lbl_prereq_dot_0',            '圆点尺寸盒',                            'WidthOverride=8, HeightOverride=8, slot.Padding=0,0,8,0, v_align=Center'),
       h('         │  │  └─ ',      'Image',                  'dec', 'lbl_prereq_dot_0_img',        '状态圆点',                              'Tint=#CCCCCC (OK) / #F44336 (MISSING), DrawAs=Image, ImageSize=8×8'),
