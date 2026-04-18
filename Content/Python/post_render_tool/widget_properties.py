@@ -19,6 +19,7 @@ WIDGET_CLASS_MAP: Dict[str, type] = {
     "Border": unreal.Border,
     "SizeBox": unreal.SizeBox,
     "Button": unreal.Button,
+    "ScaleBox": unreal.ScaleBox,
     "ExpandableArea": unreal.ExpandableArea,
     "Image": unreal.Image,
     "TextBlock": unreal.TextBlock,
@@ -188,6 +189,41 @@ def _apply_expandable_max_height(w, v):
     w.set_editor_property("max_height", float(v))
 
 
+# ScaleBox — fixed-design-size pattern: wrap the root panel in ScaleBox + SizeBox
+# so the whole tool renders at Figma native dimensions regardless of EUW tab size.
+_STRETCH_MAP = {
+    "None": "NONE",
+    "Fill": "FILL",
+    "ScaleToFit": "SCALE_TO_FIT",
+    "ScaleToFitX": "SCALE_TO_FIT_X",
+    "ScaleToFitY": "SCALE_TO_FIT_Y",
+    "ScaleToFill": "SCALE_TO_FILL",
+    "UserSpecified": "USER_SPECIFIED",
+    "UserSpecifiedWithClipping": "USER_SPECIFIED_WITH_CLIPPING",
+}
+_STRETCH_DIRECTION_MAP = {
+    "Both": "BOTH",
+    "DownOnly": "DOWN_ONLY",
+    "UpOnly": "UP_ONLY",
+}
+
+
+def _apply_scalebox_stretch(w, v):
+    attr = _STRETCH_MAP.get(v, "SCALE_TO_FIT")
+    enum_val = getattr(unreal.Stretch, attr)
+    w.set_editor_property("stretch", enum_val)
+
+
+def _apply_scalebox_stretch_direction(w, v):
+    attr = _STRETCH_DIRECTION_MAP.get(v, "BOTH")
+    enum_val = getattr(unreal.StretchDirection, attr)
+    w.set_editor_property("stretch_direction", enum_val)
+
+
+def _apply_scalebox_user_scale(w, v):
+    w.set_editor_property("user_specified_scale", float(v))
+
+
 def _apply_textblock_font(w, v):
     """Mutate the TextBlock's FSlateFontInfo in place.
 
@@ -260,6 +296,9 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "HeaderPadding": _apply_expandable_header_padding,
     "AreaPadding": _apply_expandable_area_padding,
     "MaxHeight": _apply_expandable_max_height,
+    "Stretch": _apply_scalebox_stretch,
+    "StretchDirection": _apply_scalebox_stretch_direction,
+    "UserSpecifiedScale": _apply_scalebox_user_scale,
 }
 
 

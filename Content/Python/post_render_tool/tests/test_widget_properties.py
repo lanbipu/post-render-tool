@@ -142,6 +142,17 @@ _unreal_stub.HorizontalBox = type("HorizontalBox", (_StubWidgetBase,), {})
 _unreal_stub.ScrollBox = type("ScrollBox", (_StubWidgetBase,), {})
 _unreal_stub.CanvasPanel = type("CanvasPanel", (_StubWidgetBase,), {})
 _unreal_stub.ExpandableArea = type("ExpandableArea", (_StubWidgetBase,), {})
+_unreal_stub.ScaleBox = type("ScaleBox", (_StubWidgetBase,), {})
+_unreal_stub.Stretch = types.SimpleNamespace(
+    NONE="None", FILL="Fill", SCALE_TO_FIT="ScaleToFit",
+    SCALE_TO_FIT_X="ScaleToFitX", SCALE_TO_FIT_Y="ScaleToFitY",
+    SCALE_TO_FILL="ScaleToFill",
+    USER_SPECIFIED="UserSpecified",
+    USER_SPECIFIED_WITH_CLIPPING="UserSpecifiedWithClipping",
+)
+_unreal_stub.StretchDirection = types.SimpleNamespace(
+    BOTH="Both", DOWN_ONLY="DownOnly", UP_ONLY="UpOnly",
+)
 
 _unreal_stub.SlateBrushDrawType = types.SimpleNamespace(
     BOX="Box", IMAGE="Image", NO_DRAW_TYPE="NoDrawType"

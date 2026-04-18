@@ -213,21 +213,40 @@ Widget                                 [标签] name                            
 | **name** | 契约控件严格按表名；装饰件按层级语义起名 |
 | **关键属性** | Text 值、Size、Brush Color、Padding 等 Designer 里需手填的值 |
 
-### 5.3 根布局
+### 5.3 根布局（固定 Figma 设计尺寸 — 不随 EUW tab 自适应）
+
+全部业务界面被 `ScaleBox + SizeBox` 包在一个**固定像素画布**里（360×720，匹配 Figma 设计稿）。无论 EUW tab 被拉多大/多小，`ScaleBox` 以 **ScaleToFit + Direction=Both** 等比缩放，画面比例始终 1:1 还原设计稿。
 
 ```
-CanvasPanel                            [装饰] (EditorUtilityWidget 默认根，保留不动)
-└─ ScrollBox                           [装饰] lbl_root_scroll                  Anchors=Fill, Offsets=0,0,0,0
-   └─ VerticalBox                      [装饰] lbl_sections                     Padding=12,12,12,12
-      ├─ Border                        [装饰] lbl_card_prereq                  (Section 1)
-      ├─ Border                        [装饰] lbl_card_csv_file                (Section 2)
-      ├─ Border                        [装饰] lbl_card_csv_preview             (Section 3)
-      ├─ Border                        [装饰] lbl_card_coord                   (Section 4)
-      ├─ Border                        [装饰] lbl_card_axis                    (Section 5)
-      └─ Border                        [装饰] lbl_card_actions                 (Section 6)
+VerticalBox                            [装饰] RootPanel                         EUW 强制根（C++ helper 只接受 UPanelWidget 作 WidgetTree.RootWidget，spec.blueprint.root_panel 配置）
+└─ ScaleBox                            [装饰] lbl_stage_scale                   Stretch=ScaleToFit, StretchDirection=Both, UserSpecifiedScale=1.0
+   │                                                                            slot.fill_size=1.0, size_rule=Fill, h_align=Fill, v_align=Fill（占满 tab）
+   └─ SizeBox                          [装饰] lbl_stage_size                    WidthOverride=360, HeightOverride=720（Figma 画布原始尺寸）
+      └─ ScrollBox                     [装饰] lbl_root_scroll                   Orientation=Vertical（内容超过 720px 时在画布内滚动，不撑破画布）
+         └─ VerticalBox                [装饰] lbl_sections                      slot.Padding=12,12,12,12
+            ├─ Border                  [装饰] lbl_card_prereq                  (Section 1)
+            ├─ Border                  [装饰] lbl_card_csv_file                (Section 2)
+            ├─ Border                  [装饰] lbl_card_csv_preview             (Section 3)
+            ├─ Border                  [装饰] lbl_card_coord                   (Section 4)
+            ├─ Border                  [装饰] lbl_card_axis                    (Section 5)
+            └─ Border                  [装饰] lbl_card_actions                 (Section 6)
 ```
 
 每个 Section Border 共用属性：`BrushColor=#242424`、`Padding=12,10,12,10`；所在 VerticalBox slot 的 `Padding=0,0,0,8`（下边距 8px，最后一张不加）。
+
+**缩放策略说明（Stretch 枚举）**：
+
+| Stretch | 行为 | 适用场景 |
+|---|---|---|
+| `ScaleToFit`（✅ 当前） | 等比缩放，保证 360×720 永远完整可见；tab 变大→放大，变小→缩小 | Figma 比例级还原，跨 tab 尺寸视觉一致 |
+| `None` | 不缩放，严格像素 1:1；tab 小于 360×720 时**内容被裁剪** | 需要严格像素验证；要求用户 tab 不低于设计尺寸 |
+| `Fill` | 非等比拉伸填满 tab（画面会变形） | 一般不用，会破坏设计比例 |
+| `ScaleToFill` | 等比缩放到**填满短边**，长边溢出裁剪 | 海报/启动画面类 |
+| `UserSpecified` | 按 `UserSpecifiedScale` 固定倍率缩放 | 如 HiDPI 下要强制 2x 放大 |
+
+改策略只需改 spec 里 `lbl_stage_scale.properties.Stretch` 即可，不用改代码。
+
+**想改 Figma 画布尺寸？** 调 `lbl_stage_size.properties.WidthOverride` / `HeightOverride`。不需要同步改任何 UMG slot —— SizeBox 是固定尺寸源头，ScaleBox 用它决定缩放比例。
 
 ### 5.4 Section 1 — Prerequisites（折叠头 + 内容区）
 

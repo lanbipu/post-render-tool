@@ -15,7 +15,7 @@ VALID_ROLES = {"required", "optional", "decorative"}
 
 # Widget types that can hold children. Builder walks into these.
 PANEL_TYPES = {"CanvasPanel", "ScrollBox", "VerticalBox", "HorizontalBox"}
-CONTENT_TYPES = {"Border", "SizeBox", "Button"}
+CONTENT_TYPES = {"Border", "SizeBox", "Button", "ScaleBox"}
 # ExpandableArea: UWidget with two named widget-valued properties (HeaderContent,
 # BodyContent). Spec convention: exactly 2 children; [0] → HeaderContent, [1] → BodyContent.
 EXPANDABLE_TYPES = {"ExpandableArea"}
