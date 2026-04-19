@@ -155,7 +155,7 @@ class ValidationReport:
     timecode_end: str
     focal_length_range: Tuple[float, float]
     sensor_width_mm: float
-    fps: Optional[float]
+    fps: float
     fov_check: FovCheckResult
     anomalous_frames: List[dict] = field(default_factory=list)
 
@@ -174,8 +174,7 @@ class ValidationReport:
         else:
             lines.append(f"  焦距范围    : {fl_min:.3f} – {fl_max:.3f} mm")
         lines.append(f"  传感器宽度  : {self.sensor_width_mm:.3f} mm")
-        fps_str = f"{self.fps:.3f}" if self.fps else "未知"
-        lines.append(f"  帧率        : {fps_str} fps")
+        lines.append(f"  帧率        : {self.fps:.3f} fps")
 
         lines.append("")
         lines.append("【FOV 一致性检查】")
@@ -205,7 +204,7 @@ class ValidationReport:
         return "\n".join(lines)
 
 
-def generate_report(csv_result: CsvDenseResult, fps: Optional[float] = None) -> ValidationReport:
+def generate_report(csv_result: CsvDenseResult, fps: float) -> ValidationReport:
     """Generate a ValidationReport from a parsed CsvDenseResult.
 
     Parameters
@@ -213,15 +212,12 @@ def generate_report(csv_result: CsvDenseResult, fps: Optional[float] = None) -> 
     csv_result:
         Populated CsvDenseResult from csv_parser.parse_csv_dense().
     fps:
-        Frame rate to record in the report. Falls back to
-        csv_result.detected_fps if not provided.
+        Frame rate to record in the report.
 
     Returns
     -------
     ValidationReport
     """
-    effective_fps = fps if fps is not None else csv_result.detected_fps
-
     fov_check = validate_fov(csv_result.frames)
     anomalies = detect_anomalous_frames(csv_result.frames)
 
@@ -231,7 +227,7 @@ def generate_report(csv_result: CsvDenseResult, fps: Optional[float] = None) -> 
         timecode_end=csv_result.timecode_end,
         focal_length_range=csv_result.focal_length_range,
         sensor_width_mm=csv_result.sensor_width_mm,
-        fps=effective_fps,
+        fps=fps,
         fov_check=fov_check,
         anomalous_frames=anomalies,
     )

@@ -81,10 +81,9 @@ Parsed CSV metadata — read-only display + FPS input.
 | 2 | Focal Length | TextBlock | `txt_focal_range` | "Focal Length: 30.30 - 30.30 mm" |
 | 3 | Timecode | TextBlock | `txt_timecode` | "Timecode: 00:00:30.00 → 00:00:30.00" |
 | 4 | Sensor Width | TextBlock | `txt_sensor_width` | "Sensor Width: 35.00 mm" |
-| 5 | FPS SpinBox | SpinBox | `spn_fps` | User-editable FPS override (0 = auto-detect), range 0-120 |
-| 6 | Detected FPS hint | TextBlock | `txt_detected_fps` | "Auto: 23.976 fps" or "Auto: N/A" |
+| 5 | FPS SpinBox | SpinBox | `spn_fps` | User-editable FPS (must be > 0), range 0-120 |
 
-Layout for FPS row: `FPS: [ 24.0 ▲▼ ]  Auto: 23.976 fps` — label, spinbox, hint on one horizontal line.
+Layout for FPS row: `FPS: [ 24.0 ▲▼ ]` — label and spinbox on one horizontal line.
 
 ### Section 4: Coordinate Verification
 

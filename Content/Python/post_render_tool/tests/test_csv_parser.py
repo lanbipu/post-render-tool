@@ -142,41 +142,6 @@ class TestCsvDenseParser(unittest.TestCase):
 
         self.assertIn("focalLengthMM", str(ctx.exception))
 
-    def test_auto_detect_fps_from_timestamps(self):
-        """3 rows at 0.04 s intervals → detected_fps ≈ 25."""
-        from post_render_tool.csv_parser import parse_csv_dense
-
-        prefix = "camera:cam_1"
-        headers = self._make_headers(prefix)
-        rows = [
-            self._make_row("00:00:00.00", 0),
-            self._make_row("00:00:00.04", 1),
-            self._make_row("00:00:00.08", 2),
-        ]
-        path = self._tmp(self._write_csv(headers, rows))
-
-        result = parse_csv_dense(path)
-
-        self.assertIsNotNone(result.detected_fps)
-        self.assertAlmostEqual(result.detected_fps, 25.0, delta=1.0)
-
-    def test_constant_timestamp_no_fps_detection(self):
-        """All rows same timestamp → detected_fps is None."""
-        from post_render_tool.csv_parser import parse_csv_dense
-
-        prefix = "camera:cam_1"
-        headers = self._make_headers(prefix)
-        rows = [
-            self._make_row("00:00:30.00", 1),
-            self._make_row("00:00:30.00", 2),
-            self._make_row("00:00:30.00", 3),
-        ]
-        path = self._tmp(self._write_csv(headers, rows))
-
-        result = parse_csv_dense(path)
-
-        self.assertIsNone(result.detected_fps)
-
     def test_focal_length_range(self):
         """2 rows with different focal lengths → range tuple matches min/max."""
         from post_render_tool.csv_parser import parse_csv_dense

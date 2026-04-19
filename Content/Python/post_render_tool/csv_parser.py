@@ -6,7 +6,6 @@ per-frame camera data and metadata, and returns a structured result.
 
 import csv
 import re
-import statistics
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
@@ -63,15 +62,11 @@ class CsvDenseResult:
     timecode_end: str
     focal_length_range: Tuple[float, float]
     sensor_width_mm: float
-    detected_fps: Optional[float]
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
-
-# Common broadcast/cinema frame rates for snapping
-_COMMON_FPS = [23.976, 24.0, 25.0, 29.97, 30.0, 48.0, 50.0, 59.94, 60.0]
 
 
 def _detect_camera_prefix(headers: List[str]) -> str:
@@ -97,70 +92,6 @@ def _validate_required_fields(headers: List[str], prefix: str) -> None:
         raise CsvParseError(
             f"Missing required column(s) for prefix '{prefix}': {', '.join(missing)}"
         )
-
-
-def _parse_timestamp_seconds(ts: str) -> float:
-    """Convert 'HH:MM:SS.ff' timecode to fractional seconds.
-
-    The '.ff' part is treated as hundredths of a second (centiseconds),
-    matching Disguise Designer's export convention.
-    """
-    try:
-        hms, centiseconds = ts.split(".")
-        h, m, s = hms.split(":")
-        total = int(h) * 3600 + int(m) * 60 + int(s) + int(centiseconds) / 100.0
-        return total
-    except (ValueError, AttributeError) as exc:
-        raise CsvParseError(f"Cannot parse timestamp '{ts}': {exc}") from exc
-
-
-def _detect_fps(timestamps: List[float]) -> Optional[float]:
-    """Estimate frame rate from a sequence of timestamp floats.
-
-    Algorithm:
-    1. Compute consecutive deltas.
-    2. Discard zero deltas (duplicate timestamps).
-    3. If no non-zero deltas remain → return None.
-    4. Check consistency: std/mean < 10 %.
-    5. Snap to nearest common FPS value (within 5 %).
-    """
-    if len(timestamps) < 2:
-        return None
-
-    deltas = [
-        timestamps[i + 1] - timestamps[i]
-        for i in range(len(timestamps) - 1)
-    ]
-    nonzero = [d for d in deltas if d > 0]
-
-    if not nonzero:
-        return None
-
-    mean_delta = statistics.mean(nonzero)
-
-    if len(nonzero) > 1:
-        stdev = statistics.stdev(nonzero)
-        if stdev / mean_delta >= 0.10:
-            # Timestamps too irregular to call a stable FPS
-            return None
-
-    raw_fps = 1.0 / mean_delta
-
-    # Snap to nearest common FPS within 5 %
-    best = None
-    best_diff = float("inf")
-    for common in _COMMON_FPS:
-        diff = abs(raw_fps - common)
-        rel = diff / common
-        if rel < 0.05 and diff < best_diff:
-            best = common
-            best_diff = diff
-
-    if best is not None:
-        return best
-
-    # No snap found — return raw estimate
-    return raw_fps
 
 
 def _get_float(row: dict, key: str) -> float:
@@ -222,11 +153,9 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
 
         # --- Parse rows ---
         frames: List[FrameData] = []
-        timestamps_sec: List[float] = []
 
         for row in reader:
             ts = row["timestamp"]
-            timestamps_sec.append(_parse_timestamp_seconds(ts))
 
             fd = FrameData(
                 timestamp=ts,
@@ -269,5 +198,4 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
         timecode_end=frames[-1].timestamp,
         focal_length_range=(min(focal_lengths), max(focal_lengths)),
         sensor_width_mm=sensor_widths[0],
-        detected_fps=_detect_fps(timestamps_sec),
     )

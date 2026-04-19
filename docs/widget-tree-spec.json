@@ -884,23 +884,6 @@
                                     "Value": 0.0,
                                     "MinFractionalDigits": 1
                                   }
-                                },
-                                {
-                                  "type": "TextBlock",
-                                  "name": "txt_detected_fps",
-                                  "role": "required",
-                                  "properties": {
-                                    "Text": ""
-                                  },
-                                  "slot": {
-                                    "padding": [
-                                      10,
-                                      6,
-                                      0,
-                                      6
-                                    ],
-                                    "v_align": "Center"
-                                  }
                                 }
                               ]
                             }

@@ -87,9 +87,6 @@ public:
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
     USpinBox* spn_fps;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-    UTextBlock* txt_detected_fps;
-
     // ======================================================================
     // Section 4: Coordinate Verification
     // ======================================================================

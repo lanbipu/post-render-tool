@@ -183,7 +183,6 @@ class TestValidationReport(unittest.TestCase):
             timecode_end=frames[-1].timestamp,
             focal_length_range=(30.302, 30.302),
             sensor_width_mm=35.0,
-            detected_fps=25.0,
         )
 
     def test_generate_report_returns_report(self):

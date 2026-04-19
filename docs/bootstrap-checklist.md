@@ -44,7 +44,6 @@ Drag each widget into `RootPanel`. Names must match exactly (copy-paste from `bi
 - [ ] `txt_timecode` — Text Block
 - [ ] `txt_sensor_width` — Text Block
 - [ ] `spn_fps` — Spin Box
-- [ ] `txt_detected_fps` — Text Block
 - [ ] `spn_frame` — Spin Box
 - [ ] `txt_designer_pos` — Text Block
 - [ ] `txt_designer_rot` — Text Block

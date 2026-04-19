@@ -91,10 +91,10 @@ class TestSpecDrift(unittest.TestCase):
             diffs.append(f"JSON - C++: {sorted(json_opt - cpp_opt)}")
             self.fail("Optional name drift detected:\n" + "\n".join(diffs))
 
-    def test_required_count_is_33(self):
+    def test_required_count_is_32(self):
         json_req, _ = _parse_json_contract_names()
         self.assertEqual(
-            len(json_req), 33, f"Required count drift: {len(json_req)} != 33"
+            len(json_req), 32, f"Required count drift: {len(json_req)} != 32"
         )
 
     def test_optional_count_is_8(self):

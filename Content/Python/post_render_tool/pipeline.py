@@ -71,7 +71,7 @@ def _ensure_directory(package_path: str) -> None:
 # Public API
 # ---------------------------------------------------------------------------
 
-def run_import(csv_path: str, fps: float = 0.0) -> PipelineResult:
+def run_import(csv_path: str, fps: float) -> PipelineResult:
     """Main pipeline entry point: CSV → UE assets.
 
     Parameters
@@ -79,52 +79,35 @@ def run_import(csv_path: str, fps: float = 0.0) -> PipelineResult:
     csv_path:
         Absolute or relative path to the Disguise Designer CSV Dense file.
     fps:
-        Target frame rate. If <= 0, the value detected from the CSV is used.
-        If no FPS can be determined, the pipeline aborts with an error.
+        Target frame rate. Must be > 0.
 
     Returns
     -------
     PipelineResult
         Always returned (never raises). Check `.success` and `.error_message`.
     """
-    # ------------------------------------------------------------------
-    # 步骤 0: 准备元数据（stem、sanitize、package path）
-    # ------------------------------------------------------------------
     try:
         csv_stem = Path(csv_path).stem
         stem = _sanitize_stem(csv_stem)
         package_path = f"{config.ASSET_BASE_PATH}/{stem}"
 
+        if fps <= 0.0:
+            return PipelineResult(
+                success=False,
+                error_message="无法确定帧率：请在 UI 中手动指定 fps（> 0）。",
+                package_path=package_path,
+            )
+
         unreal.log(f"[pipeline] 开始导入: {csv_path}")
         unreal.log(f"[pipeline] 资产目标路径: {package_path}")
+        unreal.log(f"[pipeline] 使用帧率: {fps} fps")
 
-        # ------------------------------------------------------------------
-        # 步骤 1/5: 解析 CSV
-        # ------------------------------------------------------------------
         unreal.log("[pipeline] 步骤 1/5 — 解析 CSV Dense 文件...")
         csv_result: CsvDenseResult = parse_csv_dense(csv_path)
         unreal.log(
             f"[pipeline] CSV 解析完成: {csv_result.frame_count} 帧, "
-            f"传感器宽度 {csv_result.sensor_width_mm:.3f} mm, "
-            f"检测帧率 {csv_result.detected_fps}"
+            f"传感器宽度 {csv_result.sensor_width_mm:.3f} mm"
         )
-
-        # ------------------------------------------------------------------
-        # 确定最终 FPS
-        # ------------------------------------------------------------------
-        effective_fps = fps if fps > 0.0 else csv_result.detected_fps
-
-        if effective_fps is None:
-            return PipelineResult(
-                success=False,
-                error_message=(
-                    "无法确定帧率：CSV 中未检测到稳定帧率，且未提供 fps 参数。"
-                    "请手动指定 fps。"
-                ),
-                package_path=package_path,
-            )
-
-        unreal.log(f"[pipeline] 使用帧率: {effective_fps} fps")
 
         # ------------------------------------------------------------------
         # 确保内容浏览器目录存在
@@ -160,7 +143,7 @@ def run_import(csv_path: str, fps: float = 0.0) -> PipelineResult:
         level_sequence = build_sequence(
             csv_result=csv_result,
             camera_actor=camera_actor,
-            fps=effective_fps,
+            fps=fps,
             asset_name=f"LS_{stem}",
             package_path=package_path,
         )
@@ -170,7 +153,7 @@ def run_import(csv_path: str, fps: float = 0.0) -> PipelineResult:
         # 步骤 5/5: 生成验证报告
         # ------------------------------------------------------------------
         unreal.log("[pipeline] 步骤 5/5 — 生成验证报告...")
-        report = generate_report(csv_result=csv_result, fps=effective_fps)
+        report = generate_report(csv_result=csv_result, fps=fps)
         unreal.log(report.format_report())
 
         unreal.log(

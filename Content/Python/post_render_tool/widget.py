@@ -44,7 +44,7 @@ _INDEX_AXIS_MAP = {0: "X (0)", 1: "Y (1)", 2: "Z (2)"}
 _REQUIRED_CONTROLS = (
     "btn_recheck", "btn_browse", "txt_file_path",
     "txt_frame_count", "txt_focal_range", "txt_timecode", "txt_sensor_width",
-    "spn_fps", "txt_detected_fps",
+    "spn_fps",
     "spn_frame",
     "txt_designer_pos", "txt_designer_rot", "txt_ue_pos", "txt_ue_rot",
     "btn_spawn_cam",
@@ -300,10 +300,6 @@ class PostRenderToolUI:
             "txt_sensor_width",
             f"Sensor Width: {result.sensor_width_mm:.2f} mm",
         )
-        if result.detected_fps is not None:
-            self._set_text("txt_detected_fps", f"Auto: {result.detected_fps} fps")
-        else:
-            self._set_text("txt_detected_fps", "Auto: N/A")
 
         spn_frame = self._get("spn_frame")
         if spn_frame is not None:
@@ -505,8 +501,7 @@ class PostRenderToolUI:
 
         self._set_results("Importing...")
 
-        fps = self._fps if self._fps > 0 else 0.0
-        pipeline_result = run_import(self._csv_path, fps)
+        pipeline_result = run_import(self._csv_path, self._fps)
         self._last_result = pipeline_result
 
         if pipeline_result.success:

@@ -20,7 +20,7 @@ from spec_loader import (  # noqa: E402
 REQUIRED_NAMES = {
     "btn_recheck", "btn_browse", "txt_file_path",
     "txt_frame_count", "txt_focal_range", "txt_timecode", "txt_sensor_width",
-    "spn_fps", "txt_detected_fps",
+    "spn_fps",
     "spn_frame", "txt_designer_pos", "txt_designer_rot",
     "txt_ue_pos", "txt_ue_rot", "btn_spawn_cam",
     "cmb_pos_x_src", "spn_pos_x_scale",
