@@ -181,11 +181,11 @@ def open_movie_render_queue(level_sequence=None) -> None:
                 )
             else:
                 queue = queue_subsystem.get_queue()
-                job = unreal.MoviePipelineEditorBlueprintLibrary.create_job_from_sequence(
+                job = unreal.MoviePipelineEditorLibrary.create_job_from_sequence(
                     queue, level_sequence
                 )
                 if job is not None:
-                    unreal.MoviePipelineEditorBlueprintLibrary.ensure_job_has_default_settings(
+                    unreal.MoviePipelineEditorLibrary.ensure_job_has_default_settings(
                         job
                     )
                     unreal.log(
