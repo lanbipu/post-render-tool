@@ -156,8 +156,9 @@ def open_sequencer(level_sequence=None) -> None:
         return
 
     try:
-        subsystem = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)
-        subsystem.open_level_sequence(level_sequence)
+        # UE 5.7: OpenLevelSequence 是 ULevelSequenceEditorBlueprintLibrary 的静态
+        # UFUNCTION（LevelSequenceEditorBlueprintLibrary.h:35-36），不在 subsystem 上。
+        unreal.LevelSequenceEditorBlueprintLibrary.open_level_sequence(level_sequence)
         unreal.log("[ui_interface] Sequencer opened.")
     except Exception as exc:  # noqa: BLE001
         unreal.log_error(f"[ui_interface] open_sequencer error: {exc}")
