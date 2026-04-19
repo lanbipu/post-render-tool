@@ -182,22 +182,19 @@ def build_camera(
     )
     logger.info("LensComponent 已添加到 %s", actor_label)
 
-    # 尝试通过 set_editor_property 关联 LensFile
-    lens_linked = False
-    for prop_name in ("lens_file", "LensFile"):
-        try:
-            lens_component.set_editor_property(prop_name, lens_file)
-            logger.info("LensFile 已关联到 LensComponent (属性名: %s)", prop_name)
-            lens_linked = True
-            break
-        except (AttributeError, TypeError, Exception):  # noqa: BLE001
-            continue
-
-    if not lens_linked:
+    # ULensComponent 没有顶层 LensFile 属性；实际 UPROPERTY 是 FLensFilePicker 嵌套
+    # （LensComponent.h:280-281 → FLensFilePicker.LensFile，CameraCalibrationCore/
+    # Public/LensFile.h:361-378）。Python 需先拿 struct、改内部字段、再 set 回去。
+    try:
+        picker = lens_component.get_editor_property("lens_file_picker")
+        picker.lens_file = lens_file
+        picker.use_default_lens_file = False
+        lens_component.set_editor_property("lens_file_picker", picker)
+        logger.info("LensFile 已关联到 LensComponent.lens_file_picker")
+    except Exception as exc:  # noqa: BLE001
         raise RuntimeError(
-            "LensFile 关联到 LensComponent 失败。"
-            "请检查 UE 5.7 LensComponent 的属性名是否变更。"
-        )
+            f"LensFile 关联到 LensComponent.lens_file_picker 失败: {exc}"
+        ) from exc
 
     # ------------------------------------------------------------------
     # 6. 启用畸变应用
