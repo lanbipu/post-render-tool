@@ -133,17 +133,14 @@ import init_post_render_tool
 
 1. 在 **Frame** SpinBox 选择一个特征帧（摄影机在已知位置的帧）
 2. 对比 **Designer** 原始坐标和 **UE** 转换坐标是否合理
-3. 点击 **Spawn Test Camera** — 在该帧位置生成临时摄影机，视口自动 Pilot 到摄影机视角
-4. 在视口中目视对比：位置是否正确、朝向有没有镜像或 180° 旋转
 
 ### 2.3 调整轴映射（如需要）
 
-如果视口中的画面与 Designer 不一致：
+如果 UE 坐标预览与 Designer 不一致：
 
 1. 在 **Axis Mapping** 区域修改 ComboBox（源轴）和 SpinBox（缩放系数）
 2. 点击 **Apply Mapping** — 坐标预览立即刷新
-3. 再次 **Spawn Test Camera** 验证
-4. 反复迭代直到匹配
+3. 反复迭代直到匹配
 
 **常见调整：**
 
@@ -207,7 +204,7 @@ wb.rebuild_widget()
 
 - **Apply Mapping** — 仅内存生效，重启 UE 后恢复为 config.py 中的值
 - **Save to config.py** — 持久化到磁盘（原子写入 + .bak 备份），下次启动自动加载
-- 建议流程：反复 Apply + Spawn Test Camera 迭代 → 确认正确 → Save
+- 建议流程：反复 Apply + 对比 Designer / UE 坐标预览 迭代 → 确认正确 → Save
 
 ### Widget 管理
 

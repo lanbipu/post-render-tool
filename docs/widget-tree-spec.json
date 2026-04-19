@@ -1139,38 +1139,6 @@
                                   }
                                 }
                               ]
-                            },
-                            {
-                              "type": "Button",
-                              "name": "btn_spawn_cam",
-                              "role": "required",
-                              "slot": {
-                                "padding": [
-                                  0,
-                                  8,
-                                  0,
-                                  0
-                                ],
-                                "h_align": "Left"
-                              },
-                              "children": [
-                                {
-                                  "type": "TextBlock",
-                                  "name": "lbl_btn_spawn_cam_text",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Text": "Spawn Test Camera"
-                                  },
-                                  "slot": {
-                                    "padding": [
-                                      14,
-                                      6,
-                                      14,
-                                      6
-                                    ]
-                                  }
-                                }
-                              ]
                             }
                           ]
                         }

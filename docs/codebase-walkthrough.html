@@ -1519,7 +1519,6 @@
           <span data-w="txt_ue_pos">Pos&nbsp;&nbsp;(234.6, 123.5, -56.8) cm</span>
           <span data-w="txt_ue_rot">Rot&nbsp;&nbsp;P=-12.34&nbsp;&nbsp;Y=56.78&nbsp;&nbsp;R=90.12°</span>
         </div>
-        <div class="btn" data-w="btn_spawn_cam">Spawn Test Camera</div>
       </div>
 
       <!-- Section 5: Axis Mapping -->
@@ -1669,7 +1668,6 @@ Import finished in 3.42s.</div>
         <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_frame_hint</td><td>UTextBlock</td><td><span class="pill opt">Optional</span></td><td>—</td></tr>
         <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_designer_pos / _rot</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td><code>_refresh_coord_preview</code></td></tr>
         <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_ue_pos / _rot</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td><code>_refresh_coord_preview</code></td></tr>
-        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">btn_spawn_cam</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_spawn_test_camera</code></td></tr>
         <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">cmb_pos_{x,y,z}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
         <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">spn_pos_{x,y,z}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
         <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">cmb_rot_{pitch,yaw,roll}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
@@ -1851,7 +1849,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     <div class="module-card">
       <div class="mod-num">§ 4.9</div>
       <div class="mod-name">ui_interface.py</div>
-      <div class="mod-role">UI 辅助函数库：文件对话框三段降级、Sequencer/MRQ 打开、前置检查、Spawn Test Camera、config.py 原子写入。</div>
+      <div class="mod-role">UI 辅助函数库：文件对话框三段降级、Sequencer/MRQ 打开、前置检查、config.py 原子写入。</div>
       <div class="mod-tags"><span class="tag ue">UE</span></div>
     </div>
     <div class="module-card">
@@ -1968,8 +1966,8 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       <code>config.py</code> 里那三行 POSITION_MAPPING 和三行 ROTATION_MAPPING 注释明确写着
       <em>"INITIAL GUESSES"</em>——它们是按 Disguise 的 Y-up 米制推断到 UE 的 Z-up 厘米的理论值，
       但 stage 校准、舞台原点偏移、导演镜像需求都可能让真实值偏 180°。
-      Section IV 的 Spawn Test Camera 和 Section V 的 Apply / Save 正是为此存在：
-      用 UE viewport 自己当真值表，而不是让工程师在脑里做矩阵乘法。
+      Section IV 的 Designer / UE 坐标并排预览 和 Section V 的 Apply / Save 正是为此存在：
+      把原值与转换值摆在眼前，用 Apply 即时刷新，再 Save 固化——而不是让工程师在脑里做矩阵乘法。
     </p>
   </div>
 
@@ -2151,16 +2149,14 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_frame',                   '「Frame」标签',                         'Text="Frame", Color=#CCCCCC, Font=12, v_align=Center'),
       h('   │  ├─ ',               'SpinBox',                'req', 'spn_frame',                   '帧号拨动控件',                          'Value=0.0, MinValue=0 (py), MaxValue=CSV 帧数-1 (py), Width≈80'),
       h('   │  └─ ',               'TextBlock',              'opt', 'txt_frame_hint',              '当前帧进度提示',                        'Color=#808080, Font=11, py:"15 / 974"'),
-      h('   ├─ ',                  'VerticalBox',            'dec', 'lbl_coord_pair',              'DESIGNER ↔ UE 对照卡',                  'slot.Padding=0,8,0,0, 内 gap=2'),
-      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_designer_header',         '「DESIGNER (source)」橙色小标题',       'Text="DESIGNER (source)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
-      h('   │  ├─ ',               'TextBlock',              'req', 'txt_designer_pos',            'Designer 原始位置（米）',               'Color=#CCCCCC, Font=11 Mono, py:"Pos  (1.2345, -0.5678, 2.3456) m"'),
-      h('   │  ├─ ',               'TextBlock',              'req', 'txt_designer_rot',            'Designer 原始旋转（度）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  (12.34, -56.78, 90.12)°"'),
-      h('   │  ├─ ',               'Border',                 'dec', 'lbl_coord_separator',         '灰色分隔横线',                          'BrushColor=#3A3A3A, Height=1, slot.Padding=0,6,0,6'),
-      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_ue_header',               '「→ UE (result)」橙色小标题',           'Text="→ UE (result)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
-      h('   │  ├─ ',               'TextBlock',              'req', 'txt_ue_pos',                  '转换后 UE 位置（cm）',                  'Color=#CCCCCC, Font=11 Mono, py:"Pos  (234.6, 123.5, -56.8) cm"'),
-      h('   │  └─ ',               'TextBlock',              'req', 'txt_ue_rot',                  '转换后 UE 旋转（P/Y/R）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  P=-12.34  Y=56.78  R=90.12°"'),
-      h('   └─ ',                  'Button',                 'req', 'btn_spawn_cam',               '「Spawn Test Camera」次级按钮',         'Style.Normal=#222222, slot.Padding=0,8,0,0, h_align=Left'),
-      h('      └─ ',               'TextBlock',              'dec', 'lbl_btn_spawn_cam_text',      '按钮内文字',                            'Text="Spawn Test Camera", Color=#F2F2F2, Font=12, slot.Padding=14,6')
+      h('   └─ ',                  'VerticalBox',            'dec', 'lbl_coord_pair',              'DESIGNER ↔ UE 对照卡',                  'slot.Padding=0,8,0,0, 内 gap=2'),
+      h('      ├─ ',               'TextBlock',              'dec', 'lbl_designer_header',         '「DESIGNER (source)」橙色小标题',       'Text="DESIGNER (source)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
+      h('      ├─ ',               'TextBlock',              'req', 'txt_designer_pos',            'Designer 原始位置（米）',               'Color=#CCCCCC, Font=11 Mono, py:"Pos  (1.2345, -0.5678, 2.3456) m"'),
+      h('      ├─ ',               'TextBlock',              'req', 'txt_designer_rot',            'Designer 原始旋转（度）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  (12.34, -56.78, 90.12)°"'),
+      h('      ├─ ',               'Border',                 'dec', 'lbl_coord_separator',         '灰色分隔横线',                          'BrushColor=#3A3A3A, Height=1, slot.Padding=0,6,0,6'),
+      h('      ├─ ',               'TextBlock',              'dec', 'lbl_ue_header',               '「→ UE (result)」橙色小标题',           'Text="→ UE (result)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
+      h('      ├─ ',               'TextBlock',              'req', 'txt_ue_pos',                  '转换后 UE 位置（cm）',                  'Color=#CCCCCC, Font=11 Mono, py:"Pos  (234.6, 123.5, -56.8) cm"'),
+      h('      └─ ',               'TextBlock',              'req', 'txt_ue_rot',                  '转换后 UE 旋转（P/Y/R）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  P=-12.34  Y=56.78  R=90.12°"')
     ],
     "5": [
       h('',                        'Border',                 'dec', 'lbl_card_axis',               'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
@@ -2266,21 +2262,19 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     },
     "4": {
       num: "§ IV",
-      title: "<em>Coordinate Verification</em> · 真值表",
-      figma: "Figma 节点 <code>2:19 / 2:25 / 2:31 / 2:39</code>",
+      title: "<em>Coordinate Verification</em> · 坐标对照",
+      figma: "Figma 节点 <code>2:19 / 2:25 / 2:31</code>",
       body: `
         <p><strong>整个工具最关键的交互区。</strong><code>config.py</code> 的默认映射是"初始猜测"，必须由人拿真机数据验证——这就是这一节存在的唯一目的。</p>
         <p>拨动 <code>spn_frame</code> → 上半区显示 Designer 原始值、下半区显示转换后 UE 值；同时 Section V 的轴映射改变会实时反映到 UE 值上。</p>
-        <p>点 Spawn Test Camera → 创建真相机、按 Tag（不是 label）识别旧相机并销毁、pilot viewport 对齐观察。</p>
       `,
       table: [
         ["spn_frame", "USpinBox", "req", "_on_frame_changed"],
         ["txt_frame_hint", "UTextBlock", "opt", "—"],
         ["txt_designer_pos / _rot", "UTextBlock × 2", "req", "_refresh_coord_preview"],
-        ["txt_ue_pos / _rot", "UTextBlock × 2", "req", "_refresh_coord_preview"],
-        ["btn_spawn_cam", "UButton", "req", "_on_spawn_test_camera"]
+        ["txt_ue_pos / _rot", "UTextBlock × 2", "req", "_refresh_coord_preview"]
       ],
-      principle: `把"单帧预览 + 真相机 Spawn"摆在一起，是让 UE viewport 自己当坐标系的真值表——避免工程师在脑里做矩阵乘法。`
+      principle: `把单帧 Designer 原值与转换结果并排陈列——让 Section V 轴映射的每一次 Apply 都能即时在眼前对齐，而不是让工程师在脑里做矩阵乘法。`
     },
     "5": {
       num: "§ V",

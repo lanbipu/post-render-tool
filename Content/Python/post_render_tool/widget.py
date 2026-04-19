@@ -29,7 +29,6 @@ from .ui_interface import (
     open_movie_render_queue,
     open_sequencer,
     save_axis_mapping,
-    spawn_test_camera,
 )
 
 
@@ -47,7 +46,6 @@ _REQUIRED_CONTROLS = (
     "spn_fps",
     "spn_frame",
     "txt_designer_pos", "txt_designer_rot", "txt_ue_pos", "txt_ue_rot",
-    "btn_spawn_cam",
     "cmb_pos_x_src", "spn_pos_x_scale",
     "cmb_pos_y_src", "spn_pos_y_scale",
     "cmb_pos_z_src", "spn_pos_z_scale",
@@ -78,7 +76,6 @@ class PostRenderToolUI:
         self._fps: float = 0.0
         self._csv_result: Optional[CsvDenseResult] = None
         self._last_result: Optional[PipelineResult] = None
-        self._test_camera_actor = None
 
         # Control refs
         self._controls: dict = {}
@@ -211,7 +208,6 @@ class PostRenderToolUI:
         self._bind_click("btn_browse", self._on_browse_clicked)
         self._bind_value_changed("spn_fps", self._on_fps_changed)
         self._bind_value_changed("spn_frame", self._on_frame_changed)
-        self._bind_click("btn_spawn_cam", self._on_spawn_test_camera)
         self._bind_click("btn_apply_mapping", self._on_apply_mapping)
         self._bind_click("btn_save_mapping", self._on_save_mapping)
         self._bind_click("btn_import", self._on_import_clicked)
@@ -359,43 +355,6 @@ class PostRenderToolUI:
 
     def _on_frame_changed(self, value: float):
         self._refresh_coord_preview()
-
-    def _on_spawn_test_camera(self):
-        if self._csv_result is None or not self._csv_result.frames:
-            self._set_results("No CSV loaded. Browse a file first.")
-            return
-
-        spn_frame = self._get("spn_frame")
-        if spn_frame is None:
-            return
-        idx = int(spn_frame.get_editor_property("value"))
-        idx = max(0, min(idx, len(self._csv_result.frames) - 1))
-        frame = self._csv_result.frames[idx]
-
-        ue_pos = transform_position(frame.offset_x, frame.offset_y, frame.offset_z)
-        ue_rot = transform_rotation(
-            frame.rotation_x, frame.rotation_y, frame.rotation_z
-        )
-
-        try:
-            self._test_camera_actor = spawn_test_camera(
-                ue_x=ue_pos[0],
-                ue_y=ue_pos[1],
-                ue_z=ue_pos[2],
-                pitch=ue_rot[0],
-                yaw=ue_rot[1],
-                roll=ue_rot[2],
-                sensor_width_mm=self._csv_result.sensor_width_mm,
-            )
-            self._set_results(
-                f"Test camera spawned at frame {idx}.\n"
-                f"Pos: ({ue_pos[0]:.1f}, {ue_pos[1]:.1f}, {ue_pos[2]:.1f}) cm\n"
-                f"Rot: P={ue_rot[0]:.2f} Y={ue_rot[1]:.2f} R={ue_rot[2]:.2f}\n"
-                f"Viewport piloted to camera."
-            )
-        except Exception as exc:  # noqa: BLE001
-            self._set_results(f"Failed to spawn test camera: {exc}")
-            unreal.log_error(f"[widget] Spawn test camera error: {exc}")
 
     # ------------------------------------------------------------------
     # Axis Mapping

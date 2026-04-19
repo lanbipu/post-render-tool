@@ -71,7 +71,7 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 
 ## 3. 契约清单
 
-### 3.1 必需控件（32 个）
+### 3.1 必需控件（31 个）
 
 使用 `meta=(BindWidget)` —— 缺失会让 BP 编译失败。
 
@@ -90,7 +90,6 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 | Coord Verification | `txt_designer_rot` | `UTextBlock` |
 | Coord Verification | `txt_ue_pos` | `UTextBlock` |
 | Coord Verification | `txt_ue_rot` | `UTextBlock` |
-| Coord Verification | `btn_spawn_cam` | `UButton` |
 | Axis Mapping — Pos | `cmb_pos_x_src` | `UComboBoxString` |
 | Axis Mapping — Pos | `spn_pos_x_scale` | `USpinBox` |
 | Axis Mapping — Pos | `cmb_pos_y_src` | `UComboBoxString` |
@@ -124,7 +123,7 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 
 `widget.py` 声明了两个 tuple，与 C++ 侧一一对应：
 
-- `_REQUIRED_CONTROLS` —— 32 个条目，对应 [3.1](#31-必需控件32-个)
+- `_REQUIRED_CONTROLS` —— 31 个条目，对应 [3.1](#31-必需控件31-个)
 - `_OPTIONAL_CONTROLS` —— 8 个条目，对应 [3.2](#32-可选控件8-个)
 
 如果 Python 侧的 tuple 与 C++ 声明漂移（drift），`get_editor_property()` 对缺失名称返回 `None`，binder 打印 warning 继续执行。**三方必须始终同步**。
@@ -133,11 +132,11 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 
 ## 4. 装饰元素
 
-UI 里的 **section 标题、行内标签、分隔符号、卡片背景、Section Header 橙色竖条** 等元素**完全不属于 40 契约**，是纯装饰，UMG 编译器不会检查它们的存在。
+UI 里的 **section 标题、行内标签、分隔符号、卡片背景、Section Header 橙色竖条** 等元素**完全不属于 39 契约**，是纯装饰，UMG 编译器不会检查它们的存在。
 
 ### 4.1 装饰件 vs 功能件：判定标准
 
-| 属性 | 40 契约控件（功能件） | 装饰件 |
+| 属性 | 39 契约控件（功能件） | 装饰件 |
 |---|---|---|
 | **作用** | Python 读值 / 监听事件 | 纯视觉，给人看 |
 | **Name 必须精确** | ✅（如 `btn_browse`） | ❌ 不强制 |
@@ -355,16 +354,14 @@ Border                                 [装饰] lbl_card_coord
    │  ├─ TextBlock                     [装饰] lbl_frame                        Text="Frame", Slot.Padding=0,6,10,6
    │  ├─ SpinBox                       [契约] spn_frame                        Value=0 (Python 重设 min=0 / max=0；CSV 加载后重设 max=frame_count-1)
    │  └─ TextBlock                     [可选] txt_frame_hint                   Text="" (Python 写 "15 / 974"), Slot.Padding=10,6,0,6
-   ├─ VerticalBox                      [装饰] lbl_coord_pair                   Padding=0,8,0,0
-   │  ├─ TextBlock                     [装饰] lbl_designer_header              Text="DESIGNER (source)" (小号字，灰色)
-   │  ├─ TextBlock                     [契约] txt_designer_pos                 Text=""
-   │  ├─ TextBlock                     [契约] txt_designer_rot                 Text=""
-   │  ├─ Border                        [装饰] lbl_coord_separator              H=1, BrushColor=#3A3A3A, Padding=0,6,0,6 (分隔线)
-   │  ├─ TextBlock                     [装饰] lbl_ue_header                    Text="→ UE (result)" (小号字，灰色)
-   │  ├─ TextBlock                     [契约] txt_ue_pos                       Text=""
-   │  └─ TextBlock                     [契约] txt_ue_rot                       Text=""
-   └─ Button                           [契约] btn_spawn_cam                    Slot.HAlign=Left, Slot.Padding=0,8,0,0
-      └─ TextBlock                     [装饰] lbl_btn_spawn_cam_text           Text="Spawn Test Camera", Slot.Padding=14,6,14,6
+   └─ VerticalBox                      [装饰] lbl_coord_pair                   Padding=0,8,0,0
+      ├─ TextBlock                     [装饰] lbl_designer_header              Text="DESIGNER (source)" (小号字，灰色)
+      ├─ TextBlock                     [契约] txt_designer_pos                 Text=""
+      ├─ TextBlock                     [契约] txt_designer_rot                 Text=""
+      ├─ Border                        [装饰] lbl_coord_separator              H=1, BrushColor=#3A3A3A, Padding=0,6,0,6 (分隔线)
+      ├─ TextBlock                     [装饰] lbl_ue_header                    Text="→ UE (result)" (小号字，灰色)
+      ├─ TextBlock                     [契约] txt_ue_pos                       Text=""
+      └─ TextBlock                     [契约] txt_ue_rot                       Text=""
 ```
 
 ### 5.8 Section 5 — Axis Mapping
@@ -420,7 +417,7 @@ Border                                 [装饰] lbl_card_actions
    └─ MultiLineEditableText            [契约] txt_results                      Text="", IsReadOnly=✓, Slot 高度≈144px (Python 追加 [OK]/[WARN] 日志行)
 ```
 
-### 5.10 契约控件速查（32 必需 + 8 可选 按层级位置）
+### 5.10 契约控件速查（31 必需 + 8 可选 按层级位置）
 
 便于 Designer 拖控件时核对是否漏了哪个契约名：
 
@@ -429,10 +426,10 @@ Border                                 [装饰] lbl_card_actions
 | 1 Prerequisites | `btn_recheck` | `prereq_summary`、`prereq_label_0..5` |
 | 2 CSV File | `btn_browse`、`txt_file_path` | — |
 | 3 CSV Preview | `txt_frame_count`、`txt_focal_range`、`txt_timecode`、`txt_sensor_width`、`spn_fps` | — |
-| 4 Coordinate Verification | `spn_frame`、`txt_designer_pos`、`txt_designer_rot`、`txt_ue_pos`、`txt_ue_rot`、`btn_spawn_cam` | `txt_frame_hint` |
+| 4 Coordinate Verification | `spn_frame`、`txt_designer_pos`、`txt_designer_rot`、`txt_ue_pos`、`txt_ue_rot` | `txt_frame_hint` |
 | 5 Axis Mapping | `cmb_pos_x_src`、`spn_pos_x_scale`、`cmb_pos_y_src`、`spn_pos_y_scale`、`cmb_pos_z_src`、`spn_pos_z_scale`、`cmb_rot_pitch_src`、`spn_rot_pitch_scale`、`cmb_rot_yaw_src`、`spn_rot_yaw_scale`、`cmb_rot_roll_src`、`spn_rot_roll_scale`、`btn_apply_mapping`、`btn_save_mapping` | — |
 | 6 Actions | `btn_import`、`btn_open_seq`、`btn_open_mrq`、`txt_results` | — |
-| **合计** | **32** | **8** |
+| **合计** | **31** | **8** |
 
 ---
 
@@ -440,9 +437,9 @@ Border                                 [装饰] lbl_card_actions
 
 ### 6.1 阶段 1 —— 裸控件（先通过 BP 编译）
 
-**必须一次性拖完 32 个必需控件才能通过 BP 编译。** 缺一个 `BindWidget` → BP 无法保存、无法 spawn、Python 也进不去。
+**必须一次性拖完 31 个必需控件才能通过 BP 编译。** 缺一个 `BindWidget` → BP 无法保存、无法 spawn、Python 也进不去。
 
-1. 按 [§3.1](#31-必需控件32-个) 拖完 32 个"裸控件"，**先不管布局 / 样式 / 嵌套**（Button 用默认方块、TextBlock 留空、全部平铺在 Canvas 或 VerticalBox 里）。约 5–10 分钟可完成
+1. 按 [§3.1](#31-必需控件31-个) 拖完 31 个"裸控件"，**先不管布局 / 样式 / 嵌套**（Button 用默认方块、TextBlock 留空、全部平铺在 Canvas 或 VerticalBox 里）。约 5–10 分钟可完成
 2. **Compile + Save** —— 通过后 Python 侧 `open_widget()` 即可驱动全部业务逻辑
 3. 按 Section 顺序验证业务逻辑：浏览 CSV → 预览 → 坐标校验 → 轴映射 → Import → 打开 Sequencer / MRQ
 

@@ -22,7 +22,7 @@ REQUIRED_NAMES = {
     "txt_frame_count", "txt_focal_range", "txt_timecode", "txt_sensor_width",
     "spn_fps",
     "spn_frame", "txt_designer_pos", "txt_designer_rot",
-    "txt_ue_pos", "txt_ue_rot", "btn_spawn_cam",
+    "txt_ue_pos", "txt_ue_rot",
     "cmb_pos_x_src", "spn_pos_x_scale",
     "cmb_pos_y_src", "spn_pos_y_scale",
     "cmb_pos_z_src", "spn_pos_z_scale",

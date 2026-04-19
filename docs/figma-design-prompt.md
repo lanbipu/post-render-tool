@@ -96,7 +96,6 @@ Interactive frame inspector — lets user check coordinate transform before impo
 | 3 | Designer Rotation | TextBlock | `txt_designer_rot` | "Designer Rot: (12.34, -56.78, 90.12) deg" |
 | 4 | UE Position | TextBlock | `txt_ue_pos` | "UE Pos: (234.6, 123.5, -56.8) cm" |
 | 5 | UE Rotation | TextBlock | `txt_ue_rot` | "UE Rot: P=-12.34  Y=56.78  R=90.12 deg" |
-| 6 | Spawn Camera | Button | `btn_spawn_cam` | Spawns a test CineCameraActor at selected frame's position |
 
 Layout for frame row: `Frame: [ 0 ▲▼ ]` — label + spinbox.
 The Designer and UE coordinates should be visually paired (e.g. left/right columns or a subtle separator between "source → result").

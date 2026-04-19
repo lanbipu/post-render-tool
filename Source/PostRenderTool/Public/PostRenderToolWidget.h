@@ -109,9 +109,6 @@ public:
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
     UTextBlock* txt_ue_rot;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-    UButton* btn_spawn_cam;
-
     // ======================================================================
     // Section 5a: Axis Mapping — Position
     // ======================================================================
