@@ -197,27 +197,30 @@ def build_sequence(
         ue_x, ue_y, ue_z = transform_position(
             frame.offset_x, frame.offset_y, frame.offset_z, cfg=xform_cfg
         )
-        ch_loc_x.add_key(frame_number, ue_x, interp)
-        ch_loc_y.add_key(frame_number, ue_y, interp)
-        ch_loc_z.add_key(frame_number, ue_z, interp)
+        # UE 5.7 AddKey 签名: (in_time, new_value, sub_frame=0.0,
+        # time_unit=DisplayRate, in_interpolation=Auto)。interpolation 是第 5 位，
+        # 必须用关键字参数，否则会被当 sub_frame (float) 报类型错。
+        ch_loc_x.add_key(frame_number, ue_x, interpolation=interp)
+        ch_loc_y.add_key(frame_number, ue_y, interpolation=interp)
+        ch_loc_z.add_key(frame_number, ue_z, interpolation=interp)
 
         # Rotation: Designer → UE (pitch, yaw, roll)
         pitch, yaw, roll = transform_rotation(
             frame.rotation_x, frame.rotation_y, frame.rotation_z, cfg=xform_cfg
         )
-        ch_roll.add_key(frame_number, roll, interp)
-        ch_pitch.add_key(frame_number, pitch, interp)
-        ch_yaw.add_key(frame_number, yaw, interp)
+        ch_roll.add_key(frame_number, roll, interpolation=interp)
+        ch_pitch.add_key(frame_number, pitch, interpolation=interp)
+        ch_yaw.add_key(frame_number, yaw, interpolation=interp)
 
         # Focal length: direct pass-through (mm)
-        ch_focal.add_key(frame_number, frame.focal_length_mm, interp)
+        ch_focal.add_key(frame_number, frame.focal_length_mm, interpolation=interp)
 
         # Aperture: direct pass-through (f-stop)
-        ch_aperture.add_key(frame_number, frame.aperture, interp)
+        ch_aperture.add_key(frame_number, frame.aperture, interpolation=interp)
 
         # Focus distance: m → cm
         focus_cm = transform_focus_distance(frame.focus_distance)
-        ch_focus.add_key(frame_number, focus_cm, interp)
+        ch_focus.add_key(frame_number, focus_cm, interpolation=interp)
 
     # ------------------------------------------------------------------
     # Step 7: Save and log
