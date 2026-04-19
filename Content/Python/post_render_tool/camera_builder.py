@@ -18,27 +18,42 @@ logger = logging.getLogger(__name__)
 # 内部工具函数
 # ---------------------------------------------------------------------------
 
-def _check_camera_calibration_plugin() -> None:
-    """验证 Camera Calibration 插件已加载。
+_LENS_COMPONENT_CLASS_PATH = "/Script/LensComponent.LensComponent"
 
-    通过检查 unreal.LensFile 类是否存在来判断插件状态。
+
+def _check_camera_calibration_plugin() -> None:
+    """验证 Camera Calibration 与 Lens Component 插件均已加载。
+
+    ULensFile 有 BlueprintType → Python 直接 unreal.LensFile 可见。
+    ULensComponent 仅 MinimalAPI 无 BlueprintType → Python 绑定生成器跳过，
+    unreal.LensComponent 不存在，只能走 load_class 动态解析 UClass。
 
     Raises
     ------
     RuntimeError
-        Camera Calibration 插件未启用时抛出。
+        任一插件未启用时抛出。
     """
     if not hasattr(unreal, "LensFile"):
         raise RuntimeError(
             "Camera Calibration 插件未启用。\n"
             "请在 Edit → Plugins 中搜索 'Camera Calibration' 并启用后重启编辑器。"
         )
-    logger.info("Camera Calibration 插件已加载 (LensFile available)")
+    if _load_lens_component_class() is None:
+        raise RuntimeError(
+            "Lens Component 插件未启用或类路径不可解析。\n"
+            "请在 Edit → Plugins 中搜索 'Lens Component' 并启用后重启编辑器。"
+        )
+    logger.info("Camera Calibration / Lens Component 插件已加载")
+
+
+def _load_lens_component_class() -> "unreal.Class | None":
+    """动态加载 ULensComponent 的 UClass；失败返回 None（插件未启用）。"""
+    return unreal.load_class(None, _LENS_COMPONENT_CLASS_PATH)
 
 
 def _add_component_via_subobject_subsystem(
     actor: "unreal.Actor",
-    component_class: type,
+    component_class: "unreal.Class",
 ) -> "unreal.ActorComponent":
     """UE 5.7 给 editor actor 实例动态添加 component。
 
@@ -59,19 +74,20 @@ def _add_component_via_subobject_subsystem(
     params.parent_handle = handles[0]
     params.new_class = component_class
 
+    class_name = component_class.get_name()
     before_comps = set(actor.get_components_by_class(component_class))
     new_handle, fail_reason = subsystem.add_new_subobject(params)
 
     if not new_handle.is_valid():
         raise RuntimeError(
-            f"{component_class.__name__} 添加失败: {fail_reason}"
+            f"{class_name} 添加失败: {fail_reason}"
         )
 
     after_comps = actor.get_components_by_class(component_class)
     new_comps = [c for c in after_comps if c not in before_comps]
     if not new_comps:
         raise RuntimeError(
-            f"{component_class.__name__} 已添加但无法在 actor components 中定位新实例"
+            f"{class_name} 已添加但无法在 actor components 中定位新实例"
         )
     return new_comps[0]
 
@@ -158,11 +174,12 @@ def build_camera(
     # ------------------------------------------------------------------
     # 5. 添加 LensComponent 并关联 LensFile
     # ------------------------------------------------------------------
-    # UE 5.7: AActor::AddComponentByClass 带 ScriptNoExport，Python 不可见。
-    # 走 SubobjectDataSubsystem 的官方 editor 路径。
-    lens_component: unreal.LensComponent = _add_component_via_subobject_subsystem(
+    # UE 5.7: ULensComponent 无 BlueprintType，unreal.LensComponent 不存在，
+    # 需用 load_class 拿 UClass；AActor::AddComponentByClass 带 ScriptNoExport
+    # 也不可用，走 SubobjectDataSubsystem 的官方 editor 路径。
+    lens_component = _add_component_via_subobject_subsystem(
         camera_actor,
-        unreal.LensComponent,
+        _load_lens_component_class(),
     )
     logger.info("LensComponent 已添加到 %s", actor_label)
 
