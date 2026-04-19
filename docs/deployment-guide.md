@@ -228,10 +228,11 @@ delete_widget()    # 销毁性：删除项目仓库里的 Blueprint 资产——
 | UBT 编译失败 | 缺 C++ 工具链 | 装 Xcode（macOS）或 Visual Studio 2022（Windows），重试 |
 | 工具栏上看不到 **VPTool** 按钮 | plugin 未启用 / UBT 未 rebuild / Editor 未重启 | 确认 plugin 绿色启用，完全关闭 Editor 后触发一次 rebuild，重开 |
 | 点 **VPTool** 按钮无反应，日志提示 `Python plugin unavailable` | `PythonScriptPlugin` 未加载 | 确认 `.uplugin` 里 `PythonScriptPlugin` enabled，或在 Edit → Plugins 手动启用并重启 |
-| Prerequisites 显示 MISSING | 对应插件未启用 / 未内建 | 按各项 hint 去 Edit → Plugins 启用并重启（常见手动项：**Camera Calibration** → `LensFile`；**Level Sequence Editor** → `LevelSequence`）。`PythonScriptPlugin` / `EditorScriptingUtilities` 已随 PostRenderTool 通过 `.uplugin` 自动启用，若仍显示 MISSING 说明依赖未生效，检查 plugin 版本与完整性 |
+| Prerequisites 显示 MISSING | 对应插件未启用 / 未内建 | 按各项 hint 去 Edit → Plugins 启用并重启（常见手动项：**Camera Calibration** → 同时提供 `LensFile` 资产类与 `LensComponent` 运行时组件；**Level Sequence Editor** → `LevelSequence`）。`PythonScriptPlugin` / `EditorScriptingUtilities` 已随 PostRenderTool 通过 `.uplugin` 自动启用，若仍显示 MISSING 说明依赖未生效，检查 plugin 版本与完整性 |
 | `ModuleNotFoundError: post_render_tool` | plugin 未启用或 Python path 未挂载 | 确认 plugin 在 Plugins 窗口里是绿色的，重启编辑器 |
 | Blueprint compile 报 `A required widget binding "X" of type Y was not found` | Blueprint 里缺少对应控件或类型不符 | 在 Designer 里添加/改类型，按 `docs/bindwidget-contract.md` 对照 |
 | `'btn_browse' UPROPERTY is None` | Blueprint 没有用当前 C++ class 重新 compile | 打开 `BP_PostRenderToolWidget`，Compile，然后重启工具 |
 | UI 打开但按钮点击没反应 | callback 未绑定（热重载副作用）| `wb.rebuild_widget()` 或重启 tab |
 | Import 后摄影机位置/朝向不对 | 轴映射未校准 | 回到 2.2 验证坐标映射 |
-| `RuntimeError: LensFile` | Camera Calibration 插件未启用 | 启用插件并重启 |
+| `RuntimeError: LensFile` 或 `AttributeError: module 'unreal' has no attribute 'LensFile'` | Camera Calibration 插件未启用 | Edit → Plugins → 搜 "Camera Calibration" → 启用 → 重启编辑器（`LensFile` 是该插件暴露的资产类） |
+| `LogUObjectGlobals: Warning: Failed to find object 'Class /Script/LensComponent.LensComponent'` / Python 侧 `LensComponent 添加失败` | Camera Calibration 插件未启用（LensComponent 是该插件下的运行时组件，并非独立插件） | 同上，启用 Camera Calibration 后重启；不要去找单独的 "Lens Component" 插件 |

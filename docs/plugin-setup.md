@@ -9,6 +9,17 @@ from scratch. Follow in order.
 - macOS: Xcode (for UBT)
 - Windows: Visual Studio 2022 with "Game development with C++" workload
 - A host `.uproject` to install into
+- Required built-in UE plugins enabled in the host project:
+  - **Camera Calibration** — provides the `LensFile` asset class and the
+    `LensComponent` runtime component that the pipeline attaches to
+    `CineCameraActor`. `LensComponent` is NOT a separate plugin; it ships
+    inside Camera Calibration. Without this plugin, the import pipeline
+    fails at the LensFile step (`AttributeError: module 'unreal' has no
+    attribute 'LensFile'`) or the LensComponent step (`Failed to find
+    object 'Class /Script/LensComponent.LensComponent'`)
+  - **Level Sequence Editor** — required for the `LevelSequence` export
+  - `PythonScriptPlugin` / `EditorScriptingUtilities` — auto-enabled by
+    this plugin's `.uplugin`, no manual action needed
 
 ## 2. Install the plugin
 
@@ -126,3 +137,5 @@ To share the plugin with a teammate:
 | Python: `'btn_browse' UPROPERTY is None` | Blueprint not compiled against current C++ | Compile BP in Designer, restart tool |
 | `ModuleNotFoundError: post_render_tool` | Plugin Python path not mounted | Restart UE Editor, verify plugin enabled |
 | Tool panel opens but buttons do nothing | Events not bound | Hot-reload `widget.py`, check Output Log for `[widget]` errors |
+| `module 'unreal' has no attribute 'LensFile'` during Import | Camera Calibration plugin disabled | Edit → Plugins → enable "Camera Calibration" → restart Editor |
+| `Failed to find object 'Class /Script/LensComponent.LensComponent'` | Same as above — `LensComponent` lives inside Camera Calibration, not a separate plugin | Enable Camera Calibration, not some "Lens Component" plugin (which is hidden and not intended for direct user enable) |
