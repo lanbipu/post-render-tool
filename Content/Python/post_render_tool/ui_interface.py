@@ -164,22 +164,47 @@ def open_sequencer(level_sequence=None) -> None:
         unreal.log_error(f"[ui_interface] open_sequencer error: {exc}")
 
 
-def open_movie_render_queue() -> None:
-    """Open the Movie Render Queue editor window."""
+def open_movie_render_queue(level_sequence=None) -> None:
+    """把 LevelSequence 预填到 Movie Render Queue 并打印手动打开指引。
+
+    UE 5.7 的 FGlobalTabmanager::TryInvokeTab 未暴露到 Python，
+    无法从脚本直接打开 MRQ tab。早前的 "MovieRenderPipeline.OpenQueue"
+    console command 并不注册于引擎，UE 对未知 command 静默，所以
+    只看到日志无效果。现在改成：用 MoviePipelineQueueSubsystem 预填 queue，
+    并告知用户手动通过菜单打开 MRQ 面板 —— 打开即可看到 job。
+
+    Parameters
+    ----------
+    level_sequence:
+        若提供，把它作为 job 加入当前 MRQ queue；否则只打印指引。
+    """
     try:
-        # Try the subsystem approach (UE 5.x preferred).
-        subsystem = unreal.get_editor_subsystem(unreal.MoviePipelineEditorLibrary)
-        subsystem.open_queue()
-    except Exception:  # noqa: BLE001
-        try:
-            # Fallback: execute editor command to open the MRQ tab.
-            unreal.SystemLibrary.execute_console_command(
-                None,
-                "MovieRenderPipeline.OpenQueue",
+        queue_subsystem = unreal.get_editor_subsystem(
+            unreal.MoviePipelineQueueSubsystem
+        )
+        if queue_subsystem is None:
+            raise RuntimeError("MoviePipelineQueueSubsystem 不可用")
+
+        if level_sequence is not None:
+            queue = queue_subsystem.get_queue()
+            job = unreal.MoviePipelineEditorBlueprintLibrary.create_job_from_sequence(
+                queue, level_sequence
             )
-            unreal.log("[ui_interface] Movie Render Queue opened via console command.")
-        except Exception as exc2:  # noqa: BLE001
-            unreal.log_error(f"[ui_interface] open_movie_render_queue error: {exc2}")
+            if job is not None:
+                unreal.MoviePipelineEditorBlueprintLibrary.ensure_job_has_default_settings(
+                    job
+                )
+                unreal.log(
+                    f"[ui_interface] 已把 {level_sequence.get_name()} "
+                    "添加到 MRQ queue"
+                )
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(f"[ui_interface] MRQ queue 预填失败: {exc}")
+
+    unreal.log(
+        "[ui_interface] 请手动打开 Movie Render Queue: "
+        "菜单 Window → Cinematics → Movie Render Queue"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -534,7 +534,8 @@ class PostRenderToolUI:
         open_sequencer(self._last_result.level_sequence)
 
     def _on_open_mrq_clicked(self):
-        open_movie_render_queue()
+        seq = self._last_result.level_sequence if self._last_result else None
+        open_movie_render_queue(seq)
 
     # ------------------------------------------------------------------
     # Misc
