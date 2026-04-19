@@ -87,10 +87,11 @@ def build_sequence(
     # ------------------------------------------------------------------
     # Step 2: Set frame rate
     # ------------------------------------------------------------------
-    movie_scene: unreal.MovieScene = level_sequence.get_movie_scene()
-
+    # UE 5.7: UMovieScene 的 SetDisplayRate / SetPlaybackRange / AddPossessable
+    # 都是 inline / 非 UFUNCTION，Python 不可见。走 MovieSceneSequenceExtensions
+    # 提供的 ScriptMethod UFUNCTION，挂在 UMovieSceneSequence（LevelSequence）上。
     numerator, denominator = _resolve_frame_rate(fps)
-    movie_scene.set_display_rate(
+    level_sequence.set_display_rate(
         unreal.FrameRate(numerator=numerator, denominator=denominator)
     )
 
@@ -100,17 +101,20 @@ def build_sequence(
     first_frame_num = csv_result.frames[0].frame_number
     last_frame_num = csv_result.frames[-1].frame_number
     frame_span = last_frame_num - first_frame_num + 1
-    movie_scene.set_playback_range(0, frame_span)
+    level_sequence.set_playback_start(0)
+    level_sequence.set_playback_end(frame_span)
 
     # ------------------------------------------------------------------
     # Step 4: Bind camera actor and CineCameraComponent as possessables
     # ------------------------------------------------------------------
-    camera_binding: unreal.SequencerBindingProxy = movie_scene.add_possessable(
+    camera_binding: unreal.MovieSceneBindingProxy = level_sequence.add_possessable(
         camera_actor
     )
 
     cine_comp = camera_actor.get_cine_camera_component()
-    comp_binding: unreal.SequencerBindingProxy = movie_scene.add_possessable(cine_comp)
+    comp_binding: unreal.MovieSceneBindingProxy = level_sequence.add_possessable(
+        cine_comp
+    )
 
     # ------------------------------------------------------------------
     # Step 5: Add tracks and sections
@@ -127,7 +131,7 @@ def build_sequence(
 
     # --- Float tracks on CineCameraComponent ---
     def _add_float_track(
-        binding: unreal.SequencerBindingProxy,
+        binding: unreal.MovieSceneBindingProxy,
         prop_name: str,
         prop_path: str,
     ) -> unreal.MovieSceneFloatSection:
