@@ -186,29 +186,16 @@ For API edge cases, dispatch an `Explore` subagent with a concrete question (e.g
 
 The plugin is exercised inside UE 5.7 Editor on `lanPC` (Windows 11 workstation). SSH alias is already configured in `~/.ssh/config` via the global `CLAUDE.md`.
 
-**Key paths:**
 - SSH entry: `ssh lanpc` → `lanpc@192.168.10.20` (SSH key via 1Password Agent)
-- UE 5.7 install: `D:\Program Files\Epic Games\UE_5.7\`
-  - Engine source read-only: `D:\Program Files\Epic Games\UE_5.7\Engine\`
-  - Other versions (UE_4.27 / 5.1–5.6) coexist under the same `Epic Games\` root
+- UE 5.7 install: `D:\Program Files\Epic Games\UE_5.7\` (other versions UE_4.27 / 5.1–5.6 coexist under the same root)
 - Target project: `E:\RenderStream Projects\test_0311\test_0311.uproject`
-- Plugin symlink / clone: `E:\RenderStream Projects\test_0311\Plugins\post-render-tool\`
-- Coexisting local plugin: `E:\RenderStream Projects\test_0311\Plugins\RenderStream-UE\` (disguise RenderStream workflow)
-- Crash dumps: `E:\RenderStream Projects\test_0311\Saved\Crashes\UECC-Windows-<hash>_<seq>\` — contains `CrashContext.runtime-xml`, `<ProjectName>.log`, `UEMinidump.dmp`
-- Project log: `E:\RenderStream Projects\test_0311\Saved\Logs\test_0311.log`
+- Plugin location: `E:\RenderStream Projects\test_0311\Plugins\post-render-tool\`
 
-**PowerShell remote execution pattern** (from global CLAUDE.md, project-specific quirks):
-- Always pipe PowerShell script via stdin: `echo '<ps-cmd>' | ssh lanpc powershell -Command -`
+**PowerShell remote execution pattern:**
+- Pipe script via stdin: `echo '<ps-cmd>' | ssh lanpc powershell -Command -`
 - Avoid inline `ssh lanpc 'powershell -Command "..."'` — Bash eats `\t` inside Windows paths like `E:\test_0311` before `ssh` sees it
-- For paths with spaces or special chars, prefer `-LiteralPath "forward/slash/path"` — PowerShell accepts `/` on Windows and you sidestep Bash escape hell
-- `Get-ChildItem -Include *.uasset` needs `-Path` + wildcard, NOT `-LiteralPath`. Use `-Filter "*.uasset"` with `-LiteralPath` instead
-- UE exe: `E:\RenderStream Projects\test_0311\Binaries\Win64\test_0311Editor.exe` (project-specific build); engine target receipt at `E:\RenderStream Projects\test_0311\Binaries\Win64\test_0311Editor.target`
-
-**Project-specific Engine-install quirk** (observed 2026-04-19):
-- UE_5.7's `Engine\Plugins\Runtime\nDisplay\Content\` shipped with **0 `.uasset` files** from the Epic Launcher download (icons/SVG/PNG intact, but all Mesh/Material/Texture assets missing). UE_5.6 on the same machine has 49 `.uasset` intact for comparison.
-- Symptom: crash on editor launch — `Assertion failed: MeshMaterialObj.Object` at `DisplayClusterDisplayDeviceBaseComponent.cpp:100`, preceded in the log by `CDO Constructor ...: Failed to find /nDisplay/...` for ~10 assets.
-- Fix: Epic Games Launcher → Library → UE 5.7 → dropdown → **Verify**. Re-downloads only the missing content.
-- This is **unrelated to LensComponent / plugin-enable edits** — don't assume recent `.uproject` changes caused a similar crash without checking the log first.
+- For paths with spaces, use `-LiteralPath "forward/slash/path"` — PowerShell accepts `/` on Windows
+- `Get-ChildItem -Include *.uasset` only works with `-Path` + wildcard; with `-LiteralPath` use `-Filter "*.uasset"` instead
 
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->
 ## Knowledge Base (Managed by Docsmith)
