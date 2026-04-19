@@ -6,24 +6,28 @@ and hands the live instance to ``widget.PostRenderToolUI``, which binds
 Python callbacks to the widgets exposed by the BindWidget contract in
 ``UPostRenderToolWidget`` (C++).
 
-**The Blueprint is NOT shipped with the plugin source.** UE 5.7 does not
-expose ``UWidgetBlueprint::WidgetTree`` to Python reflection, so this
-project's convention is: the **first** bootstrapping deployment authors
-the Blueprint once in the UMG Designer and commits the resulting
-``.uasset`` to the project's git/p4 repo. All **subsequent** deployments
-(teammates, CI, other machines) just ``git pull`` / ``p4 sync`` to
-receive the same asset — they do NOT re-author it.
+**Blueprint distribution: automation-first, manual as fallback** (reverses
+the bd140d7 "manual-only" stance, 2026-04-17). ``docs/widget-tree-spec.json``
+is the single source of truth; ``rebuild_from_spec()`` (this module) →
+``build_widget_blueprint.run_build()`` → ``UPostRenderToolBuildHelper`` C++
+UFUNCTION bridge populates ``UWidgetBlueprint::WidgetTree`` idempotently
+(existing user tweaks survive; ``force_reapply=True`` overrides for
+theme-level edits). UE 5.7 still doesn't expose ``WidgetTree`` directly to
+Python reflection — the helper UFUNCTIONs are the official escape hatch.
 
-This module only *consumes* the committed asset. If ``load_widget()``
-raises because the asset is missing, first try to sync from source
-control; fall back to ``docs/deployment-guide.md`` §1.3 only when no
-teammate has bootstrapped the asset yet (fresh project, or the depot
-copy is gone).
+This module *consumes* the committed asset for normal runtime use; when
+that asset is missing, prefer:
+
+  1. ``git pull`` / ``p4 sync`` to recover the committed copy, OR
+  2. ``rebuild_from_spec()`` to regenerate from JSON spec, OR
+  3. ``docs/bootstrap-checklist.md`` for the manual fallback path
+     (only when both spec and depot are unavailable — fresh projects
+     before automation existed, or upstream wipe + spec corruption).
 
 The Blueprint's widget tree must satisfy the BindWidget contract in
 ``Source/PostRenderTool/Public/PostRenderToolWidget.h``; missing required
 widgets fail the Blueprint compile. See ``TEMPLATE_SETUP_INSTRUCTIONS``
-below for recovery steps when the asset is missing or corrupt.
+below for sync/restore commands when the asset is missing or corrupt.
 """
 
 from __future__ import annotations
@@ -40,11 +44,9 @@ WIDGET_ASSET_PATH = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
 TEMPLATE_SETUP_INSTRUCTIONS = f"""
 Blueprint asset not found: {WIDGET_ASSET_PATH}
 
-BP_PostRenderToolWidget is NOT shipped with the plugin source. The canonical
-distribution is: the first team member who sets up the project bootstraps
-the Blueprint once via docs/deployment-guide.md §1.3, commits the .uasset,
-and everyone else receives it via source-control sync. Figure out which
-scenario you are in before running any command:
+BP_PostRenderToolWidget is normally distributed via source control; the
+preferred regeneration path is `rebuild_from_spec()` (JSON spec → BP).
+Pick the recovery path that matches your situation:
 
 Scenario A — fresh clone, you never had the asset locally
 ---------------------------------------------------------
@@ -72,19 +74,25 @@ Use the correct per-SCM recovery command:
                (the -f flag force-resyncs even if p4 thinks you're current;
                alternatively `p4 revert` if the file is open in a changelist)
 
-Scenario C — nobody has ever bootstrapped, or depot copy is gone too
---------------------------------------------------------------------
-This is a fresh project where §1.3 has never been run, or an upstream
-mistake wiped the committed .uasset. Only in this case do you actually
-have to build the Blueprint yourself: follow docs/deployment-guide.md
-§1.3 Step 1 → Step 7, then commit the resulting .uasset so every
-subsequent teammate recovers via Scenario A or B, not a re-bootstrap.
-This is a one-time bootstrap, not a per-deployment task.
+Scenario C — fresh project, no .uasset committed yet, but spec is ready
+-----------------------------------------------------------------------
+The spec docs/widget-tree-spec.json exists, but this project has never
+committed a built BP. Use the automation path:
 
-There is no Python / C++ automation for populating the widget tree —
-UE 5.7 hides UWidgetBlueprint::WidgetTree from reflection, and the team
-decided (commit bd140d7) that Designer hand-authoring + version-controlled
-.uasset is the canonical path.
+  from post_render_tool.widget_builder import rebuild_from_spec
+  rebuild_from_spec()
+
+This calls build_widget_blueprint.run_build() which uses
+unreal.PostRenderToolBuildHelper (C++ UFUNCTION bridge) to populate the
+WidgetTree from the spec. Idempotent — safe to re-run. Commit the
+resulting .uasset so future teammates land in Scenario A.
+
+Scenario D — spec is also missing or corrupt (rare)
+---------------------------------------------------
+Manual fallback only. Follow docs/bootstrap-checklist.md to hand-author
+the BP in UMG Designer per the Figma layout, then commit it. Treat this
+as a one-time recovery, not a normal workflow — fix the spec afterward
+so future regenerations stay automated.
 """.strip()
 
 # Module-level reference — prevents GC of the UI builder and its callbacks.
