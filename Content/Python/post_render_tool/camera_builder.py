@@ -59,8 +59,9 @@ def _add_component_via_subobject_subsystem(
 
     UE 5.7 的 AActor::AddComponentByClass 与 AddInstanceComponent 都未暴露到 Python
     （ScriptNoExport / 无 UFUNCTION），必须走 SubobjectDataSubsystem 官方路径。
-    add_new_subobject 返回 FSubobjectDataHandle 但从 handle 到 UActorComponent* 的
-    Python 桥尚不明确；用 get_components_by_class 的前后差集定位新实例作为解决办法。
+    add_new_subobject 返回的 FSubobjectDataHandle 的 IsValid() 是普通 inline 方法
+    未带 UFUNCTION（SubobjectDataHandle.h:46），Python 不可访问；用
+    get_components_by_class 的前后差集定位新实例兼做失败检测。
     """
     # SubobjectDataSubsystem::Get 是 C++ 静态方法未进 Python 绑定，走 UEngineSubsystem 通道。
     subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
@@ -79,18 +80,13 @@ def _add_component_via_subobject_subsystem(
 
     class_name = component_class.get_name()
     before_comps = set(actor.get_components_by_class(component_class))
-    new_handle, fail_reason = subsystem.add_new_subobject(params)
-
-    if not new_handle.is_valid():
-        raise RuntimeError(
-            f"{class_name} 添加失败: {fail_reason}"
-        )
+    _new_handle, fail_reason = subsystem.add_new_subobject(params)
 
     after_comps = actor.get_components_by_class(component_class)
     new_comps = [c for c in after_comps if c not in before_comps]
     if not new_comps:
         raise RuntimeError(
-            f"{class_name} 已添加但无法在 actor components 中定位新实例"
+            f"{class_name} 添加失败: {fail_reason}"
         )
     return new_comps[0]
 
