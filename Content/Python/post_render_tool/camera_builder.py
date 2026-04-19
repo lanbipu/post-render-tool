@@ -62,12 +62,10 @@ def _add_component_via_subobject_subsystem(
     add_new_subobject 返回 FSubobjectDataHandle 但从 handle 到 UActorComponent* 的
     Python 桥尚不明确；用 get_components_by_class 的前后差集定位新实例作为解决办法。
     """
-    # USubobjectDataSubsystem : public UEngineSubsystem（SubobjectDataSubsystem.h:96），
-    # Python 只暴露 unreal.get_engine_subsystem；SubobjectDataSubsystem::Get 是 C++ 静态
-    # 辅助方法，未进 Python 绑定。
+    # SubobjectDataSubsystem::Get 是 C++ 静态方法未进 Python 绑定，走 UEngineSubsystem 通道。
     subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
     if subsystem is None:
-        raise RuntimeError("无法获取 SubobjectDataSubsystem（UEngineSubsystem 未初始化？）")
+        raise RuntimeError("SubobjectDataSubsystem 获取失败")
 
     handles = subsystem.k2_gather_subobject_data_for_instance(actor)
     if not handles:
