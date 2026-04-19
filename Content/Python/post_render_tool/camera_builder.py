@@ -36,6 +36,46 @@ def _check_camera_calibration_plugin() -> None:
     logger.info("Camera Calibration 插件已加载 (LensFile available)")
 
 
+def _add_component_via_subobject_subsystem(
+    actor: "unreal.Actor",
+    component_class: type,
+) -> "unreal.ActorComponent":
+    """UE 5.7 给 editor actor 实例动态添加 component。
+
+    UE 5.7 的 AActor::AddComponentByClass 与 AddInstanceComponent 都未暴露到 Python
+    （ScriptNoExport / 无 UFUNCTION），必须走 SubobjectDataSubsystem 官方路径。
+    add_new_subobject 返回 FSubobjectDataHandle 但从 handle 到 UActorComponent* 的
+    Python 桥尚不明确；用 get_components_by_class 的前后差集定位新实例作为解决办法。
+    """
+    subsystem = unreal.SubobjectDataSubsystem.get()
+
+    handles = subsystem.k2_gather_subobject_data_for_instance(actor)
+    if not handles:
+        raise RuntimeError(
+            f"SubobjectDataSubsystem 未能枚举 {actor.get_name()} 的 subobject handles"
+        )
+
+    params = unreal.AddNewSubobjectParams()
+    params.parent_handle = handles[0]
+    params.new_class = component_class
+
+    before_comps = set(actor.get_components_by_class(component_class))
+    new_handle, fail_reason = subsystem.add_new_subobject(params)
+
+    if not new_handle.is_valid():
+        raise RuntimeError(
+            f"{component_class.__name__} 添加失败: {fail_reason}"
+        )
+
+    after_comps = actor.get_components_by_class(component_class)
+    new_comps = [c for c in after_comps if c not in before_comps]
+    if not new_comps:
+        raise RuntimeError(
+            f"{component_class.__name__} 已添加但无法在 actor components 中定位新实例"
+        )
+    return new_comps[0]
+
+
 # ---------------------------------------------------------------------------
 # 公共 API
 # ---------------------------------------------------------------------------
@@ -118,17 +158,13 @@ def build_camera(
     # ------------------------------------------------------------------
     # 5. 添加 LensComponent 并关联 LensFile
     # ------------------------------------------------------------------
-    lens_component: unreal.LensComponent = camera_actor.add_component_by_class(
-        component_class=unreal.LensComponent,
-        manual_attachment=False,
-        relative_transform=unreal.Transform(),
+    # UE 5.7: AActor::AddComponentByClass 带 ScriptNoExport，Python 不可见。
+    # 走 SubobjectDataSubsystem 的官方 editor 路径。
+    lens_component: unreal.LensComponent = _add_component_via_subobject_subsystem(
+        camera_actor,
+        unreal.LensComponent,
     )
-
-    if lens_component is None:
-        raise RuntimeError(
-            "LensComponent 添加失败。"
-            "请检查 Camera Calibration 插件是否正确启用。"
-        )
+    logger.info("LensComponent 已添加到 %s", actor_label)
 
     # 尝试通过 set_editor_property 关联 LensFile
     lens_linked = False
