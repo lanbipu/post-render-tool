@@ -193,65 +193,45 @@ def build_lens_file(
             nd["k1"], nd["k2"], nd["k3"],
         )
 
-        # UE LensFile Python API 在不同引擎版本中签名略有差异，使用 try/except 兜底
-        added = False
-
-        # 尝试方式 A：add_distortion_point(focus, zoom, params_struct)
+        # UE 5.7 LensFile API（CameraCalibrationCore/Public/LensFile.h:174-183）：
+        #   - AddDistortionPoint(focus, zoom, FDistortionInfo, FFocalLengthInfo)
+        #   - AddImageCenterPoint(focus, zoom, FImageCenterInfo)
+        # Struct 字段（LensData.h:162-220）：
+        #   - FDistortionInfo.Parameters: TArray<float>       → parameters
+        #   - FFocalLengthInfo.FxFy:      FVector2D           → fx_fy
+        #   - FImageCenterInfo.PrincipalPoint: FVector2D      → principal_point
+        # focus=0（固定对焦点），zoom 用归一化焦距比（焦距/传感器宽度）
+        zoom_value = focal_mm / frame.sensor_width_mm
         try:
-            params = unreal.LensDistortionState()
-            params.distortion_info.parameters = [
+            distortion_info = unreal.DistortionInfo()
+            distortion_info.parameters = [
                 nd["k1"], nd["k2"], nd["p1"], nd["p2"], nd["k3"]
             ]
-            params.focal_length_info.fx = nd["fx"]
-            params.focal_length_info.fy = nd["fy"]
-            params.image_center_info.cx = nd["cx"]
-            params.image_center_info.cy = nd["cy"]
-            # focus=0（固定对焦），zoom 用归一化焦距比（焦距/传感器宽度）
-            zoom_value = focal_mm / frame.sensor_width_mm
+
+            focal_info = unreal.FocalLengthInfo()
+            focal_info.fx_fy = unreal.Vector2D(nd["fx"], nd["fy"])
+
+            image_center = unreal.ImageCenterInfo()
+            image_center.principal_point = unreal.Vector2D(nd["cx"], nd["cy"])
+
             lens_file.add_distortion_point(
-                focus=0.0,
-                zoom=zoom_value,
-                distortion_state=params,
+                new_focus=0.0,
+                new_zoom=zoom_value,
+                new_point=distortion_info,
+                new_focal_length=focal_info,
             )
-            added = True
-            logger.info("    [方式A] 写入成功 (zoom=%.4f)", zoom_value)
-        except (AttributeError, TypeError, Exception) as exc_a:  # noqa: BLE001
-            logger.warning("    [方式A] 失败: %s", exc_a)
-
-        # 尝试方式 B：add_distortion_point 使用 DistortionInfo / separate structs
-        if not added:
-            try:
-                distortion_info = unreal.DistortionInfo()
-                distortion_info.parameters = [
-                    nd["k1"], nd["k2"], nd["p1"], nd["p2"], nd["k3"]
-                ]
-                focal_info = unreal.FocalLengthInfo()
-                focal_info.fx = nd["fx"]
-                focal_info.fy = nd["fy"]
-                image_center = unreal.ImageCenterInfo()
-                image_center.cx = nd["cx"]
-                image_center.cy = nd["cy"]
-                zoom_value = focal_mm / frame.sensor_width_mm
-                lens_file.add_distortion_point(
-                    focus=0.0,
-                    zoom=zoom_value,
-                    distortion_info=distortion_info,
-                    focal_length_info=focal_info,
-                    image_center_info=image_center,
-                )
-                added = True
-                logger.info("    [方式B] 写入成功 (zoom=%.4f)", zoom_value)
-            except (AttributeError, TypeError, Exception) as exc_b:  # noqa: BLE001
-                logger.warning("    [方式B] 失败: %s", exc_b)
-
-        if not added:
-            logger.error(
-                "    焦距 %.3f mm 畸变数据写入失败，已跳过。"
-                "请检查当前 UE 版本的 LensFile Python API。",
-                focal_mm,
+            lens_file.add_image_center_point(
+                new_focus=0.0,
+                new_zoom=zoom_value,
+                new_point=image_center,
             )
-        else:
+            logger.info("    写入成功 (zoom=%.4f)", zoom_value)
             success_count += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "    焦距 %.3f mm 写入失败 [%s]: %s",
+                focal_mm, type(exc).__name__, exc,
+            )
 
     logger.info("畸变数据写入完成: %d/%d 组成功", success_count, len(groups))
 
