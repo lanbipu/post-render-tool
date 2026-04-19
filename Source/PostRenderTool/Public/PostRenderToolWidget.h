@@ -88,29 +88,7 @@ public:
     USpinBox* spn_fps;
 
     // ======================================================================
-    // Section 4: Coordinate Verification
-    // ======================================================================
-
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-    USpinBox* spn_frame;
-
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
-    UTextBlock* txt_frame_hint;
-
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-    UTextBlock* txt_designer_pos;
-
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-    UTextBlock* txt_designer_rot;
-
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-    UTextBlock* txt_ue_pos;
-
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-    UTextBlock* txt_ue_rot;
-
-    // ======================================================================
-    // Section 5a: Axis Mapping — Position
+    // Section 4a: Axis Mapping — Position
     // ======================================================================
 
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
@@ -132,7 +110,7 @@ public:
     USpinBox* spn_pos_z_scale;
 
     // ======================================================================
-    // Section 5b: Axis Mapping — Rotation
+    // Section 4b: Axis Mapping — Rotation
     // ======================================================================
 
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
@@ -160,7 +138,7 @@ public:
     UButton* btn_save_mapping;
 
     // ======================================================================
-    // Section 6: Actions + Results
+    // Section 5: Actions + Results
     // ======================================================================
 
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))

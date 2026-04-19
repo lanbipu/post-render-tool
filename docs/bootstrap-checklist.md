@@ -10,7 +10,7 @@ For when `build_widget_blueprint.py` is unavailable (freshly cloned repo without
 
 - [ ] UE Editor launched, host project loaded with PostRenderTool plugin enabled
 - [ ] `Content Browser → VP Post-Render Tool Content → Blueprints/` visible
-- [ ] `docs/bindwidget-contract.md` open alongside (reference for 39 names)
+- [ ] `docs/bindwidget-contract.md` open alongside (reference for 33 names)
 - [ ] `docs/codebase-walkthrough.html` open at `#ui` for visual reference
 
 ---
@@ -32,7 +32,7 @@ For when `build_widget_blueprint.py` is unavailable (freshly cloned repo without
 
 ---
 
-## Phase C — 31 required widgets (flat, fast pass; ~8 min)
+## Phase C — 26 required widgets (flat, fast pass; ~8 min)
 
 Drag each widget into `RootPanel`. Names must match exactly (copy-paste from `bindwidget-contract.md` §3.1).
 
@@ -44,11 +44,6 @@ Drag each widget into `RootPanel`. Names must match exactly (copy-paste from `bi
 - [ ] `txt_timecode` — Text Block
 - [ ] `txt_sensor_width` — Text Block
 - [ ] `spn_fps` — Spin Box
-- [ ] `spn_frame` — Spin Box
-- [ ] `txt_designer_pos` — Text Block
-- [ ] `txt_designer_rot` — Text Block
-- [ ] `txt_ue_pos` — Text Block
-- [ ] `txt_ue_rot` — Text Block
 - [ ] `cmb_pos_x_src` — Combo Box (String)
 - [ ] `spn_pos_x_scale` — Spin Box
 - [ ] `cmb_pos_y_src` — Combo Box (String)
@@ -86,7 +81,6 @@ All are `Text Block`:
 - [ ] `prereq_label_4`
 - [ ] `prereq_label_5`
 - [ ] `prereq_summary`
-- [ ] `txt_frame_hint`
 
 Default Text = empty string (see `bindwidget-contract.md` §5.1 warning).
 

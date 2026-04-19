@@ -64,7 +64,7 @@ If `Content/Blueprints/BP_PostRenderToolWidget.uasset` does not exist yet
 6. Delete the default `CanvasPanel_0` root, drag a `VerticalBox` as the new root, name it `RootPanel`
 7. Add widgets to satisfy the BindWidget contract — see
    `Source/PostRenderTool/Public/PostRenderToolWidget.h` for the exact
-   list of 33 required names and types
+   list of 26 required names and types
 8. Compile (Ctrl+B). If the Compiler Results panel shows
    "A required widget binding X was not found", add the missing widget
 9. Save (Ctrl+S)

@@ -20,8 +20,7 @@ from typing import Optional
 import unreal
 
 from . import config
-from .coordinate_transform import transform_position, transform_rotation
-from .csv_parser import CsvDenseResult, CsvParseError, parse_csv_dense
+from .csv_parser import CsvParseError, parse_csv_dense
 from .pipeline import PipelineResult, run_import
 from .ui_interface import (
     browse_csv_file,
@@ -44,8 +43,6 @@ _REQUIRED_CONTROLS = (
     "btn_recheck", "btn_browse", "txt_file_path",
     "txt_frame_count", "txt_focal_range", "txt_timecode", "txt_sensor_width",
     "spn_fps",
-    "spn_frame",
-    "txt_designer_pos", "txt_designer_rot", "txt_ue_pos", "txt_ue_rot",
     "cmb_pos_x_src", "spn_pos_x_scale",
     "cmb_pos_y_src", "spn_pos_y_scale",
     "cmb_pos_z_src", "spn_pos_z_scale",
@@ -61,7 +58,7 @@ _REQUIRED_CONTROLS = (
 _OPTIONAL_CONTROLS = (
     "prereq_label_0", "prereq_label_1", "prereq_label_2",
     "prereq_label_3", "prereq_label_4", "prereq_label_5",
-    "prereq_summary", "txt_frame_hint",
+    "prereq_summary",
 )
 
 
@@ -74,7 +71,6 @@ class PostRenderToolUI:
         # State
         self._csv_path: str = ""
         self._fps: float = 0.0
-        self._csv_result: Optional[CsvDenseResult] = None
         self._last_result: Optional[PipelineResult] = None
 
         # Control refs
@@ -168,12 +164,6 @@ class PostRenderToolUI:
             spn_fps.set_editor_property("max_value", 120.0)
             spn_fps.set_editor_property("value", 0.0)
 
-        spn_frame = self._get("spn_frame")
-        if spn_frame is not None:
-            spn_frame.set_editor_property("min_value", 0.0)
-            spn_frame.set_editor_property("max_value", 0.0)
-            spn_frame.set_editor_property("value", 0.0)
-
     # ------------------------------------------------------------------
     # Event binding
     # ------------------------------------------------------------------
@@ -207,7 +197,6 @@ class PostRenderToolUI:
         self._bind_click("btn_recheck", self._on_recheck_prereqs)
         self._bind_click("btn_browse", self._on_browse_clicked)
         self._bind_value_changed("spn_fps", self._on_fps_changed)
-        self._bind_value_changed("spn_frame", self._on_frame_changed)
         self._bind_click("btn_apply_mapping", self._on_apply_mapping)
         self._bind_click("btn_save_mapping", self._on_save_mapping)
         self._bind_click("btn_import", self._on_import_clicked)
@@ -271,17 +260,14 @@ class PostRenderToolUI:
         try:
             result = parse_csv_dense(csv_path)
         except CsvParseError as exc:
-            self._csv_result = None
             self._set_results(f"CSV Error: {exc}")
             unreal.log_warning(f"[widget] CSV parse error: {exc}")
             return
         except Exception as exc:  # noqa: BLE001
-            self._csv_result = None
             self._set_results(f"Error: {exc}")
             unreal.log_error(f"[widget] Preview error: {exc}")
             return
 
-        self._csv_result = result
         fl_min, fl_max = result.focal_length_range
         self._set_text("txt_frame_count", f"Frames: {result.frame_count}")
         self._set_text(
@@ -297,64 +283,10 @@ class PostRenderToolUI:
             f"Sensor Width: {result.sensor_width_mm:.2f} mm",
         )
 
-        spn_frame = self._get("spn_frame")
-        if spn_frame is not None:
-            max_frame = max(0.0, float(result.frame_count - 1))
-            spn_frame.set_editor_property("max_value", max_frame)
-            spn_frame.set_editor_property("value", 0.0)
-
-        self._refresh_coord_preview()
         unreal.log(f"[widget] CSV preview loaded: {csv_path}")
 
     def _on_fps_changed(self, value: float):
         self._fps = value
-
-    # ------------------------------------------------------------------
-    # Coordinate Verification
-    # ------------------------------------------------------------------
-
-    def _refresh_coord_preview(self):
-        if self._csv_result is None or not self._csv_result.frames:
-            return
-
-        spn_frame = self._get("spn_frame")
-        if spn_frame is None:
-            return
-        idx = int(spn_frame.get_editor_property("value"))
-        idx = max(0, min(idx, len(self._csv_result.frames) - 1))
-        frame = self._csv_result.frames[idx]
-
-        self._set_text(
-            "txt_designer_pos",
-            f"Designer Pos: ({frame.offset_x:.4f}, "
-            f"{frame.offset_y:.4f}, {frame.offset_z:.4f}) m",
-        )
-        self._set_text(
-            "txt_designer_rot",
-            f"Designer Rot: ({frame.rotation_x:.2f}, "
-            f"{frame.rotation_y:.2f}, {frame.rotation_z:.2f})°",
-        )
-
-        ue_pos = transform_position(frame.offset_x, frame.offset_y, frame.offset_z)
-        ue_rot = transform_rotation(
-            frame.rotation_x, frame.rotation_y, frame.rotation_z
-        )
-        self._set_text(
-            "txt_ue_pos",
-            f"UE Pos: ({ue_pos[0]:.1f}, {ue_pos[1]:.1f}, {ue_pos[2]:.1f}) cm",
-        )
-        self._set_text(
-            "txt_ue_rot",
-            f"UE Rot: P={ue_rot[0]:.2f}  Y={ue_rot[1]:.2f}  R={ue_rot[2]:.2f}°",
-        )
-
-        hint = self._get("txt_frame_hint")
-        if hint is not None:
-            total = max(0, len(self._csv_result.frames) - 1)
-            hint.set_text(unreal.Text(f"{idx} / {total}"))
-
-    def _on_frame_changed(self, value: float):
-        self._refresh_coord_preview()
 
     # ------------------------------------------------------------------
     # Axis Mapping
@@ -426,9 +358,8 @@ class PostRenderToolUI:
         config.POSITION_MAPPING = pos_mapping
         config.ROTATION_MAPPING = rot_mapping
 
-        self._refresh_coord_preview()
         self._set_results(
-            "Axis mapping applied (in memory). Coordinate preview updated."
+            "Axis mapping applied (in memory)."
         )
         unreal.log("[widget] Axis mapping applied in memory.")
 
@@ -443,7 +374,6 @@ class PostRenderToolUI:
         pos_mapping, rot_mapping = self._read_mapping_from_ui()
         try:
             save_axis_mapping(pos_mapping, rot_mapping)
-            self._refresh_coord_preview()
             self._set_results("Axis mapping saved to config.py successfully.")
         except Exception as exc:  # noqa: BLE001
             self._set_results(f"Failed to save mapping: {exc}")

@@ -53,7 +53,7 @@ Copy-Item -Recurse "C:\path\to\post_render_tool" "C:\path\to\MyVPProject\Plugins
    build_widget_blueprint.run_build()
    ```
 
-3. 脚本读取 `docs/widget-tree-spec.json`，把 41 个契约 widget + 装饰嵌套结构 + 属性 + slot padding 一次性填入 BP，compile + save
+3. 脚本读取 `docs/widget-tree-spec.json`，把 33 个契约 widget + 装饰嵌套结构 + 属性 + slot padding 一次性填入 BP，compile + save
 4. 打开 BP 校验：6 个 Section 全部出现、`Compile Succeeded`、Hierarchy 面板和 Figma 一致
 5. 在 Designer 里按需美化 —— 脚本 rerun 不会回滚用户已做的视觉美化（idempotent 契约详见 `build_widget_blueprint.py` 顶部注释）
 6. 提交 `.uasset`（见 Phase F 下方）
@@ -127,20 +127,15 @@ import init_post_render_tool
 - 帧数、焦距范围、时码范围、传感器宽度
 - 自动检测的帧率（FPS SpinBox 设为 0 即使用自动检测值）
 
-### 2.2 验证坐标映射
+### 2.2 调整轴映射（如需要）
 
-> `config.py` 中的轴映射是初始猜测，**首次使用必须验证**。
+> `config.py` 中的轴映射是初始猜测，**首次使用必须用真机数据验证**。
 
-1. 在 **Frame** SpinBox 选择一个特征帧（摄影机在已知位置的帧）
-2. 对比 **Designer** 原始坐标和 **UE** 转换坐标是否合理
-
-### 2.3 调整轴映射（如需要）
-
-如果 UE 坐标预览与 Designer 不一致：
+先按默认映射跑一次 Import，在 UE 视口里核对现场位置。若偏差明显：
 
 1. 在 **Axis Mapping** 区域修改 ComboBox（源轴）和 SpinBox（缩放系数）
-2. 点击 **Apply Mapping** — 坐标预览立即刷新
-3. 反复迭代直到匹配
+2. 点击 **Apply Mapping** — 内存生效
+3. 重跑 Import，在视口里对比，反复迭代直到匹配
 
 **常见调整：**
 
@@ -154,13 +149,13 @@ import init_post_render_tool
 
 确认正确后点击 **Save to config.py** 持久化。
 
-### 2.4 导入
+### 2.3 导入
 
 点击 **Import** 执行完整流水线：CSV → LensFile → CineCameraActor → LevelSequence。
 
 Results 区域显示验证报告（FOV 误差、异常帧检测等）。
 
-### 2.5 验证与渲染
+### 2.4 验证与渲染
 
 - **Open Sequencer** — 播放 LevelSequence，目视检查摄影机轨迹
 - **Open Movie Render Queue** — 打开 MRQ 进行最终渲染
@@ -204,7 +199,7 @@ wb.rebuild_widget()
 
 - **Apply Mapping** — 仅内存生效，重启 UE 后恢复为 config.py 中的值
 - **Save to config.py** — 持久化到磁盘（原子写入 + .bak 备份），下次启动自动加载
-- 建议流程：反复 Apply + 对比 Designer / UE 坐标预览 迭代 → 确认正确 → Save
+- 建议流程：反复 Apply + 重跑 Import 在视口对比 → 确认正确 → Save
 
 ### Widget 管理
 

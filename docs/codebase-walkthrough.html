@@ -1394,7 +1394,7 @@
     </div>
     <div class="meta-item">
       <span class="label">Contract</span>
-      <span class="val">33 required &middot; 8 optional · 41 total</span>
+      <span class="val">26 required &middot; 7 optional · 33 total</span>
     </div>
     <div class="meta-item">
       <span class="label">Figma Source</span>
@@ -1500,29 +1500,8 @@
         </div>
       </div>
 
-      <!-- Section 4: Coordinate Verification -->
-      <div class="psec" data-section="4" data-w="lbl_card_coord">
-        <div class="psec-head" data-w="lbl_coord_header">
-          <div class="left"><span class="bar" data-w="lbl_coord_accent_img"></span><span data-w="lbl_coord_title">Coordinate Verification</span></div>
-        </div>
-        <div class="row" data-w="lbl_coord_frame_row">
-          <span class="label" data-w="lbl_frame">Frame</span>
-          <div class="spn" data-w="spn_frame"><span>0</span><span class="arrows">▲<br>▼</span></div>
-          <span class="dim" data-w="txt_frame_hint">0 / 973</span>
-        </div>
-        <div class="pair-box" data-w="lbl_coord_pair">
-          <span class="tag-src" data-w="lbl_designer_header">DESIGNER (source)</span>
-          <span data-w="txt_designer_pos">Pos&nbsp;&nbsp;(1.2345, -0.5678, 2.3456) m</span>
-          <span data-w="txt_designer_rot">Rot&nbsp;&nbsp;(12.34, -56.78, 90.12)°</span>
-          <div class="sep" data-w="lbl_coord_separator"></div>
-          <span class="tag-dst" data-w="lbl_ue_header">→ UE (result)</span>
-          <span data-w="txt_ue_pos">Pos&nbsp;&nbsp;(234.6, 123.5, -56.8) cm</span>
-          <span data-w="txt_ue_rot">Rot&nbsp;&nbsp;P=-12.34&nbsp;&nbsp;Y=56.78&nbsp;&nbsp;R=90.12°</span>
-        </div>
-      </div>
-
-      <!-- Section 5: Axis Mapping -->
-      <div class="psec" data-section="5" data-w="lbl_card_axis">
+      <!-- Section 4: Axis Mapping -->
+      <div class="psec" data-section="4" data-w="lbl_card_axis">
         <div class="psec-head" data-w="lbl_axis_header">
           <div class="left"><span class="bar" data-w="lbl_axis_accent_img"></span><span data-w="lbl_axis_title">Axis Mapping</span></div>
         </div>
@@ -1580,8 +1559,8 @@
         </div>
       </div>
 
-      <!-- Section 6: Actions + RESULTS -->
-      <div class="psec" data-section="6" data-w="lbl_card_actions">
+      <!-- Section 5: Actions + RESULTS -->
+      <div class="psec" data-section="5" data-w="lbl_card_actions">
         <div class="psec-head" data-w="lbl_actions_header">
           <div class="left"><span class="bar" data-w="lbl_actions_accent_img"></span><span data-w="lbl_actions_title">Actions</span></div>
         </div>
@@ -1624,19 +1603,19 @@ Import finished in 3.42s.</div>
 
   <div class="stat-strip reveal">
     <div class="stat-cell">
-      <div class="num"><em>41</em></div>
+      <div class="num"><em>33</em></div>
       <div class="lbl">Total UPROPERTYs</div>
     </div>
     <div class="stat-cell">
-      <div class="num">33</div>
+      <div class="num">26</div>
       <div class="lbl">BindWidget (required)</div>
     </div>
     <div class="stat-cell">
-      <div class="num">8</div>
+      <div class="num">7</div>
       <div class="lbl">BindWidgetOptional</div>
     </div>
     <div class="stat-cell">
-      <div class="num"><em>6</em></div>
+      <div class="num"><em>5</em></div>
       <div class="lbl">Visible panel sections</div>
     </div>
   </div>
@@ -1664,20 +1643,16 @@ Import finished in 3.42s.</div>
         <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_sensor_width</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
         <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">spn_fps</td><td>USpinBox</td><td><span class="pill req">Required</span></td><td><code>_on_fps_changed</code></td></tr>
         <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_detected_fps</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
-        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">spn_frame</td><td>USpinBox</td><td><span class="pill req">Required</span></td><td><code>_on_frame_changed</code></td></tr>
-        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_frame_hint</td><td>UTextBlock</td><td><span class="pill opt">Optional</span></td><td>—</td></tr>
-        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_designer_pos / _rot</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td><code>_refresh_coord_preview</code></td></tr>
-        <tr><td class="section-col">IV · Coord Verification</td><td class="ctrl">txt_ue_pos / _rot</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td><code>_refresh_coord_preview</code></td></tr>
-        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">cmb_pos_{x,y,z}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
-        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">spn_pos_{x,y,z}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
-        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">cmb_rot_{pitch,yaw,roll}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
-        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">spn_rot_{pitch,yaw,roll}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
-        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">btn_apply_mapping</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_apply_mapping</code></td></tr>
-        <tr><td class="section-col">V · Axis Mapping</td><td class="ctrl">btn_save_mapping</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_save_mapping</code></td></tr>
-        <tr><td class="section-col">VI · Actions</td><td class="ctrl">btn_import</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_import_clicked</code></td></tr>
-        <tr><td class="section-col">VI · Actions</td><td class="ctrl">btn_open_seq</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_open_sequencer_clicked</code></td></tr>
-        <tr><td class="section-col">VI · Actions</td><td class="ctrl">btn_open_mrq</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_open_mrq_clicked</code></td></tr>
-        <tr><td class="section-col">VI · Actions</td><td class="ctrl">txt_results</td><td>UMultiLineEditableText</td><td><span class="pill req">Required</span></td><td><code>_set_results</code></td></tr>
+        <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">cmb_pos_{x,y,z}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
+        <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">spn_pos_{x,y,z}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
+        <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">cmb_rot_{pitch,yaw,roll}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
+        <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">spn_rot_{pitch,yaw,roll}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
+        <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">btn_apply_mapping</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_apply_mapping</code></td></tr>
+        <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">btn_save_mapping</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_save_mapping</code></td></tr>
+        <tr><td class="section-col">V · Actions</td><td class="ctrl">btn_import</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_import_clicked</code></td></tr>
+        <tr><td class="section-col">V · Actions</td><td class="ctrl">btn_open_seq</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_open_sequencer_clicked</code></td></tr>
+        <tr><td class="section-col">V · Actions</td><td class="ctrl">btn_open_mrq</td><td>UButton</td><td><span class="pill req">Required</span></td><td><code>_on_open_mrq_clicked</code></td></tr>
+        <tr><td class="section-col">V · Actions</td><td class="ctrl">txt_results</td><td>UMultiLineEditableText</td><td><span class="pill req">Required</span></td><td><code>_set_results</code></td></tr>
       </tbody>
     </table>
   </div>
@@ -1686,7 +1661,7 @@ Import finished in 3.42s.</div>
     <div class="callout">
       <div class="icon">¹</div>
       <div class="ctitle">C++ 只声明，不填肉</div>
-      <div class="ctext"><code>PostRenderToolWidget.h</code> 里 41 个 UPROPERTY 是"契约模版"——规定 BP 里必须有哪些控件、什么名字、什么类型。实现都在 BP 里。</div>
+      <div class="ctext"><code>PostRenderToolWidget.h</code> 里 33 个 UPROPERTY 是"契约模版"——规定 BP 里必须有哪些控件、什么名字、什么类型。实现都在 BP 里。</div>
     </div>
     <div class="callout">
       <div class="icon">²</div>
@@ -1861,13 +1836,13 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     <div class="module-card">
       <div class="mod-num">§ 4.11</div>
       <div class="mod-name">widget.py</div>
-      <div class="mod-role">UI 控制器。持有所有 UI 状态，把 41 个 UPROPERTY 指针绑到 10 个事件回调。全部 Figma 控件在这里"活"起来。</div>
+      <div class="mod-role">UI 控制器。持有最后一次导入结果，把 33 个 UPROPERTY 指针绑到 8 个事件回调。全部 Figma 控件在这里"活"起来。</div>
       <div class="mod-tags"><span class="tag ue">UE</span><span class="tag">controller</span></div>
     </div>
     <div class="module-card">
       <div class="mod-num">§ 4.12</div>
       <div class="mod-name">PostRenderToolWidget.h</div>
-      <div class="mod-role">C++ BindWidget 契约。41 个 UPROPERTY，按 Figma 分节用注释分组。BlueprintReadOnly 是 Python 可见的必要条件。</div>
+      <div class="mod-role">C++ BindWidget 契约。33 个 UPROPERTY，按 Figma 分节用注释分组。BlueprintReadOnly 是 Python 可见的必要条件。</div>
       <div class="mod-tags"><span class="tag">cpp</span></div>
     </div>
   </div>
@@ -1899,10 +1874,10 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     → PostRenderToolUI(widget)  <span class="comment"># 控制器挂载到模块全局 _active_ui，防 GC</span>
 
 <span class="step">Step 2 · UI wire-up</span>
-  widget.py:87  _acquire_all_controls()   <span class="comment"># host.get_editor_property(name) × 41</span>
+  widget.py:87  _acquire_all_controls()   <span class="comment"># host.get_editor_property(name) × 33</span>
   widget.py:88  _init_axis_combos()       <span class="comment"># 填 X(0)/Y(1)/Z(2) 三个选项</span>
   widget.py:89  _push_initial_mapping_values()  <span class="comment"># 回填 config 的 POSITION/ROTATION</span>
-  widget.py:90  _bind_events()            <span class="comment"># 10 个回调挂上 on_clicked / on_value_changed</span>
+  widget.py:90  _bind_events()            <span class="comment"># 8 个回调挂上 on_clicked / on_value_changed</span>
   widget.py:91  _check_and_display_prereqs()  <span class="comment"># Section I 亮起绿色 OK</span>
 
 <span class="step">Step 3 · User clicks Browse  (Section II · btn_browse)</span>
@@ -1916,10 +1891,8 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     csv_parser.py:227  for row in reader: FrameData(...)
     csv_parser.py:263  return CsvDenseResult(frame_count=1200, detected_fps=24.0, ...)
   widget.py:288 txt_frame_count / txt_focal_range / txt_timecode / txt_sensor_width / txt_detected_fps  ← 全部刷新
-  widget.py:311 spn_frame.max_value = 1199
-  widget.py:314 _refresh_coord_preview()  <span class="comment"># Section IV 的 4 个字段立即填上</span>
 
-<span class="step">Step 4 · User clicks Import  (Section VI · btn_import)</span>
+<span class="step">Step 4 · User clicks Import  (Section V · btn_import)</span>
   widget.py:501 _on_import_clicked()
   <span class="file">pipeline.py</span>:74  run_import(csv_path, fps=0.0)
     :94   package_path = /Game/PostRender/shot1_take5_dense
@@ -1966,8 +1939,8 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       <code>config.py</code> 里那三行 POSITION_MAPPING 和三行 ROTATION_MAPPING 注释明确写着
       <em>"INITIAL GUESSES"</em>——它们是按 Disguise 的 Y-up 米制推断到 UE 的 Z-up 厘米的理论值，
       但 stage 校准、舞台原点偏移、导演镜像需求都可能让真实值偏 180°。
-      Section IV 的 Designer / UE 坐标并排预览 和 Section V 的 Apply / Save 正是为此存在：
-      把原值与转换值摆在眼前，用 Apply 即时刷新，再 Save 固化——而不是让工程师在脑里做矩阵乘法。
+      Section IV 的 Apply（内存试错）+ Save（磁盘固化）正是为此存在：
+      用真机数据反复试、满意后固化到源码——而不是让工程师在脑里做矩阵乘法。
     </p>
   </div>
 
@@ -1979,7 +1952,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     <li><strong>ui_interface.py:405</strong>&nbsp;&nbsp;save_axis_mapping 的 <code>importlib.reload</code> 与 Apply 的内存写入存在短暂状态竞争。</li>
     <li><strong>csv_parser.py:233</strong>&nbsp;&nbsp;<code>int(float(row["frame"]))</code> 双层转换是为 <code>"100.0"</code> 字符串准备的，未注释。</li>
     <li><strong>Figma 静态文本</strong>&nbsp;&nbsp;不在契约中、无 CI 检查——<em>POSITION (m → cm)</em> 打反不会报错。</li>
-    <li><strong>坐标映射默认值</strong>&nbsp;&nbsp;未用真实 CSV 验证；工具在 Section IV 提供了验证闭环但未执行。</li>
+    <li><strong>坐标映射默认值</strong>&nbsp;&nbsp;未用真实 CSV 验证；需要拿真机数据跑一次 Import、通过 Section IV 的 Apply / Save 固化。</li>
   </ul>
 
   <div class="editor-hr">✦</div>
@@ -2139,26 +2112,6 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       h('      └─ ',               'TextBlock',              'req', 'txt_detected_fps',            '自动检测的 fps 提示',                   'Color=#808080, Font=11 Italic, py:"Auto: 23.976 fps"')
     ],
     "4": [
-      h('',                        'Border',                 'dec', 'lbl_card_coord',              'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
-      h('└─ ',                     'VerticalBox',            'dec', 'lbl_coord_vbox',              '卡内纵向排',                            ''),
-      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_coord_header',            '卡片头横排',                            ''),
-      h('   │  ├─ ',               'SizeBox',                'dec', 'lbl_coord_accent',            '橙色段头竖条尺寸盒',                    'WidthOverride=3, HeightOverride=13, slot.Padding=0,0,8,0'),
-      h('   │  │  └─ ',            'Image',                  'dec', 'lbl_coord_accent_img',        '段头左侧橙色竖条',                      'Tint=#E8704D, DrawAs=Box, ImageSize=3×13'),
-      h('   │  └─ ',               'TextBlock',              'dec', 'lbl_coord_title',             '段头主标题',                            'Text="Coordinate Verification", Color=#F2F2F2, Font=13 Bold'),
-      h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_coord_frame_row',         'Frame 选择行',                          'slot.Padding=0,8,0,0, gap=8, v_align=Center'),
-      h('   │  ├─ ',               'TextBlock',              'dec', 'lbl_frame',                   '「Frame」标签',                         'Text="Frame", Color=#CCCCCC, Font=12, v_align=Center'),
-      h('   │  ├─ ',               'SpinBox',                'req', 'spn_frame',                   '帧号拨动控件',                          'Value=0.0, MinValue=0 (py), MaxValue=CSV 帧数-1 (py), Width≈80'),
-      h('   │  └─ ',               'TextBlock',              'opt', 'txt_frame_hint',              '当前帧进度提示',                        'Color=#808080, Font=11, py:"15 / 974"'),
-      h('   └─ ',                  'VerticalBox',            'dec', 'lbl_coord_pair',              'DESIGNER ↔ UE 对照卡',                  'slot.Padding=0,8,0,0, 内 gap=2'),
-      h('      ├─ ',               'TextBlock',              'dec', 'lbl_designer_header',         '「DESIGNER (source)」橙色小标题',       'Text="DESIGNER (source)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
-      h('      ├─ ',               'TextBlock',              'req', 'txt_designer_pos',            'Designer 原始位置（米）',               'Color=#CCCCCC, Font=11 Mono, py:"Pos  (1.2345, -0.5678, 2.3456) m"'),
-      h('      ├─ ',               'TextBlock',              'req', 'txt_designer_rot',            'Designer 原始旋转（度）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  (12.34, -56.78, 90.12)°"'),
-      h('      ├─ ',               'Border',                 'dec', 'lbl_coord_separator',         '灰色分隔横线',                          'BrushColor=#3A3A3A, Height=1, slot.Padding=0,6,0,6'),
-      h('      ├─ ',               'TextBlock',              'dec', 'lbl_ue_header',               '「→ UE (result)」橙色小标题',           'Text="→ UE (result)", Color=#E8704D, Font=11 Bold, slot.Padding=0,0,0,2'),
-      h('      ├─ ',               'TextBlock',              'req', 'txt_ue_pos',                  '转换后 UE 位置（cm）',                  'Color=#CCCCCC, Font=11 Mono, py:"Pos  (234.6, 123.5, -56.8) cm"'),
-      h('      └─ ',               'TextBlock',              'req', 'txt_ue_rot',                  '转换后 UE 旋转（P/Y/R）',               'Color=#CCCCCC, Font=11 Mono, py:"Rot  P=-12.34  Y=56.78  R=90.12°"')
-    ],
-    "5": [
       h('',                        'Border',                 'dec', 'lbl_card_axis',               'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
       h('└─ ',                     'VerticalBox',            'dec', 'lbl_axis_vbox',               '卡内纵向排',                            ''),
       h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_axis_header',             '卡片头横排',                            ''),
@@ -2186,7 +2139,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       h('      └─ ',               'Button',                 'req', 'btn_save_mapping',            '「Save to config.py」次级按钮（写盘）', 'Style.Normal=#222222, slot.FillSize=1.0'),
       h('         └─ ',            'TextBlock',              'dec', 'lbl_btn_save_mapping_text',   '按钮内文字',                            'Text="Save to config.py", Color=#F2F2F2, Font=12')
     ],
-    "6": [
+    "5": [
       h('',                        'Border',                 'dec', 'lbl_card_actions',            'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
       h('└─ ',                     'VerticalBox',            'dec', 'lbl_actions_vbox',            '卡内纵向排',                            ''),
       h('   ├─ ',                  'HorizontalBox',          'dec', 'lbl_actions_header',          '卡片头横排',                            ''),
@@ -2262,22 +2215,6 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     },
     "4": {
       num: "§ IV",
-      title: "<em>Coordinate Verification</em> · 坐标对照",
-      figma: "Figma 节点 <code>2:19 / 2:25 / 2:31</code>",
-      body: `
-        <p><strong>整个工具最关键的交互区。</strong><code>config.py</code> 的默认映射是"初始猜测"，必须由人拿真机数据验证——这就是这一节存在的唯一目的。</p>
-        <p>拨动 <code>spn_frame</code> → 上半区显示 Designer 原始值、下半区显示转换后 UE 值；同时 Section V 的轴映射改变会实时反映到 UE 值上。</p>
-      `,
-      table: [
-        ["spn_frame", "USpinBox", "req", "_on_frame_changed"],
-        ["txt_frame_hint", "UTextBlock", "opt", "—"],
-        ["txt_designer_pos / _rot", "UTextBlock × 2", "req", "_refresh_coord_preview"],
-        ["txt_ue_pos / _rot", "UTextBlock × 2", "req", "_refresh_coord_preview"]
-      ],
-      principle: `把单帧 Designer 原值与转换结果并排陈列——让 Section V 轴映射的每一次 Apply 都能即时在眼前对齐，而不是让工程师在脑里做矩阵乘法。`
-    },
-    "5": {
-      num: "§ V",
       title: "<em>Axis Mapping</em> · 双层承诺",
       figma: "Figma 节点 <code>4:2 / 4:6 / 4:44 / 4:82</code>",
       body: `
@@ -2292,10 +2229,10 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
         ["btn_apply_mapping", "UButton", "req", "_on_apply_mapping"],
         ["btn_save_mapping", "UButton", "req", "_on_save_mapping"]
       ],
-      principle: `Apply（内存试错）+ Save（磁盘固化）= 双层承诺。用户可反复拨、配合 Section IV 验证，然后一键固化——避免"改了忘存"。`
+      principle: `Apply（内存试错）+ Save（磁盘固化）= 双层承诺。用户可反复拨、满意后一键固化——避免"改了忘存"。`
     },
-    "6": {
-      num: "§ VI",
+    "5": {
+      num: "§ V",
       title: "<em>Actions</em> · 主操作与日志",
       figma: "Figma 节点 <code>5:2 / 5:6 / 5:14</code>",
       body: `
@@ -2322,14 +2259,12 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     'lbl_prereq_vbox':          'lbl_card_prereq',
     'lbl_csv_file_vbox':        'lbl_card_csv_file',
     'lbl_csv_preview_vbox':     'lbl_card_csv_preview',
-    'lbl_coord_vbox':           'lbl_card_coord',
     'lbl_axis_vbox':            'lbl_card_axis',
     'lbl_actions_vbox':         'lbl_card_actions',
     // Accent SizeBoxes → inner Image (the actual visible bar)
     'lbl_prereq_accent':        'lbl_prereq_accent_img',
     'lbl_csv_file_accent':      'lbl_csv_file_accent_img',
     'lbl_csv_preview_accent':   'lbl_csv_preview_accent_img',
-    'lbl_coord_accent':         'lbl_coord_accent_img',
     'lbl_axis_accent':          'lbl_axis_accent_img',
     'lbl_actions_accent':       'lbl_actions_accent_img',
     'lbl_prereq_header_spacer': 'lbl_prereq_header',
@@ -2504,7 +2439,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       }
     });
   });
-  /* Default: show Section 4 (Coordinate Verification) — the most instructive one */
+  /* Default: show Section 4 (Axis Mapping) — the most instructive one */
   activate(document.querySelector('.panel .psec[data-section="4"]'));
 
   /* --- Scroll reveal --- */

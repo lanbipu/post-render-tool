@@ -85,22 +85,7 @@ Parsed CSV metadata — read-only display + FPS input.
 
 Layout for FPS row: `FPS: [ 24.0 ▲▼ ]` — label and spinbox on one horizontal line.
 
-### Section 4: Coordinate Verification
-
-Interactive frame inspector — lets user check coordinate transform before importing.
-
-| # | Control | Type | Variable Name | Purpose |
-|---|---------|------|---------------|---------|
-| 1 | Frame selector | SpinBox | `spn_frame` | Pick frame index (0 ~ frame_count-1) |
-| 2 | Designer Position | TextBlock | `txt_designer_pos` | "Designer Pos: (1.2345, -0.5678, 2.3456) m" |
-| 3 | Designer Rotation | TextBlock | `txt_designer_rot` | "Designer Rot: (12.34, -56.78, 90.12) deg" |
-| 4 | UE Position | TextBlock | `txt_ue_pos` | "UE Pos: (234.6, 123.5, -56.8) cm" |
-| 5 | UE Rotation | TextBlock | `txt_ue_rot` | "UE Rot: P=-12.34  Y=56.78  R=90.12 deg" |
-
-Layout for frame row: `Frame: [ 0 ▲▼ ]` — label + spinbox.
-The Designer and UE coordinates should be visually paired (e.g. left/right columns or a subtle separator between "source → result").
-
-### Section 5: Axis Mapping
+### Section 4: Axis Mapping
 
 6-axis remapping editor — maps Disguise (Y-up, meters) to UE (Z-up, centimeters).
 
@@ -126,10 +111,10 @@ ComboBox options: "X (0)", "Y (1)", "Z (2)".
 Action buttons at bottom of this section:
 | # | Control | Type | Variable Name | Purpose |
 |---|---------|------|---------------|---------|
-| 1 | Apply Mapping | Button (secondary) | `btn_apply_mapping` | Apply to memory, refresh coordinate preview |
+| 1 | Apply Mapping | Button (secondary) | `btn_apply_mapping` | Apply mapping to memory (takes effect on next Import) |
 | 2 | Save to config.py | Button (secondary) | `btn_save_mapping` | Persist mapping to disk |
 
-### Section 6: Actions + Results
+### Section 5: Actions + Results
 
 Main pipeline actions and output log.
 

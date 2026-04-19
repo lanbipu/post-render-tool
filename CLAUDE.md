@@ -70,7 +70,7 @@ post_render_tool/                               ← plugin root
 │       ├── PostRenderTool.Build.cs             ← module descriptor (UMG, Blutility, UnrealEd, …)
 │       ├── Public/
 │       │   ├── PostRenderToolModule.h          ← empty module entry point
-│       │   └── PostRenderToolWidget.h          ← C++ BindWidget contract (39 UPROPERTYs)
+│       │   └── PostRenderToolWidget.h          ← C++ BindWidget contract (33 UPROPERTYs)
 │       └── Private/
 │           ├── PostRenderToolModule.cpp
 │           └── PostRenderToolWidget.cpp        ← empty NativeConstruct stub
@@ -94,12 +94,12 @@ post_render_tool/                               ← plugin root
 │           └── widget_programmatic.py.bak      # archival (pre-plugin builder, unused)
 └── docs/
     ├── plugin-setup.md                         ← first-time install guide
-    └── bindwidget-contract.md                  ← 41 widget name/type reference
+    └── bindwidget-contract.md                  ← 33 widget name/type reference
 ```
 
 UE loads the plugin from `<UEProject>/Plugins/PostRenderTool/`, mounts `Content/` at the virtual path `/PostRenderTool/`, and adds `Content/Python/` to `sys.path`.
 
-**BindWidget contract:** `UPostRenderToolWidget` (C++) declares 31 required + 8 optional widget pointers via `UPROPERTY(BlueprintReadOnly, meta=(BindWidget))` / `meta=(BindWidgetOptional)`. The child Blueprint `BP_PostRenderToolWidget` must contain widgets with matching names and types, or the UMG compiler fails the Blueprint build with `A required widget binding "X" of type Y was not found.`
+**BindWidget contract:** `UPostRenderToolWidget` (C++) declares 26 required + 7 optional widget pointers via `UPROPERTY(BlueprintReadOnly, meta=(BindWidget))` / `meta=(BindWidgetOptional)`. The child Blueprint `BP_PostRenderToolWidget` must contain widgets with matching names and types, or the UMG compiler fails the Blueprint build with `A required widget binding "X" of type Y was not found.`
 
 **Runtime flow:**
 1. User runs `import init_post_render_tool` in the UE Python console
@@ -109,7 +109,7 @@ UE loads the plugin from `<UEProject>/Plugins/PostRenderTool/`, mounts `Content/
 5. Button clicks drive the existing pure-Python business logic (`parse_csv_dense`, `transform_position`, `run_import`, …)
 
 **Build flow (Designer bootstrap automation):**
-1. `docs/widget-tree-spec.json` is the single source of truth for the full WidgetTree (39 contract + decorative nesting + widget properties + slot padding).
+1. `docs/widget-tree-spec.json` is the single source of truth for the full WidgetTree (33 contract + decorative nesting + widget properties + slot padding).
 2. `build_widget_blueprint.run_build()` parses the spec → calls `UPostRenderToolBuildHelper` (C++ bridge, 3 UFUNCTIONs) to mutate `UWidgetBlueprint.WidgetTree`. Python cannot touch WidgetTree directly (`BaseWidgetBlueprint.h:16-17` → bare `UPROPERTY()` without `BlueprintVisible` is invisible to Python reflection per `PyGenUtil.cpp::IsScriptExposedProperty`).
 3. `widget_properties.apply_widget_properties/apply_slot_properties` sets per-widget + slot-layout values via `set_editor_property()` reflection.
 4. `unreal.BlueprintEditorLibrary.compile_blueprint` + `unreal.EditorAssetLibrary.save_asset` persist the `.uasset`.
