@@ -141,11 +141,27 @@ def build_lens_file(
     # ------------------------------------------------------------------
     logger.info("正在创建 LensFile 资产: %s/%s", package_path, asset_name)
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+
+    # UE 5.7: ULensFileFactoryNew 在 CameraCalibrationEditor Private 模块，
+    # 未导出给 Python。create_asset 接受 factory=None 时走 NewObject 默认路径
+    # (AssetTools.cpp:1762-1764)。保留对旧版本 factory 的兼容兜底。
+    factory_obj = None
+    factory_cls = getattr(unreal, "LensFileFactoryNew", None)
+    if factory_cls is not None:
+        try:
+            factory_obj = factory_cls()
+            logger.info("使用 LensFileFactoryNew 创建资产")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("LensFileFactoryNew 实例化失败，回落到 factory=None: %s", exc)
+            factory_obj = None
+    else:
+        logger.info("UE 5.7 未导出 LensFileFactoryNew，使用 factory=None 默认路径")
+
     lens_file: unreal.LensFile = asset_tools.create_asset(
         asset_name=asset_name,
         package_path=package_path,
         asset_class=unreal.LensFile,
-        factory=unreal.LensFileFactoryNew(),
+        factory=factory_obj,
     )
 
     if lens_file is None:
