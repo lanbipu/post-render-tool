@@ -75,6 +75,7 @@ class CsvDenseResult:
     timecode_end: str
     focal_length_range: Tuple[float, float]
     sensor_width_mm: float
+    aspect_ratio: float
 
 
 # ---------------------------------------------------------------------------
@@ -285,4 +286,5 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
         timecode_end=frames[-1].timestamp,
         focal_length_range=(min(focal_lengths), max(focal_lengths)),
         sensor_width_mm=sensor_widths[0],
+        aspect_ratio=frames[0].aspect_ratio,
     )

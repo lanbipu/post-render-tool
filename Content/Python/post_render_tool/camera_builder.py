@@ -120,6 +120,7 @@ def _ensure_lens_component(camera: "unreal.Actor") -> "unreal.ActorComponent":
 def _configure_camera(
     camera_actor: "unreal.CineCameraActor",
     sensor_width_mm: float,
+    sensor_height_mm: float,
     lens_file: "unreal.LensFile",
 ) -> None:
     """配置 Filmback + LensComponent + LensFile + apply_distortion。
@@ -127,12 +128,20 @@ def _configure_camera(
     对新建和复用的 CineCameraActor 都安全：所有字段都用"读-改-写"覆盖赋值，
     不依赖初始状态。
     """
-    # Filmback
+    # Filmback：SensorWidth 和 SensorHeight 必须同时写。UE 5.7 默认 Filmback
+    # 是 Super 35（36x18.67 mm），若只写 width 则 aspect 与 CSV 不一致：
+    # UCineCameraComponent::GetVerticalFieldOfView 用的是 Filmback.SensorHeight
+    # (CineCameraComponent.cpp:327)，导致垂直 FOV 偏差。
     comp: unreal.CineCameraComponent = camera_actor.get_cine_camera_component()
     filmback = comp.filmback
     filmback.sensor_width = sensor_width_mm
+    filmback.sensor_height = sensor_height_mm
     comp.filmback = filmback
-    logger.info("Filmback 传感器宽度已设置: %.3f mm", sensor_width_mm)
+    logger.info(
+        "Filmback 传感器已设置: %.3f x %.3f mm (aspect=%.4f)",
+        sensor_width_mm, sensor_height_mm,
+        sensor_width_mm / sensor_height_mm if sensor_height_mm > 0 else 0.0,
+    )
 
     # LensComponent：已有复用，没有则 add（UE 5.7 无顶层 LensFile 属性，走 FLensFilePicker
     # 嵌套 struct — LensComponent.h:280-281）
@@ -163,6 +172,7 @@ def _configure_camera(
 
 def build_camera(
     sensor_width_mm: float,
+    sensor_height_mm: float,
     lens_file: "unreal.LensFile",
     actor_label: str = "CineCamera_PostRender",
 ) -> "unreal.CineCameraActor":
@@ -176,6 +186,9 @@ def build_camera(
     ----------
     sensor_width_mm:
         物理传感器宽度（毫米），对应 Filmback sensor_width。
+    sensor_height_mm:
+        物理传感器高度（毫米），对应 Filmback sensor_height。通常由上游用
+        ``sensor_width / aspect_ratio`` 推算得出。
     lens_file:
         已创建的 unreal.LensFile 资产对象。
     actor_label:
@@ -197,10 +210,10 @@ def build_camera(
     existing = _find_actor_by_label(actor_label, unreal.CineCameraActor)
     if existing is not None:
         logger.info("复用现有 CineCameraActor: %s", actor_label)
-        _configure_camera(existing, sensor_width_mm, lens_file)
+        _configure_camera(existing, sensor_width_mm, sensor_height_mm, lens_file)
         logger.info(
-            "CineCameraActor 配置完成（复用）: label='%s', sensor_width=%.3f mm",
-            actor_label, sensor_width_mm,
+            "CineCameraActor 配置完成（复用）: label='%s', sensor=%.3fx%.3f mm",
+            actor_label, sensor_width_mm, sensor_height_mm,
         )
         return existing
 
@@ -221,9 +234,9 @@ def build_camera(
     camera_actor.set_actor_label(actor_label)
     logger.info("已创建 CineCameraActor: %s", actor_label)
 
-    _configure_camera(camera_actor, sensor_width_mm, lens_file)
+    _configure_camera(camera_actor, sensor_width_mm, sensor_height_mm, lens_file)
     logger.info(
-        "CineCameraActor 构建完成（新建）: label='%s', sensor_width=%.3f mm",
-        actor_label, sensor_width_mm,
+        "CineCameraActor 构建完成（新建）: label='%s', sensor=%.3fx%.3f mm",
+        actor_label, sensor_width_mm, sensor_height_mm,
     )
     return camera_actor

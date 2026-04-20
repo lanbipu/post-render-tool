@@ -195,7 +195,32 @@ def build_lens_file(
         logger.info("开始向已有 LensFile 写入畸变数据...")
 
     # ------------------------------------------------------------------
-    # 2. 按焦距分组
+    # 2. 写入 LensInfo.SensorDimensions（标定传感器尺寸）
+    # ------------------------------------------------------------------
+    # 运行时 FxFyScale = LensInfo.SensorDimensions / CameraFilmback
+    # (LensFile.cpp:453)，然后 FxFy_runtime = FxFy_stored * FxFyScale。
+    # 必须让 LensInfo 跟我们下游 CineCameraComponent.Filmback 写的是同一尺寸，
+    # 否则 Distortion 映射和 Filmback 两边会错位，导致镜头比例异常。
+    pa_width = csv_result.sensor_width_mm
+    aspect = csv_result.aspect_ratio
+    # 上游 pipeline.run_import 在 step 1 之后已拒绝 aspect<=0 / width<=0 的
+    # CSV，这里不再兜底 —— fallback 会生成"能保存但尺寸错"的 LensFile，反而
+    # 让静默错误绕过校验。
+    pa_height = pa_width / aspect
+    try:
+        lens_info = lens_file.get_editor_property("lens_info")
+        lens_info.sensor_dimensions = unreal.Vector2D(pa_width, pa_height)
+        lens_file.set_editor_property("lens_info", lens_info)
+        logger.info(
+            "LensInfo.SensorDimensions 已设置: %.3f x %.3f mm", pa_width, pa_height
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"LensInfo.SensorDimensions 写入失败: {exc}"
+        ) from exc
+
+    # ------------------------------------------------------------------
+    # 3. 按焦距分组
     # ------------------------------------------------------------------
     groups = _group_by_focal_length(
         csv_result.frames,
@@ -205,7 +230,7 @@ def build_lens_file(
                 [round(fl, 3) for fl in sorted(groups)])
 
     # ------------------------------------------------------------------
-    # 3. 写入各组畸变点
+    # 4. 写入各组畸变点
     # ------------------------------------------------------------------
     success_count = 0
     for focal_mm, frame in sorted(groups.items()):
@@ -272,7 +297,7 @@ def build_lens_file(
         )
 
     # ------------------------------------------------------------------
-    # 4. 保存资产
+    # 5. 保存资产
     # ------------------------------------------------------------------
     # save_asset 需要 Object 路径（含 .asset_name 对象后缀），不同于 package 路径。
     save_path = f"{full_asset_path}.{asset_name}"

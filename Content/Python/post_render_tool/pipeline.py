@@ -106,8 +106,24 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
         csv_result: CsvDenseResult = parse_csv_dense(csv_path)
         unreal.log(
             f"[pipeline] CSV 解析完成: {csv_result.frame_count} 帧, "
-            f"传感器宽度 {csv_result.sensor_width_mm:.3f} mm"
+            f"传感器宽度 {csv_result.sensor_width_mm:.3f} mm, "
+            f"aspect {csv_result.aspect_ratio:.4f}"
         )
+
+        # CSV 元数据校验必须早于任何资产写入：下游 build_lens_file 会对已存在的
+        # LF_* 资产 clear_all()，若 aspect=0 这类脏数据放到后面才报，已有的良好
+        # LensFile 会被擦空。
+        if csv_result.sensor_width_mm <= 0:
+            raise RuntimeError(
+                f"CSV sensor_width_mm 非法 ({csv_result.sensor_width_mm})，"
+                f"无法推算 Filmback。"
+            )
+        if csv_result.aspect_ratio <= 0:
+            raise RuntimeError(
+                f"CSV aspect_ratio 非法 ({csv_result.aspect_ratio})，"
+                f"无法推算 sensor_height。"
+            )
+        sensor_height_mm = csv_result.sensor_width_mm / csv_result.aspect_ratio
 
         # ------------------------------------------------------------------
         # 确保内容浏览器目录存在
@@ -128,9 +144,12 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
         # ------------------------------------------------------------------
         # 步骤 3/5: 创建 CineCameraActor
         # ------------------------------------------------------------------
+        # Disguise Designer 不直接导出 sensor_height，aspectRatio 是 image aspect
+        # (w/h)，所以 h = w / aspect。aspect/width 校验已前置在 step 1 之后。
         unreal.log("[pipeline] 步骤 3/5 — 创建 CineCameraActor...")
         camera_actor = build_camera(
             sensor_width_mm=csv_result.sensor_width_mm,
+            sensor_height_mm=sensor_height_mm,
             lens_file=lens_file,
             actor_label=f"CineCamera_{stem}",
         )
