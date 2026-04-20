@@ -172,6 +172,61 @@ class TestCsvDenseParser(unittest.TestCase):
         with self.assertRaises(CsvParseError):
             parse_csv_dense(f.name)
 
+    def test_row_with_empty_required_field_is_skipped(self):
+        """Disguise-style dropped-tracker rows (empty required fields) are
+        skipped, not fatal. Good rows still parse."""
+        from post_render_tool.csv_parser import parse_csv_dense
+
+        prefix = "camera:cam_1"
+        headers = self._make_headers(prefix)
+
+        good = self._make_row("00:00:10.00", 600)
+        bad_offset = self._make_row("00:00:10.04", 601)
+        bad_offset[headers.index(f"{prefix}.offset.x")] = ""  # blank required field
+        good2 = self._make_row("00:00:10.08", 602)
+
+        path = self._tmp(self._write_csv(headers, [good, bad_offset, good2]))
+        result = parse_csv_dense(path)
+
+        self.assertEqual(result.frame_count, 2)
+        self.assertEqual([f.frame_number for f in result.frames], [600, 602])
+
+    def test_empty_frame_column_is_also_skipped(self):
+        """Blank `frame` column is treated the same as a blank body field."""
+        from post_render_tool.csv_parser import parse_csv_dense
+
+        prefix = "camera:cam_1"
+        headers = self._make_headers(prefix)
+
+        good = self._make_row("00:00:10.00", 600)
+        bad_frame = self._make_row("00:00:10.04", 601)
+        bad_frame[headers.index("frame")] = ""
+
+        path = self._tmp(self._write_csv(headers, [good, bad_frame]))
+        result = parse_csv_dense(path)
+
+        self.assertEqual(result.frame_count, 1)
+        self.assertEqual(result.frames[0].frame_number, 600)
+
+    def test_all_rows_empty_raises(self):
+        """If every row has empty required fields, raise CsvParseError
+        (no usable frames) rather than returning an empty result."""
+        from post_render_tool.csv_parser import CsvParseError, parse_csv_dense
+
+        prefix = "camera:cam_1"
+        headers = self._make_headers(prefix)
+
+        r1 = self._make_row("00:00:10.00", 600)
+        r1[headers.index(f"{prefix}.offset.x")] = ""
+        r2 = self._make_row("00:00:10.04", 601)
+        r2[headers.index(f"{prefix}.rotation.y")] = ""
+
+        path = self._tmp(self._write_csv(headers, [r1, r2]))
+
+        with self.assertRaises(CsvParseError) as ctx:
+            parse_csv_dense(path)
+        self.assertIn("skipped 2", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

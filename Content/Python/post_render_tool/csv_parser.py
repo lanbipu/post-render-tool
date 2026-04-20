@@ -5,11 +5,15 @@ per-frame camera data and metadata, and returns a structured result.
 """
 
 import csv
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 from . import config
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -18,6 +22,18 @@ from . import config
 
 class CsvParseError(Exception):
     """Raised when the CSV cannot be parsed due to structural or field issues."""
+
+
+class _EmptyFieldError(ValueError):
+    """Internal marker for a required field that is blank on a given row.
+
+    parse_csv_dense catches this per-row to skip trackers-dropped frames
+    rather than aborting the whole pipeline. Not part of the public API.
+    """
+
+    def __init__(self, key: str):
+        super().__init__(f"Field {key!r} is empty")
+        self.key = key
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +111,17 @@ def _validate_required_fields(headers: List[str], prefix: str) -> None:
 
 
 def _get_float(row: dict, key: str) -> float:
-    return float(row[key])
+    val = row.get(key)
+    if val is None or val == "":
+        raise _EmptyFieldError(key)
+    return float(val)
+
+
+def _get_required_int(row: dict, key: str) -> int:
+    val = row.get(key)
+    if val is None or val == "":
+        raise _EmptyFieldError(key)
+    return int(float(val))
 
 
 def _get_opt_float(row: dict, key: str) -> Optional[float]:
@@ -152,39 +178,60 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
             return f"{prefix}.{suffix}"
 
         # --- Parse rows ---
+        # Disguise Designer 在 tracker 丢帧 / 校准未就绪时导出的 CSV 行中
+        # 必填字段可能是空串。按帧跳过 + 记数，避免整条 pipeline 因一行炸掉。
+        # frame_number 驱动 LevelSequence cadence，跳帧会在 sequence 里产生
+        # keyframe gap，UE 会线性插值，效果等价于"丢失帧用前后插值补"。
         frames: List[FrameData] = []
+        skipped = 0
+        first_skip_sample: Optional[str] = None
 
         for row in reader:
-            ts = row["timestamp"]
-
-            fd = FrameData(
-                timestamp=ts,
-                frame_number=int(float(row["frame"])),
-                offset_x=_get_float(row, col("offset.x")),
-                offset_y=_get_float(row, col("offset.y")),
-                offset_z=_get_float(row, col("offset.z")),
-                rotation_x=_get_float(row, col("rotation.x")),
-                rotation_y=_get_float(row, col("rotation.y")),
-                rotation_z=_get_float(row, col("rotation.z")),
-                focal_length_mm=_get_float(row, col("focalLengthMM")),
-                sensor_width_mm=_get_float(row, col("paWidthMM")),
-                aspect_ratio=_get_float(row, col("aspectRatio")),
-                aperture=_get_float(row, col("aperture")),
-                focus_distance=_get_float(row, col("focusDistance")),
-                k1=_get_float(row, col("k1k2k3.x")),
-                k2=_get_float(row, col("k1k2k3.y")),
-                k3=_get_float(row, col("k1k2k3.z")),
-                center_shift_x_mm=_get_float(row, col("centerShiftMM.x")),
-                center_shift_y_mm=_get_float(row, col("centerShiftMM.y")),
-                fov_h=_get_float(row, col("fieldOfViewH")),
-                fov_v=_get_opt_float(row, col("fieldOfViewV")),
-                resolution_x=_get_opt_int(row, col("resolution.x")),
-                resolution_y=_get_opt_int(row, col("resolution.y")),
-            )
+            try:
+                ts = row["timestamp"]
+                fd = FrameData(
+                    timestamp=ts,
+                    frame_number=_get_required_int(row, "frame"),
+                    offset_x=_get_float(row, col("offset.x")),
+                    offset_y=_get_float(row, col("offset.y")),
+                    offset_z=_get_float(row, col("offset.z")),
+                    rotation_x=_get_float(row, col("rotation.x")),
+                    rotation_y=_get_float(row, col("rotation.y")),
+                    rotation_z=_get_float(row, col("rotation.z")),
+                    focal_length_mm=_get_float(row, col("focalLengthMM")),
+                    sensor_width_mm=_get_float(row, col("paWidthMM")),
+                    aspect_ratio=_get_float(row, col("aspectRatio")),
+                    aperture=_get_float(row, col("aperture")),
+                    focus_distance=_get_float(row, col("focusDistance")),
+                    k1=_get_float(row, col("k1k2k3.x")),
+                    k2=_get_float(row, col("k1k2k3.y")),
+                    k3=_get_float(row, col("k1k2k3.z")),
+                    center_shift_x_mm=_get_float(row, col("centerShiftMM.x")),
+                    center_shift_y_mm=_get_float(row, col("centerShiftMM.y")),
+                    fov_h=_get_float(row, col("fieldOfViewH")),
+                    fov_v=_get_opt_float(row, col("fieldOfViewV")),
+                    resolution_x=_get_opt_int(row, col("resolution.x")),
+                    resolution_y=_get_opt_int(row, col("resolution.y")),
+                )
+            except _EmptyFieldError as exc:
+                skipped += 1
+                if first_skip_sample is None:
+                    first_skip_sample = f"frame={row.get('frame', '?')} field={exc.key}"
+                continue
             frames.append(fd)
 
+        if skipped:
+            logger.warning(
+                "parse_csv_dense: skipped %d row(s) with empty required fields "
+                "(first example: %s). LevelSequence will interpolate across the gap.",
+                skipped, first_skip_sample,
+            )
+
     if not frames:
-        raise CsvParseError(f"No data rows found in file: {file_path}")
+        raise CsvParseError(
+            f"No usable data rows found in file: {file_path} "
+            f"(skipped {skipped} row(s) with empty required fields)"
+        )
 
     focal_lengths = [f.focal_length_mm for f in frames]
     sensor_widths = [f.sensor_width_mm for f in frames]
