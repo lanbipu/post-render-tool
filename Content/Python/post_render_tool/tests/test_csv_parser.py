@@ -208,33 +208,70 @@ class TestCsvDenseParser(unittest.TestCase):
         self.assertEqual(result.frame_count, 1)
         self.assertEqual(result.frames[0].frame_number, 600)
 
-    def test_lenient_fields_empty_does_not_skip(self):
-        """Empty k1/k2/k3/aperture/focusDistance/centerShift/fov_h defaults
-        to 0.0 — row survives, transform fields unaffected."""
+    def test_carry_forward_lens_fields(self):
+        """Disguise sparse-lens CSV: row 0 has lens params, row 1 blanks
+        them → row 1 carries forward from row 0 (not zeros)."""
         from post_render_tool.csv_parser import parse_csv_dense
 
         prefix = "camera:cam_1"
         headers = self._make_headers(prefix)
-
-        row = self._make_row("00:00:10.00", 600)
-        # Blank out every lenient field
-        for suffix in ("k1k2k3.x", "k1k2k3.y", "k1k2k3.z",
+        r0 = self._make_row("00:00:10.00", 600, focal=35.0)
+        r1 = self._make_row("00:00:10.04", 601, focal=99.0)  # noqa: F841 overridden below
+        # Blank r1's lens / optics columns
+        for suffix in ("focalLengthMM", "paWidthMM", "aspectRatio",
+                       "k1k2k3.x", "k1k2k3.y", "k1k2k3.z",
                        "centerShiftMM.x", "centerShiftMM.y",
                        "aperture", "focusDistance", "fieldOfViewH"):
-            row[headers.index(f"{prefix}.{suffix}")] = ""
+            r1[headers.index(f"{prefix}.{suffix}")] = ""
 
-        path = self._tmp(self._write_csv(headers, [row]))
+        path = self._tmp(self._write_csv(headers, [r0, r1]))
+        result = parse_csv_dense(path)
+
+        self.assertEqual(result.frame_count, 2)
+        self.assertAlmostEqual(result.frames[0].focal_length_mm, 35.0, places=3)
+        self.assertAlmostEqual(result.frames[1].focal_length_mm, 35.0, places=3)
+        self.assertAlmostEqual(result.frames[1].k1, result.frames[0].k1, places=6)
+
+    def test_backfill_from_later_row(self):
+        """Row 0 has blank lens fields, row 1 populated → row 0 seeds
+        backward from row 1 (Disguise warmup pattern)."""
+        from post_render_tool.csv_parser import parse_csv_dense
+
+        prefix = "camera:cam_1"
+        headers = self._make_headers(prefix)
+        r0 = self._make_row("00:00:10.00", 600, focal=99.0)
+        r1 = self._make_row("00:00:10.04", 601, focal=50.0)
+        for suffix in ("focalLengthMM", "paWidthMM", "aspectRatio", "aperture"):
+            r0[headers.index(f"{prefix}.{suffix}")] = ""
+
+        path = self._tmp(self._write_csv(headers, [r0, r1]))
+        result = parse_csv_dense(path)
+
+        self.assertEqual(result.frame_count, 2)
+        # Row 0 should have inherited row 1's values
+        self.assertAlmostEqual(result.frames[0].focal_length_mm, 50.0, places=3)
+        self.assertAlmostEqual(result.frames[1].focal_length_mm, 50.0, places=3)
+
+    def test_carry_forward_missing_everywhere_defaults_zero(self):
+        """If a lens field is blank in every row, default to 0.0 (no seed)."""
+        from post_render_tool.csv_parser import parse_csv_dense
+
+        prefix = "camera:cam_1"
+        headers = self._make_headers(prefix)
+        r0 = self._make_row("00:00:10.00", 600)
+        for suffix in ("k1k2k3.x", "k1k2k3.y", "k1k2k3.z",
+                       "aperture", "focusDistance", "fieldOfViewH"):
+            r0[headers.index(f"{prefix}.{suffix}")] = ""
+
+        path = self._tmp(self._write_csv(headers, [r0]))
         result = parse_csv_dense(path)
 
         self.assertEqual(result.frame_count, 1)
         f = result.frames[0]
-        # Lenient fields defaulted to 0.0
         self.assertEqual(f.k1, 0.0)
         self.assertEqual(f.aperture, 0.0)
         self.assertEqual(f.focus_distance, 0.0)
         self.assertEqual(f.fov_h, 0.0)
-        # Strict fields preserved from the CSV
-        self.assertAlmostEqual(f.offset_x, 0.002, places=3)
 
     def test_all_rows_empty_raises(self):
         """If every row has empty required fields, raise CsvParseError
