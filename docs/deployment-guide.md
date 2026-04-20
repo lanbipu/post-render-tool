@@ -123,9 +123,9 @@ import init_post_render_tool
 
 ### 2.1 加载 CSV
 
-点击 **Browse...** 选择 Disguise Designer CSV Dense 文件。CSV Preview 区域自动显示：
-- 帧数、焦距范围、时码范围、传感器宽度
-- 自动检测的帧率（FPS SpinBox 设为 0 即使用自动检测值）
+点击 **Browse...** 选择 Disguise Designer CSV Dense 文件。CSV Preview 区域自动显示：帧数、焦距范围、时码范围、传感器宽度。
+
+在 **FPS** SpinBox 里手动填入目标帧率（24 / 25 / 29.97 / 30 / 48 / 60 等），Import 时使用此值。未填（值为 0）会中止 Import 并提示。
 
 ### 2.2 调整轴映射（如需要）
 

@@ -1496,7 +1496,6 @@
         <div class="row" data-w="lbl_csv_preview_fps_row">
           <span class="label" data-w="lbl_fps">FPS</span>
           <div class="spn" data-w="spn_fps"><span>24.0</span><span class="arrows">▲<br>▼</span></div>
-          <span class="dim" data-w="txt_detected_fps">Auto: 23.976 fps</span>
         </div>
       </div>
 
@@ -1642,7 +1641,6 @@ Import finished in 3.42s.</div>
         <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_timecode</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
         <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_sensor_width</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
         <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">spn_fps</td><td>USpinBox</td><td><span class="pill req">Required</span></td><td><code>_on_fps_changed</code></td></tr>
-        <tr><td class="section-col">III · CSV Preview</td><td class="ctrl">txt_detected_fps</td><td>UTextBlock</td><td><span class="pill req">Required</span></td><td>—</td></tr>
         <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">cmb_pos_{x,y,z}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
         <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">spn_pos_{x,y,z}_scale</td><td>USpinBox × 3</td><td><span class="pill req">Required</span></td><td><code>_read_mapping_from_ui</code></td></tr>
         <tr><td class="section-col">IV · Axis Mapping</td><td class="ctrl">cmb_rot_{pitch,yaw,roll}_src</td><td>UComboBoxString × 3</td><td><span class="pill req">Required</span></td><td><code>_init_axis_combos</code></td></tr>
@@ -1722,7 +1720,7 @@ Disguise CSV Dense file
         │
         ▼
 <span style="color:var(--accent-soft)">csv_parser.parse_csv_dense()</span>
-        │  → CsvDenseResult { frames, sensor_width_mm, focal_length_range, detected_fps }
+        │  → CsvDenseResult { frames, sensor_width_mm, focal_length_range }
         │
         ├──────────────────────────────────────────┐
         ▼                                          ▼
@@ -1889,15 +1887,15 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     csv_parser.py:206  open(file, encoding="utf-8-sig")
     csv_parser.py:216  _detect_camera_prefix(headers)  <span class="comment"># 正则匹配 camera:cam01</span>
     csv_parser.py:227  for row in reader: FrameData(...)
-    csv_parser.py:263  return CsvDenseResult(frame_count=1200, detected_fps=24.0, ...)
-  widget.py:288 txt_frame_count / txt_focal_range / txt_timecode / txt_sensor_width / txt_detected_fps  ← 全部刷新
+    csv_parser.py:263  return CsvDenseResult(frame_count=1200, sensor_width_mm=35.0, ...)
+  widget.py:288 txt_frame_count / txt_focal_range / txt_timecode / txt_sensor_width  ← 全部刷新
 
 <span class="step">Step 4 · User clicks Import  (Section V · btn_import)</span>
   widget.py:501 _on_import_clicked()
-  <span class="file">pipeline.py</span>:74  run_import(csv_path, fps=0.0)
+  <span class="file">pipeline.py</span>:74  run_import(csv_path, fps=24.0)  <span class="comment"># fps 来自 spn_fps，用户必填</span>
     :94   package_path = /Game/PostRender/shot1_take5_dense
     :105  [1/5] parse_csv_dense()
-    :115  effective_fps = 24.0 (自动检测值兜底)
+    :115  effective_fps = 24.0
     :138  [2/5] lens_file_builder.build_lens_file(...)
           → AssetTools.create_asset(LensFile)
           → _group_by_focal_length(tolerance=0.1)
@@ -2108,8 +2106,7 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
       h('   │  └─ ',               'TextBlock',              'req', 'txt_sensor_width',            '传感器宽度摘要',                        'Color=#CCCCCC, Font=12, py:"Sensor Width: 35.00 mm"'),
       h('   └─ ',                  'HorizontalBox',          'dec', 'lbl_csv_preview_fps_row',     'FPS 输入行',                            'slot.Padding=0,8,0,0, gap=8, v_align=Center'),
       h('      ├─ ',               'TextBlock',              'dec', 'lbl_fps',                     '「FPS」标签',                           'Text="FPS", Color=#CCCCCC, Font=12, v_align=Center'),
-      h('      ├─ ',               'SpinBox',                'req', 'spn_fps',                     '用户手动覆盖 fps',                      'Value=0.0, MinValue=0.0 (py), MaxValue=120.0 (py), Width≈80'),
-      h('      └─ ',               'TextBlock',              'req', 'txt_detected_fps',            '自动检测的 fps 提示',                   'Color=#808080, Font=11 Italic, py:"Auto: 23.976 fps"')
+      h('      └─ ',               'SpinBox',                'req', 'spn_fps',                     '用户必填目标帧率',                      'Value=0.0, MinValue=0.0 (py), MaxValue=120.0 (py), Width≈80')
     ],
     "4": [
       h('',                        'Border',                 'dec', 'lbl_card_axis',               'Section 卡片容器',                      'BrushColor=#242424, Padding=12,10,12,10, slot.Padding=0,0,0,8'),
@@ -2197,21 +2194,20 @@ Spawn CineCameraActor                    对每一帧写入 9 个通道关键帧
     },
     "3": {
       num: "§ III",
-      title: "<em>CSV Preview</em> · 机器估算 + 人工覆盖",
+      title: "<em>CSV Preview</em> · 摘要 + FPS 必填",
       figma: "Figma 节点 <code>2:2 / 2:6 / 2:11</code>",
       body: `
-        <p>六个字段在 Browse 回调里一次性填充。<code>spn_fps</code> 默认 <strong>0.0</strong>——语义是"让 pipeline 自己选"，pipeline 则用 <code>csv_result.detected_fps</code> 兜底。</p>
-        <p>用户可手动输入 24.0 / 29.97 覆盖——适用于 CSV 时间戳抖动超过 10%、自动检测返回 None 的场景。</p>
+        <p>四个文本字段（帧数 / 焦段 / 时码 / 传感器）在 Browse 回调里一次性填充，用于肉眼校验 CSV 参数是否合理。</p>
+        <p><code>spn_fps</code> 是用户必填项（24 / 25 / 29.97 / 30 / 48 / 60 …）。早期版本有自动检测显示（<code>txt_detected_fps</code> "Auto: 23.976"），commit <code>63146c8</code> 移除——Disguise 时间戳抖动常使估算与真实帧率差 ≥1 fps，错帧率直接破坏 LevelSequence 时基。Import 前校验 <code>fps &gt; 0</code>，未填直接中止。</p>
       `,
       table: [
         ["txt_frame_count", "UTextBlock", "req", "—"],
         ["txt_focal_range", "UTextBlock", "req", "—"],
         ["txt_timecode", "UTextBlock", "req", "—"],
         ["txt_sensor_width", "UTextBlock", "req", "—"],
-        ["spn_fps", "USpinBox", "req", "_on_fps_changed"],
-        ["txt_detected_fps", "UTextBlock", "req", "—"]
+        ["spn_fps", "USpinBox", "req", "_on_fps_changed"]
       ],
-      principle: `Trust-but-override：机器给估算值，人类随时能覆盖。并列展示"自动 23.976" 让用户一眼知道默认行为是什么。`
+      principle: `宁可强制用户显式选 fps，也不让估算值沉默跑错——fps 错误会直接毁掉 LevelSequence 时基，事后难以回溯。`
     },
     "4": {
       num: "§ IV",

@@ -1,5 +1,7 @@
 # Widget Blueprint Automation + Manual Bootstrap Checklist Implementation Plan
 
+> **Status (2026-04-20):** Executed and shipped. Snapshot preserved for historical context. Two subsequent deletions narrowed the contract: `Spawn Test Camera` removed in commit `7caed17`; `Coordinate Verification` section removed in commit `ae9aa92`. Spec size is now **26 required + 7 optional = 33**; Section numbering collapsed to 1–5. Treat widget / section references below as snapshot-accurate, not current. For the live contract see `docs/bindwidget-contract.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Generate `BP_PostRenderToolWidget.uasset` programmatically from a JSON spec so the Figma design is reproduced 1:1 in Designer, editable afterward; also provide a manual checklist as fallback when automation is unavailable.

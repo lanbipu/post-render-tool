@@ -282,16 +282,14 @@ Figma 节点 `2:2`。展开后分两块：纯文本 stats（`2:6`）+ FPS 输入
 | `2:8` `Focal Length: 30.30 – 30.30 mm` | `txt_focal_range` | `UTextBlock` | `widget.py:293` | `f"Focal Length: {min:.2f} – {max:.2f} mm"` |
 | `2:9` `Timecode: 00:00:30.00 → 00:00:30.00` | `txt_timecode` | `UTextBlock` | `widget.py:297` | `f"Timecode: {start} → {end}"` |
 | `2:10` `Sensor Width: 35.00 mm` | `txt_sensor_width` | `UTextBlock` | `widget.py:301` | `f"Sensor Width: {sensor_width_mm:.2f} mm"` |
-| `2:13` `FPS SpinBox` | `spn_fps` | `USpinBox` | `widget.py:317` `_on_fps_changed`（委托 `on_value_changed`） | 用户覆盖 FPS；`0.0` 表示沿用自动检测 |
-| `2:18` `Auto: 23.976 fps` | `txt_detected_fps` | `UTextBlock` | `widget.py:304` | 显示 `csv_parser._detect_fps()` 的估算值 |
+| `2:13` `FPS SpinBox` | `spn_fps` | `USpinBox` | `widget.py:317` `_on_fps_changed`（委托 `on_value_changed`） | 用户必填的目标帧率 |
 
 **功能逻辑**：
 
-- Preview 数据**在 Browse 回调里同步填充**——`parse_csv_dense()` 一次返回后 6 个字段一并更新。
-- FPS SpinBox 默认值 `0.0`（`widget.py:172`），语义是"让 pipeline 自己选"。`widget.py:508` `fps = self._fps if self._fps > 0 else 0.0`，传 `0.0` 给 `pipeline.run_import` 时会回退到 `csv_result.detected_fps`。
-- 用户可手动输入 `24.0` / `29.97` 等覆盖，适用于 CSV 时间戳抖动超过 10%、`_detect_fps()` 返回 `None` 的场景。
+- Preview 数据**在 Browse 回调里同步填充**——`parse_csv_dense()` 一次返回后 4 个文本字段一并更新。
+- FPS SpinBox 默认 `0.0`，用户需手动填入 24 / 25 / 29.97 / 30 等目标帧率。`pipeline.run_import` 收到 `fps <= 0` 会抛异常，防止沉默地跑出错误帧率的 LevelSequence。
 
-**设计原理**：Preview 把所有与摄影机"物理参数"有关的基础数据摊在桌面上，让用户按 Import 之前就能肉眼校验："焦距范围对不对？时间码长度对不对？传感器 35mm/60mm 有没有预设错？"——这些错带到 LensFile 就得整条流水线重跑。`txt_detected_fps` 与 `spn_fps` 并列，是**"机器估算值 + 人工可覆盖值"**的典型"信任但可超越"（trust-but-override）模式。
+**设计原理**：Preview 把所有与摄影机"物理参数"有关的基础数据摊在桌面上，让用户按 Import 之前就能肉眼校验："焦距范围对不对？时间码长度对不对？传感器 35mm/60mm 有没有预设错？"——这些错带到 LensFile 就得整条流水线重跑。FPS 刻意不做自动检测（commit `63146c8`）：CSV 时间戳抖动常使估算值误差 ≥1 fps，而 fps 错误直接破坏 LevelSequence 时基；强制用户显式选择能换取可预期的输出。
 
 ---
 
@@ -487,7 +485,6 @@ csv_parser.parse_csv_dense()
         │    .frames          [FrameData, ...]  ← 每帧一条
         │    .sensor_width_mm
         │    .focal_length_range
-        │    .detected_fps
         │
         ├──────────────────────────────────────────┐
         │                                          │
@@ -605,7 +602,6 @@ class CsvDenseResult:     # 整个 CSV 的聚合结果
     timecode_start/end: str
     focal_length_range: Tuple[float, float]
     sensor_width_mm: float
-    detected_fps: Optional[float]
 ```
 
 **关键逻辑：相机前缀自动识别（`:77-86`）**
@@ -621,21 +617,7 @@ def _detect_camera_prefix(headers):
 
 原理：Disguise CSV 的每列命名为 `camera:<name>.<field>`，通过正则找到 `offset.x` 列就能确定完整前缀。这样工具不需要用户手动告知相机叫什么名字。
 
-**关键逻辑：帧率自动检测（`:117-163`）**
-
-```python
-def _detect_fps(timestamps):
-    deltas = [t[i+1] - t[i] for i in range(len(t)-1)]  # 相邻帧时间差
-    nonzero = [d for d in deltas if d > 0]              # 去掉重复帧
-    mean_delta = statistics.mean(nonzero)               # 平均帧间隔
-    if stdev / mean_delta >= 0.10:                      # 超过 10% 不稳定 → 放弃
-        return None
-    raw_fps = 1.0 / mean_delta                          # 1 ÷ 平均帧间隔
-    # 对齐到最近的标准帧率（23.976/24/25/29.97/30/...）
-    best = min(_COMMON_FPS, key=..., filter=within 5%)
-```
-
-设计亮点：标准帧率列表（`:74`）覆盖了广播和电影常用帧率；5% 容差处理轻微时钟漂移；超过 10% 波动则返回 None 而不是乱猜。
+> **为什么不自动检测 FPS？** 早期版本曾有 `_detect_fps()` + `txt_detected_fps` 显示（commit `63146c8` 删除）。实践中 Disguise 导出的时间戳抖动常使估算与真实帧率差 ≥1 fps，而错误帧率直接破坏 LevelSequence 时基。现在 fps 改为 `spn_fps` 用户必填，Import 前校验 `fps > 0`，以可预期的显式输入换取沉默失败的风险。
 
 **公共 API：`parse_csv_dense(file_path)`（`:188-273`）**
 
@@ -1420,7 +1402,7 @@ widget.py:501 _on_import_clicked()
 :105  [Step 1/5] parse_csv_dense(csv_path)
       → 返回 CsvDenseResult
 
-:115  effective_fps = 24.0（用户未设置，使用 detected_fps）
+:115  effective_fps = 24.0（来自 spn_fps，用户必填）
 
 :132  _ensure_directory("/Game/PostRender/shot1_take5_dense")
       → EditorAssetLibrary.make_directory(...)
@@ -1594,10 +1576,10 @@ self._set_results(report_text)        ← 在 txt_results 显示中文报告
 ```python
 from Content.Python.post_render_tool.csv_parser import parse_csv_dense
 result = parse_csv_dense("你的测试.csv")
-print(result.frame_count, result.focal_length_range, result.detected_fps)
+print(result.frame_count, result.focal_length_range, result.sensor_width_mm)
 ```
 
-目标：理解 `parse_csv_dense` 的完整返回结构，以及帧率自动检测的行为。
+目标：理解 `parse_csv_dense` 的完整返回结构（`CsvDenseResult` 数据类的各字段）。
 
 ---
 
