@@ -131,6 +131,29 @@ public:
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
     USpinBox* spn_rot_roll_scale;
 
+    // ======================================================================
+    // Section 4c: Axis Mapping — Rotation Offset (degrees)
+    //
+    // Applied AFTER the (source × scale) mapping above. Use to correct
+    // overall camera yaw/pitch/roll alignment when the shoot convention
+    // requires a constant rotation beyond what axis remapping expresses.
+    //
+    // These are Optional so older BP_PostRenderToolWidget assets (authored
+    // before offsets existed) keep compiling on upgrade. When missing,
+    // widget.py falls back to the existing config.ROTATION_OFFSET_DEG value
+    // instead of zeroing it out; user must rerun `rebuild_from_spec()` to
+    // add the SpinBoxes.
+    // ======================================================================
+
+    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    USpinBox* spn_rot_pitch_offset;
+
+    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    USpinBox* spn_rot_yaw_offset;
+
+    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    USpinBox* spn_rot_roll_offset;
+
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
     UButton* btn_apply_mapping;
 

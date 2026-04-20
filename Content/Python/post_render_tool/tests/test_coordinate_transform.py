@@ -63,6 +63,42 @@ class TestTransformRotation(unittest.TestCase):
         self.assertAlmostEqual(abs(yaw),   20.0)
         self.assertAlmostEqual(abs(roll),  30.0)
 
+    def test_yaw_offset_only_applies_to_yaw(self):
+        # Offset yaw by -90°. Pitch and roll must be unaffected.
+        cfg = TransformConfig(
+            rot_pitch=(0, -1.0),
+            rot_yaw=(1, -1.0),
+            rot_roll=(2, 1.0),
+            rot_pitch_offset=0.0,
+            rot_yaw_offset=-90.0,
+            rot_roll_offset=0.0,
+        )
+        pitch, yaw, roll = transform_rotation(10.0, 20.0, 30.0, cfg=cfg)
+        #   pitch = -10 + 0    = -10
+        #   yaw   = -20 + -90  = -110
+        #   roll  =  30 + 0    =  30
+        self.assertAlmostEqual(pitch, -10.0)
+        self.assertAlmostEqual(yaw, -110.0)
+        self.assertAlmostEqual(roll, 30.0)
+
+    def test_all_offsets_sum_per_axis(self):
+        cfg = TransformConfig(
+            rot_pitch=(0, 1.0),
+            rot_yaw=(1, 1.0),
+            rot_roll=(2, 1.0),
+            rot_pitch_offset=5.0,
+            rot_yaw_offset=-12.5,
+            rot_roll_offset=180.0,
+        )
+        pitch, yaw, roll = transform_rotation(1.0, 2.0, 3.0, cfg=cfg)
+        self.assertAlmostEqual(pitch, 1.0 + 5.0)
+        self.assertAlmostEqual(yaw,   2.0 + -12.5)
+        self.assertAlmostEqual(roll,  3.0 + 180.0)
+
+    def test_offset_rejects_non_numeric(self):
+        with self.assertRaises(ValueError):
+            TransformConfig(rot_yaw_offset="abc")
+
 
 class TestTransformFocusDistance(unittest.TestCase):
 

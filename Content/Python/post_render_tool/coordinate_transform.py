@@ -10,7 +10,8 @@ from . import config
 
 @dataclass
 class TransformConfig:
-    """Per-axis transform rules. Each field is (source_index, scale_factor)."""
+    """Per-axis transform rules. Each mapping field is (source_index, scale_factor);
+    offset fields are plain degrees applied after the mapping."""
 
     pos_x: Tuple[int, float] = field(default_factory=lambda: config.POSITION_MAPPING["x"])
     pos_y: Tuple[int, float] = field(default_factory=lambda: config.POSITION_MAPPING["y"])
@@ -18,13 +19,21 @@ class TransformConfig:
     rot_pitch: Tuple[int, float] = field(default_factory=lambda: config.ROTATION_MAPPING["pitch"])
     rot_yaw: Tuple[int, float] = field(default_factory=lambda: config.ROTATION_MAPPING["yaw"])
     rot_roll: Tuple[int, float] = field(default_factory=lambda: config.ROTATION_MAPPING["roll"])
+    rot_pitch_offset: float = field(default_factory=lambda: float(config.ROTATION_OFFSET_DEG["pitch"]))
+    rot_yaw_offset: float = field(default_factory=lambda: float(config.ROTATION_OFFSET_DEG["yaw"]))
+    rot_roll_offset: float = field(default_factory=lambda: float(config.ROTATION_OFFSET_DEG["roll"]))
 
     def __post_init__(self) -> None:
-        # Validate each field is a 2-tuple (idx, scale)
+        # Validate each mapping field is a 2-tuple (idx, scale)
         for attr in ("pos_x", "pos_y", "pos_z", "rot_pitch", "rot_yaw", "rot_roll"):
             val = getattr(self, attr)
             if not (isinstance(val, (tuple, list)) and len(val) == 2):
                 raise ValueError(f"TransformConfig.{attr} must be a 2-tuple (source_idx, scale)")
+        # Validate offsets are numeric
+        for attr in ("rot_pitch_offset", "rot_yaw_offset", "rot_roll_offset"):
+            val = getattr(self, attr)
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"TransformConfig.{attr} must be a number (degrees)")
 
 
 def _default_cfg() -> TransformConfig:
@@ -63,6 +72,10 @@ def transform_rotation(
 ) -> tuple:
     """Map Designer rotation (rx, ry, rz) in degrees to UE (pitch, yaw, roll).
 
+    Applies axis remap + scale from ``ROTATION_MAPPING`` first, then adds
+    ``ROTATION_OFFSET_DEG`` (degrees). Offsets act on local camera axes; only
+    when pitch/roll ≈ 0 does a yaw offset behave like a world-Z rotation.
+
     Returns:
         (pitch, yaw, roll) as floats
     """
@@ -75,7 +88,11 @@ def transform_rotation(
         idx, scale = rule
         return src[idx] * scale
 
-    return (apply(cfg.rot_pitch), apply(cfg.rot_yaw), apply(cfg.rot_roll))
+    return (
+        apply(cfg.rot_pitch) + cfg.rot_pitch_offset,
+        apply(cfg.rot_yaw)   + cfg.rot_yaw_offset,
+        apply(cfg.rot_roll)  + cfg.rot_roll_offset,
+    )
 
 
 def transform_focus_distance(designer_meters: float) -> float:

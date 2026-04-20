@@ -1482,6 +1482,110 @@
                               ]
                             },
                             {
+                              "type": "TextBlock",
+                              "name": "lbl_rot_offset_subheader",
+                              "role": "decorative",
+                              "properties": {
+                                "Text": "ROTATION OFFSET (deg)",
+                                "ColorAndOpacity": [
+                                  0.7,
+                                  0.7,
+                                  0.7,
+                                  1.0
+                                ]
+                              },
+                              "slot": {
+                                "padding": [
+                                  0,
+                                  12,
+                                  0,
+                                  4
+                                ]
+                              }
+                            },
+                            {
+                              "type": "HorizontalBox",
+                              "name": "lbl_rot_offset_row",
+                              "role": "decorative",
+                              "children": [
+                                {
+                                  "type": "TextBlock",
+                                  "name": "lbl_rot_pitch_offset_label",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Text": "Pitch"
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      0,
+                                      6,
+                                      8,
+                                      6
+                                    ],
+                                    "v_align": "Center"
+                                  }
+                                },
+                                {
+                                  "type": "SpinBox",
+                                  "name": "spn_rot_pitch_offset",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Value": 0.0
+                                  }
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "lbl_rot_yaw_offset_label",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Text": "Yaw"
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      16,
+                                      6,
+                                      8,
+                                      6
+                                    ],
+                                    "v_align": "Center"
+                                  }
+                                },
+                                {
+                                  "type": "SpinBox",
+                                  "name": "spn_rot_yaw_offset",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Value": 0.0
+                                  }
+                                },
+                                {
+                                  "type": "TextBlock",
+                                  "name": "lbl_rot_roll_offset_label",
+                                  "role": "decorative",
+                                  "properties": {
+                                    "Text": "Roll"
+                                  },
+                                  "slot": {
+                                    "padding": [
+                                      16,
+                                      6,
+                                      8,
+                                      6
+                                    ],
+                                    "v_align": "Center"
+                                  }
+                                },
+                                {
+                                  "type": "SpinBox",
+                                  "name": "spn_rot_roll_offset",
+                                  "role": "optional",
+                                  "properties": {
+                                    "Value": 0.0
+                                  }
+                                }
+                              ]
+                            },
+                            {
                               "type": "HorizontalBox",
                               "name": "lbl_axis_btn_row",
                               "role": "decorative",

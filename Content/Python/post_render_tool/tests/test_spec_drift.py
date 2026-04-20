@@ -97,10 +97,10 @@ class TestSpecDrift(unittest.TestCase):
             len(json_req), 26, f"Required count drift: {len(json_req)} != 26"
         )
 
-    def test_optional_count_is_7(self):
+    def test_optional_count_is_10(self):
         _, json_opt = _parse_json_contract_names()
         self.assertEqual(
-            len(json_opt), 7, f"Optional count drift: {len(json_opt)} != 7"
+            len(json_opt), 10, f"Optional count drift: {len(json_opt)} != 10"
         )
 
 

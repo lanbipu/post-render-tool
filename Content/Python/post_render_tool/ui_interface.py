@@ -248,9 +248,10 @@ def get_prerequisite_status() -> List[Tuple[str, bool, str]]:
 def save_axis_mapping(
     pos_mapping: dict,
     rot_mapping: dict,
+    rot_offset: dict,
     config_path: str | None = None,
 ) -> None:
-    """Write POSITION_MAPPING and ROTATION_MAPPING back to config.py.
+    """Write POSITION_MAPPING, ROTATION_MAPPING and ROTATION_OFFSET_DEG back to config.py.
 
     Parameters
     ----------
@@ -258,6 +259,8 @@ def save_axis_mapping(
         ``{"x": (idx, scale), "y": ..., "z": ...}``
     rot_mapping:
         ``{"pitch": (idx, scale), "yaw": ..., "roll": ...}``
+    rot_offset:
+        ``{"pitch": float_deg, "yaw": float_deg, "roll": float_deg}``
     config_path:
         Absolute path to config.py. If None, derived from the config module.
     """
@@ -295,6 +298,16 @@ def save_axis_mapping(
         )
     rot_block = "ROTATION_MAPPING = {\n" + "\n".join(rot_lines) + "\n}"
 
+    # Build ROTATION_OFFSET_DEG replacement (degrees, applied after mapping)
+    off_lines = []
+    for key in ("pitch", "yaw", "roll"):
+        value = float(rot_offset[key])
+        off_lines.append(
+            f'    "{key}": {value},  '
+            f"# UE.{key.capitalize()} += {value}°"
+        )
+    off_block = "ROTATION_OFFSET_DEG = {\n" + "\n".join(off_lines) + "\n}"
+
     # Replace in source (with match validation)
     new_source = re.sub(
         r"POSITION_MAPPING\s*=\s*\{[^}]*\}",
@@ -315,6 +328,31 @@ def save_axis_mapping(
     if new_source == source:
         raise RuntimeError("ROTATION_MAPPING block not found in config.py")
     source = new_source
+
+    new_source = re.sub(
+        r"ROTATION_OFFSET_DEG\s*=\s*\{[^}]*\}",
+        off_block,
+        source,
+        count=1,
+    )
+    if new_source == source:
+        # Legacy config.py (pre-offset installations) doesn't have the block —
+        # insert it right after ROTATION_MAPPING instead of failing. re.sub
+        # above already replaced ROTATION_MAPPING with the new rot_block, so
+        # we anchor on the freshly-written block in `source`.
+        anchor = re.search(r"ROTATION_MAPPING\s*=\s*\{[^}]*\}", source)
+        if anchor is None:
+            raise RuntimeError(
+                "Cannot insert ROTATION_OFFSET_DEG: ROTATION_MAPPING anchor missing"
+            )
+        end = anchor.end()
+        insertion = (
+            "\n\n# Per-axis rotation offset (degrees), applied AFTER the mapping above.\n"
+            + off_block
+        )
+        source = source[:end] + insertion + source[end:]
+    else:
+        source = new_source
 
     # Validate syntax before writing — never corrupt config.py
     try:

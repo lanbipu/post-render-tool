@@ -54,11 +54,15 @@ _REQUIRED_CONTROLS = (
     "txt_results",
 )
 
-# Optional controls — skipped silently if missing.
+# Optional controls — skipped silently if missing. The three rotation offset
+# SpinBoxes live here so pre-offset BP assets still load; user runs
+# rebuild_from_spec() to add them, otherwise edits ROTATION_OFFSET_DEG
+# directly in config.py.
 _OPTIONAL_CONTROLS = (
     "prereq_label_0", "prereq_label_1", "prereq_label_2",
     "prereq_label_3", "prereq_label_4", "prereq_label_5",
     "prereq_summary",
+    "spn_rot_pitch_offset", "spn_rot_yaw_offset", "spn_rot_roll_offset",
 )
 
 
@@ -139,6 +143,7 @@ class PostRenderToolUI:
     def _push_initial_mapping_values(self):
         pos = config.POSITION_MAPPING
         rot = config.ROTATION_MAPPING
+        offset = config.ROTATION_OFFSET_DEG
 
         mapping = [
             ("cmb_pos_x_src", "spn_pos_x_scale", pos["x"]),
@@ -157,6 +162,20 @@ class PostRenderToolUI:
                 )
             if spn is not None:
                 spn.set_editor_property("value", float(scale))
+
+        # Rotation offsets (degrees). Allow ±360 so users can enter any
+        # conventional re-orientation (-90, 90, 180, …).
+        for spn_name, key in (
+            ("spn_rot_pitch_offset", "pitch"),
+            ("spn_rot_yaw_offset", "yaw"),
+            ("spn_rot_roll_offset", "roll"),
+        ):
+            spn = self._get(spn_name)
+            if spn is None:
+                continue
+            spn.set_editor_property("min_value", -360.0)
+            spn.set_editor_property("max_value", 360.0)
+            spn.set_editor_property("value", float(offset[key]))
 
         spn_fps = self._get("spn_fps")
         if spn_fps is not None:
@@ -292,6 +311,9 @@ class PostRenderToolUI:
     # Axis Mapping
     # ------------------------------------------------------------------
 
+    # Mandatory set — missing any of these blocks Apply/Save. Rotation offset
+    # SpinBoxes are intentionally excluded; they degrade to the current
+    # config value (see _read_mapping_from_ui) so legacy BPs still work.
     _MAPPING_CONTROLS = (
         "cmb_pos_x_src", "spn_pos_x_scale",
         "cmb_pos_y_src", "spn_pos_y_scale",
@@ -317,6 +339,14 @@ class PostRenderToolUI:
         return bool(missing)
 
     def _read_mapping_from_ui(self) -> tuple:
+        """Return (pos_mapping, rot_mapping, rot_offset_deg) read from widgets.
+
+        If an offset SpinBox is absent (legacy BP before `rebuild_from_spec`
+        added the widgets), that axis falls back to the current
+        config.ROTATION_OFFSET_DEG value rather than zeroing it out. This
+        keeps user-edited offsets intact when Apply/Save is clicked on a
+        not-yet-regenerated Blueprint.
+        """
         def axis_index(combo_name: str) -> int:
             combo = self._get(combo_name)
             if combo is None:
@@ -329,6 +359,12 @@ class PostRenderToolUI:
                 return 0.0
             return spn.get_editor_property("value")
 
+        def offset(spn_name: str, key: str) -> float:
+            spn = self._get(spn_name)
+            if spn is None:
+                return float(config.ROTATION_OFFSET_DEG.get(key, 0.0))
+            return float(spn.get_editor_property("value"))
+
         return (
             {
                 "x": (axis_index("cmb_pos_x_src"), scale("spn_pos_x_scale")),
@@ -340,6 +376,11 @@ class PostRenderToolUI:
                 "yaw": (axis_index("cmb_rot_yaw_src"), scale("spn_rot_yaw_scale")),
                 "roll": (axis_index("cmb_rot_roll_src"), scale("spn_rot_roll_scale")),
             },
+            {
+                "pitch": offset("spn_rot_pitch_offset", "pitch"),
+                "yaw":   offset("spn_rot_yaw_offset",   "yaw"),
+                "roll":  offset("spn_rot_roll_offset",  "roll"),
+            },
         )
 
     def _on_apply_mapping(self):
@@ -350,18 +391,19 @@ class PostRenderToolUI:
             )
             return
 
-        pos_mapping, rot_mapping = self._read_mapping_from_ui()
+        pos_mapping, rot_mapping, rot_offset = self._read_mapping_from_ui()
 
-        # coordinate_transform reads config.POSITION_MAPPING / ROTATION_MAPPING
-        # on every call, so mutating the config dicts is enough — no reload or
-        # global rebind needed.
+        # coordinate_transform reads config.POSITION_MAPPING / ROTATION_MAPPING /
+        # ROTATION_OFFSET_DEG on every call, so mutating the config dicts is
+        # enough — no reload or global rebind needed.
         config.POSITION_MAPPING = pos_mapping
         config.ROTATION_MAPPING = rot_mapping
+        config.ROTATION_OFFSET_DEG = rot_offset
 
         self._set_results(
-            "Axis mapping applied (in memory)."
+            "Axis mapping + rotation offset applied (in memory)."
         )
-        unreal.log("[widget] Axis mapping applied in memory.")
+        unreal.log("[widget] Axis mapping + rotation offset applied in memory.")
 
     def _on_save_mapping(self):
         if self._missing_mapping_controls():
@@ -371,10 +413,12 @@ class PostRenderToolUI:
             )
             return
 
-        pos_mapping, rot_mapping = self._read_mapping_from_ui()
+        pos_mapping, rot_mapping, rot_offset = self._read_mapping_from_ui()
         try:
-            save_axis_mapping(pos_mapping, rot_mapping)
-            self._set_results("Axis mapping saved to config.py successfully.")
+            save_axis_mapping(pos_mapping, rot_mapping, rot_offset)
+            self._set_results(
+                "Axis mapping + rotation offset saved to config.py successfully."
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_results(f"Failed to save mapping: {exc}")
             unreal.log_error(f"[widget] Save mapping error: {exc}")

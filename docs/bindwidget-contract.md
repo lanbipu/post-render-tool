@@ -104,7 +104,7 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 | Actions | `btn_open_mrq` | `UButton` |
 | Actions | `txt_results` | `UMultiLineEditableText` |
 
-### 3.2 可选控件（7 个）
+### 3.2 可选控件（10 个）
 
 使用 `meta=(BindWidgetOptional)` —— 缺失不会导致 BP 编译失败，但对应 Python 功能**静默降级**。
 
@@ -112,13 +112,16 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 |---|---|---|---|
 | `prereq_label_0` ~ `prereq_label_5` | `UTextBlock` | Section 1 内容区 | 6 条插件状态行不显示（汇总计数仍工作） |
 | `prereq_summary` | `UTextBlock` | Section 1 折叠头 | "N / 6 OK" 徽章不显示 |
+| `spn_rot_pitch_offset` | `USpinBox` | Section 4 Rotation Offset | UI 里不可调该轴 offset；`_read_mapping_from_ui` 回落到 `config.ROTATION_OFFSET_DEG["pitch"]`，Apply/Save 保留现有值不清零 |
+| `spn_rot_yaw_offset` | `USpinBox` | Section 4 Rotation Offset | 同上（yaw） |
+| `spn_rot_roll_offset` | `USpinBox` | Section 4 Rotation Offset | 同上（roll） |
 
 ### 3.3 Python 侧契约
 
 `widget.py` 声明了两个 tuple，与 C++ 侧一一对应：
 
 - `_REQUIRED_CONTROLS` —— 26 个条目，对应 [3.1](#31-必需控件26-个)
-- `_OPTIONAL_CONTROLS` —— 7 个条目，对应 [3.2](#32-可选控件7-个)
+- `_OPTIONAL_CONTROLS` —— 10 个条目，对应 [3.2](#32-可选控件10-个)
 
 如果 Python 侧的 tuple 与 C++ 声明漂移（drift），`get_editor_property()` 对缺失名称返回 `None`，binder 打印 warning 继续执行。**三方必须始终同步**。
 
@@ -126,11 +129,11 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 
 ## 4. 装饰元素
 
-UI 里的 **section 标题、行内标签、分隔符号、卡片背景、Section Header 橙色竖条** 等元素**完全不属于 33 契约**，是纯装饰，UMG 编译器不会检查它们的存在。
+UI 里的 **section 标题、行内标签、分隔符号、卡片背景、Section Header 橙色竖条** 等元素**完全不属于 契约**，是纯装饰，UMG 编译器不会检查它们的存在。
 
 ### 4.1 装饰件 vs 功能件：判定标准
 
-| 属性 | 33 契约控件（功能件） | 装饰件 |
+| 属性 | 契约控件（功能件） | 装饰件 |
 |---|---|---|
 | **作用** | Python 读值 / 监听事件 | 纯视觉，给人看 |
 | **Name 必须精确** | ✅（如 `btn_browse`） | ❌ 不强制 |
@@ -396,7 +399,7 @@ Border                                 [装饰] lbl_card_actions
 | 1 Prerequisites | `btn_recheck` | `prereq_summary`、`prereq_label_0..5` |
 | 2 CSV File | `btn_browse`、`txt_file_path` | — |
 | 3 CSV Preview | `txt_frame_count`、`txt_focal_range`、`txt_timecode`、`txt_sensor_width`、`spn_fps` | — |
-| 4 Axis Mapping | `cmb_pos_x_src`、`spn_pos_x_scale`、`cmb_pos_y_src`、`spn_pos_y_scale`、`cmb_pos_z_src`、`spn_pos_z_scale`、`cmb_rot_pitch_src`、`spn_rot_pitch_scale`、`cmb_rot_yaw_src`、`spn_rot_yaw_scale`、`cmb_rot_roll_src`、`spn_rot_roll_scale`、`btn_apply_mapping`、`btn_save_mapping` | — |
+| 4 Axis Mapping | `cmb_pos_x_src`、`spn_pos_x_scale`、`cmb_pos_y_src`、`spn_pos_y_scale`、`cmb_pos_z_src`、`spn_pos_z_scale`、`cmb_rot_pitch_src`、`spn_rot_pitch_scale`、`cmb_rot_yaw_src`、`spn_rot_yaw_scale`、`cmb_rot_roll_src`、`spn_rot_roll_scale`、`btn_apply_mapping`、`btn_save_mapping` | `spn_rot_pitch_offset`、`spn_rot_yaw_offset`、`spn_rot_roll_offset` |
 | 5 Actions | `btn_import`、`btn_open_seq`、`btn_open_mrq`、`txt_results` | — |
 | **合计** | **26** | **7** |
 

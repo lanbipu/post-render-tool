@@ -20,6 +20,16 @@ ROTATION_MAPPING = {
     "roll": (2, 1.0),    # UE Roll  ← Designer.rotation.z
 }
 
+# Per-axis rotation offset (degrees), applied AFTER the mapping above.
+# Use case: 整体相机姿态与实拍片场约定不对齐时（例如需要整体偏航 -90°）。
+# 注意：offset 叠加在本地 pitch/yaw/roll 上；当相机 pitch/roll ≈ 0 时
+# 等价于绕 world Z 旋转 yaw 偏移量，否则会与真正的"世界 Z 旋转"不同。
+ROTATION_OFFSET_DEG = {
+    "pitch": 0.0,
+    "yaw": 0.0,
+    "roll": 0.0,
+}
+
 # --- Asset Paths ---
 ASSET_BASE_PATH = "/Game/PostRender"  # Base path in Content Browser
 
