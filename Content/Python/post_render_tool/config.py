@@ -1,23 +1,23 @@
 """Centralized configuration for VP Post-Render Tool."""
 
 # --- Coordinate Transform (Designer Y-up meters → UE Z-up centimeters) ---
-# These are INITIAL GUESSES. Must be validated against real data.
 # Each tuple: (source_axis_index, scale_factor)
 # source_axis_index: 0=Designer.x, 1=Designer.y, 2=Designer.z
-# scale_factor: includes unit conversion (×100 for m→cm) and axis flip
+# Regression-guarded by tests/test_coordinate_transform.py::TestKnownPoses.
 
 POSITION_MAPPING = {
-    # UE axis: (Designer axis index, scale)
-    "x": (2, -100.0),  # UE.X (forward) ← -Designer.Z × 100
-    "y": (0, 100.0),   # UE.Y (right)   ← Designer.X × 100
-    "z": (1, 100.0),   # UE.Z (up)      ← Designer.Y × 100
+    "x": (2, 100.0),
+    "y": (0, 100.0),
+    "z": (1, 100.0),
 }
 
+# Identity per-axis (pitch=rx, yaw=ry, roll=rz). Disguise's CSV rotation already
+# matches UE's Rotator semantics directly — kept as a configurable map only so
+# Operators can override via the UI for non-standard exports.
 ROTATION_MAPPING = {
-    # UE axis: (Designer axis index, scale)
-    "pitch": (0, -1.0),  # UE Pitch ← -Designer.rotation.x
-    "yaw": (1, -1.0),    # UE Yaw   ← -Designer.rotation.y
-    "roll": (2, 1.0),    # UE Roll  ← Designer.rotation.z
+    "pitch": (0, 1.0),
+    "yaw":   (1, 1.0),
+    "roll":  (2, 1.0),
 }
 
 # Per-axis rotation offset (degrees), applied AFTER the mapping above.

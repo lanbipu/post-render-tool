@@ -120,8 +120,11 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
 
 ## Gotchas
 
-- **Coordinate transform defaults are UNVERIFIED.** `config.py` POSITION_MAPPING / ROTATION_MAPPING
-  are initial guesses. Must test with real data in UE viewport before production use.
+- **Coordinate transform defaults are VERIFIED (2026-04-20).** `config.py` POSITION_MAPPING swaps
+  Disguise (z, x, y) → UE (X, Y, Z) all positive ×100; ROTATION_MAPPING is identity per axis.
+  Validated against an FBX-imported camera wrapped in a Z=+90° parent Actor (the user-confirmed
+  correct reference); two pose pairs match to <0.001 cm / <0.001°. Regression-guarded by
+  `tests/test_coordinate_transform.py::TestKnownPoses` — rerun after any axis-mapping change.
 - **LensFile API varies across UE versions.** `lens_file_builder.py` has dual try/except paths.
   If both fail, it raises RuntimeError (not silent).
 - **Frame cadence preserved.** sequence_builder uses `frame_number - first_frame_number` as keyframe

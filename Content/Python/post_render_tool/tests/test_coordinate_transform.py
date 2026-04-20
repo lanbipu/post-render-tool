@@ -23,13 +23,13 @@ class TestTransformPosition(unittest.TestCase):
 
     def test_position_mapping_axes(self):
         # Designer (1, 2, 3):
-        #   UE.X = -Designer.Z × 100 = -300.0
-        #   UE.Y =  Designer.X × 100 =  100.0
-        #   UE.Z =  Designer.Y × 100 =  200.0
+        #   UE.X = Designer.Z × 100 = 300.0
+        #   UE.Y = Designer.X × 100 = 100.0
+        #   UE.Z = Designer.Y × 100 = 200.0
         ue_x, ue_y, ue_z = transform_position(1.0, 2.0, 3.0)
-        self.assertAlmostEqual(ue_x, -300.0)
-        self.assertAlmostEqual(ue_y,  100.0)
-        self.assertAlmostEqual(ue_z,  200.0)
+        self.assertAlmostEqual(ue_x, 300.0)
+        self.assertAlmostEqual(ue_y, 100.0)
+        self.assertAlmostEqual(ue_z, 200.0)
 
     def test_custom_config(self):
         # Custom mapping: all axes identity × 1.0 (no reorder, no scale change)
@@ -54,14 +54,12 @@ class TestTransformRotation(unittest.TestCase):
         self.assertEqual(result, (0.0, 0.0, 0.0))
 
     def test_rotation_values_preserved_in_magnitude(self):
-        # Designer (rx=10, ry=20, rz=30):
-        #   pitch = -rx × 1.0 = -10.0  → |pitch| = 10
-        #   yaw   = -ry × 1.0 = -20.0  → |yaw|   = 20
-        #   roll  =  rz × 1.0 =  30.0  → |roll|  = 30
+        # Designer (rx=10, ry=20, rz=30) → UE (pitch=10, yaw=20, roll=30)
+        # All three are direct identity per default ROTATION_MAPPING.
         pitch, yaw, roll = transform_rotation(10.0, 20.0, 30.0)
-        self.assertAlmostEqual(abs(pitch), 10.0)
-        self.assertAlmostEqual(abs(yaw),   20.0)
-        self.assertAlmostEqual(abs(roll),  30.0)
+        self.assertAlmostEqual(pitch, 10.0)
+        self.assertAlmostEqual(yaw,   20.0)
+        self.assertAlmostEqual(roll,  30.0)
 
     def test_yaw_offset_only_applies_to_yaw(self):
         # Offset yaw by -90°. Pitch and roll must be unaffected.
@@ -106,6 +104,31 @@ class TestTransformFocusDistance(unittest.TestCase):
         # 5.0 meters → 500.0 cm
         result = transform_focus_distance(5.0)
         self.assertAlmostEqual(result, 500.0)
+
+
+class TestKnownPoses(unittest.TestCase):
+    """Regression: real Disguise CSV ↔ UE pose pairs captured 2026-04-20 by
+    cross-checking the CSV import path against an FBX-imported camera wrapped
+    in a Z=+90° parent Actor (the configuration verified visually correct in
+    the UE viewport)."""
+
+    def test_frame_1790_rest_pose(self):
+        # CSV (0.00225, 0.99859, -6.00113) m, rotation ≈ 0 deg.
+        ue_x, ue_y, ue_z = transform_position(0.0022488, 0.998591, -6.00113)
+        self.assertAlmostEqual(ue_x, -600.113, places=3)
+        self.assertAlmostEqual(ue_y,    0.225, places=3)
+        self.assertAlmostEqual(ue_z,   99.859, places=3)
+
+    def test_frame_2901_moved_pose(self):
+        # CSV (5.00251, 1.99925, -12.0007) m, rotation (-7, -20, -18) deg.
+        ue_x, ue_y, ue_z = transform_position(5.00251, 1.99925, -12.0007)
+        self.assertAlmostEqual(ue_x, -1200.07,  places=2)
+        self.assertAlmostEqual(ue_y,   500.251, places=3)
+        self.assertAlmostEqual(ue_z,   199.925, places=3)
+        pitch, yaw, roll = transform_rotation(-6.99896, -19.9967, -18.0002)
+        self.assertAlmostEqual(pitch, -6.99896, places=4)
+        self.assertAlmostEqual(yaw,  -19.9967,  places=4)
+        self.assertAlmostEqual(roll, -18.0002,  places=4)
 
 
 if __name__ == "__main__":
