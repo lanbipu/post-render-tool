@@ -137,38 +137,62 @@ def build_lens_file(
         资产创建失败时抛出。
     """
     # ------------------------------------------------------------------
-    # 1. 创建资产
+    # 1. 创建或复用资产（幂等）
     # ------------------------------------------------------------------
-    logger.info("正在创建 LensFile 资产: %s/%s", package_path, asset_name)
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    # 策略：资产已存在 → load + ClearAll() 清空所有 tables → 落到下面重填。
+    # 原因：LensFile 可能已被场景里的 CineCameraActor 引用，此时 create_asset
+    # 会失败（AssetTools 弹 "is in use" 对话框）。清空 in-place 既不破坏引用，
+    # 又能反映 CSV 最新内容 —— 避免"同名 CSV 改过内容后畸变数据仍是旧值"的
+    # 静默错误（LensFile.h:222-223 UFUNCTION ULensFile::ClearAll）。
+    full_asset_path = f"{package_path}/{asset_name}"
+    lens_file: "unreal.LensFile | None" = None
 
-    # UE 5.7: ULensFileFactoryNew 在 CameraCalibrationEditor Private 模块，
-    # 未导出给 Python。create_asset 接受 factory=None 时走 NewObject 默认路径
-    # (AssetTools.cpp:1762-1764)。保留对旧版本 factory 的兼容兜底。
-    factory_obj = None
-    factory_cls = getattr(unreal, "LensFileFactoryNew", None)
-    if factory_cls is not None:
-        try:
-            factory_obj = factory_cls()
-            logger.info("使用 LensFileFactoryNew 创建资产")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("LensFileFactoryNew 实例化失败，回落到 factory=None: %s", exc)
-            factory_obj = None
-    else:
-        logger.info("UE 5.7 未导出 LensFileFactoryNew，使用 factory=None 默认路径")
-
-    lens_file: unreal.LensFile = asset_tools.create_asset(
-        asset_name=asset_name,
-        package_path=package_path,
-        asset_class=unreal.LensFile,
-        factory=factory_obj,
-    )
+    if unreal.EditorAssetLibrary.does_asset_exist(full_asset_path):
+        existing = unreal.EditorAssetLibrary.load_asset(full_asset_path)
+        if existing is not None:
+            logger.info("LensFile 已存在，清空旧 tables 后重建: %s", full_asset_path)
+            existing.clear_all()
+            lens_file = existing
+        else:
+            logger.warning(
+                "LensFile 资产存在但 load 失败，尝试重新创建: %s", full_asset_path
+            )
 
     if lens_file is None:
-        raise RuntimeError(
-            f"LensFile 资产创建失败: {package_path}/{asset_name}"
+        logger.info("正在创建 LensFile 资产: %s", full_asset_path)
+        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+
+        # UE 5.7: ULensFileFactoryNew 在 CameraCalibrationEditor Private 模块，
+        # 未导出给 Python。create_asset 接受 factory=None 时走 NewObject 默认路径
+        # (AssetTools.cpp:1762-1764)。保留对旧版本 factory 的兼容兜底。
+        factory_obj = None
+        factory_cls = getattr(unreal, "LensFileFactoryNew", None)
+        if factory_cls is not None:
+            try:
+                factory_obj = factory_cls()
+                logger.info("使用 LensFileFactoryNew 创建资产")
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "LensFileFactoryNew 实例化失败，回落到 factory=None: %s", exc
+                )
+                factory_obj = None
+        else:
+            logger.info("UE 5.7 未导出 LensFileFactoryNew，使用 factory=None 默认路径")
+
+        lens_file = asset_tools.create_asset(
+            asset_name=asset_name,
+            package_path=package_path,
+            asset_class=unreal.LensFile,
+            factory=factory_obj,
         )
-    logger.info("资产创建成功，开始写入畸变数据...")
+
+        if lens_file is None:
+            raise RuntimeError(
+                f"LensFile 资产创建失败: {full_asset_path}"
+            )
+        logger.info("资产创建成功，开始写入畸变数据...")
+    else:
+        logger.info("开始向已有 LensFile 写入畸变数据...")
 
     # ------------------------------------------------------------------
     # 2. 按焦距分组
@@ -250,8 +274,9 @@ def build_lens_file(
     # ------------------------------------------------------------------
     # 4. 保存资产
     # ------------------------------------------------------------------
-    full_asset_path = f"{package_path}/{asset_name}.{asset_name}"
-    unreal.EditorAssetLibrary.save_asset(full_asset_path, only_if_is_dirty=False)
-    logger.info("LensFile 已保存: %s", full_asset_path)
+    # save_asset 需要 Object 路径（含 .asset_name 对象后缀），不同于 package 路径。
+    save_path = f"{full_asset_path}.{asset_name}"
+    unreal.EditorAssetLibrary.save_asset(save_path, only_if_is_dirty=False)
+    logger.info("LensFile 已保存: %s", save_path)
 
     return lens_file

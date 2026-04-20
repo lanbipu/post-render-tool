@@ -92,6 +92,72 @@ def _add_component_via_subobject_subsystem(
 
 
 # ---------------------------------------------------------------------------
+# 内部工具：幂等辅助
+# ---------------------------------------------------------------------------
+
+def _find_actor_by_label(
+    label: str, actor_class: "unreal.Class"
+) -> "unreal.Actor | None":
+    """在当前关卡查找 label 匹配的指定类 Actor，找不到返回 None。"""
+    for actor in unreal.EditorLevelLibrary.get_all_level_actors():
+        if isinstance(actor, actor_class) and actor.get_actor_label() == label:
+            return actor
+    return None
+
+
+def _ensure_lens_component(camera: "unreal.Actor") -> "unreal.ActorComponent":
+    """返回 camera 上的 LensComponent：已有复用，没有则通过 Subsystem 添加。"""
+    lens_comp_class = _load_lens_component_class()
+    existing = camera.get_components_by_class(lens_comp_class)
+    if existing:
+        logger.info("复用现有 LensComponent")
+        return existing[0]
+    lens_component = _add_component_via_subobject_subsystem(camera, lens_comp_class)
+    logger.info("已添加 LensComponent")
+    return lens_component
+
+
+def _configure_camera(
+    camera_actor: "unreal.CineCameraActor",
+    sensor_width_mm: float,
+    lens_file: "unreal.LensFile",
+) -> None:
+    """配置 Filmback + LensComponent + LensFile + apply_distortion。
+
+    对新建和复用的 CineCameraActor 都安全：所有字段都用"读-改-写"覆盖赋值，
+    不依赖初始状态。
+    """
+    # Filmback
+    comp: unreal.CineCameraComponent = camera_actor.get_cine_camera_component()
+    filmback = comp.filmback
+    filmback.sensor_width = sensor_width_mm
+    comp.filmback = filmback
+    logger.info("Filmback 传感器宽度已设置: %.3f mm", sensor_width_mm)
+
+    # LensComponent：已有复用，没有则 add（UE 5.7 无顶层 LensFile 属性，走 FLensFilePicker
+    # 嵌套 struct — LensComponent.h:280-281）
+    lens_component = _ensure_lens_component(camera_actor)
+    try:
+        picker = lens_component.get_editor_property("lens_file_picker")
+        picker.lens_file = lens_file
+        picker.use_default_lens_file = False
+        lens_component.set_editor_property("lens_file_picker", picker)
+        logger.info("LensFile 已关联到 LensComponent.lens_file_picker")
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"LensFile 关联到 LensComponent.lens_file_picker 失败: {exc}"
+        ) from exc
+
+    try:
+        lens_component.set_editor_property("apply_distortion", True)
+        logger.info("LensComponent apply_distortion 已启用")
+    except (AttributeError, TypeError, Exception) as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"apply_distortion 启用失败: {exc}"
+        ) from exc
+
+
+# ---------------------------------------------------------------------------
 # 公共 API
 # ---------------------------------------------------------------------------
 
@@ -100,15 +166,11 @@ def build_camera(
     lens_file: "unreal.LensFile",
     actor_label: str = "CineCamera_PostRender",
 ) -> "unreal.CineCameraActor":
-    """创建 CineCameraActor 并配置 Filmback 与 LensComponent。
+    """创建或复用 CineCameraActor，并配置 Filmback 与 LensComponent（幂等）。
 
-    流程：
-    1. 检查 Camera Calibration 插件是否已加载。
-    2. 在世界原点 Spawn CineCameraActor。
-    3. 设置 Actor Label。
-    4. 配置 CineCameraComponent 的 Filmback 传感器宽度。
-    5. 添加 LensComponent 并关联 LensFile 资产。
-    6. 启用 LensComponent 的畸变应用（apply_distortion = True）。
+    幂等策略：按 actor_label 在当前关卡查找 CineCameraActor，找到则复用并更新配置，
+    否则在世界原点 Spawn 新实例。复用路径对于"改 axis mapping 后重新 Import"
+    至关重要 —— 它保持 LevelSequence 里的 possessable GUID 稳定。
 
     Parameters
     ----------
@@ -122,24 +184,29 @@ def build_camera(
     Returns
     -------
     unreal.CineCameraActor
-        已配置完毕的 CineCameraActor 实例。
+        已配置完毕的 CineCameraActor 实例（可能是现有的或新 Spawn 的）。
 
     Raises
     ------
     RuntimeError
-        Camera Calibration 插件未加载，或 Actor Spawn 失败时抛出。
+        Camera Calibration 插件未加载，或 Actor Spawn / 属性写入失败时抛出。
     """
-    # ------------------------------------------------------------------
-    # 1. 检查插件
-    # ------------------------------------------------------------------
     _check_camera_calibration_plugin()
 
-    # ------------------------------------------------------------------
-    # 2. 在世界原点 Spawn CineCameraActor
-    # ------------------------------------------------------------------
+    # 优先复用 label 匹配的现有 actor（避免每次 Import 产生 CineCamera_*_2、_3 ...）
+    existing = _find_actor_by_label(actor_label, unreal.CineCameraActor)
+    if existing is not None:
+        logger.info("复用现有 CineCameraActor: %s", actor_label)
+        _configure_camera(existing, sensor_width_mm, lens_file)
+        logger.info(
+            "CineCameraActor 配置完成（复用）: label='%s', sensor_width=%.3f mm",
+            actor_label, sensor_width_mm,
+        )
+        return existing
+
+    # Spawn 新实例
     location = unreal.Vector(0.0, 0.0, 0.0)
     rotation = unreal.Rotator(0.0, 0.0, 0.0)
-
     camera_actor: unreal.CineCameraActor = (
         unreal.EditorLevelLibrary.spawn_actor_from_class(
             actor_class=unreal.CineCameraActor,
@@ -147,71 +214,16 @@ def build_camera(
             rotation=rotation,
         )
     )
-
     if camera_actor is None:
         raise RuntimeError(
             "CineCameraActor Spawn 失败，请确认当前关卡已打开且编辑器处于正常状态。"
         )
-
-    # ------------------------------------------------------------------
-    # 3. 设置 Actor Label
-    # ------------------------------------------------------------------
     camera_actor.set_actor_label(actor_label)
     logger.info("已创建 CineCameraActor: %s", actor_label)
 
-    # ------------------------------------------------------------------
-    # 4. 配置 Filmback 传感器宽度
-    # ------------------------------------------------------------------
-    comp: unreal.CineCameraComponent = camera_actor.get_cine_camera_component()
-
-    filmback = comp.filmback
-    filmback.sensor_width = sensor_width_mm
-    comp.filmback = filmback
-
-    logger.info("Filmback 传感器宽度已设置: %.3f mm", sensor_width_mm)
-
-    # ------------------------------------------------------------------
-    # 5. 添加 LensComponent 并关联 LensFile
-    # ------------------------------------------------------------------
-    # UE 5.7: ULensComponent 无 BlueprintType，unreal.LensComponent 不存在，
-    # 需用 load_class 拿 UClass；AActor::AddComponentByClass 带 ScriptNoExport
-    # 也不可用，走 SubobjectDataSubsystem 的官方 editor 路径。
-    lens_component = _add_component_via_subobject_subsystem(
-        camera_actor,
-        _load_lens_component_class(),
-    )
-    logger.info("LensComponent 已添加到 %s", actor_label)
-
-    # ULensComponent 没有顶层 LensFile 属性；实际 UPROPERTY 是 FLensFilePicker 嵌套
-    # （LensComponent.h:280-281 → FLensFilePicker.LensFile，CameraCalibrationCore/
-    # Public/LensFile.h:361-378）。Python 需先拿 struct、改内部字段、再 set 回去。
-    try:
-        picker = lens_component.get_editor_property("lens_file_picker")
-        picker.lens_file = lens_file
-        picker.use_default_lens_file = False
-        lens_component.set_editor_property("lens_file_picker", picker)
-        logger.info("LensFile 已关联到 LensComponent.lens_file_picker")
-    except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(
-            f"LensFile 关联到 LensComponent.lens_file_picker 失败: {exc}"
-        ) from exc
-
-    # ------------------------------------------------------------------
-    # 6. 启用畸变应用
-    # ------------------------------------------------------------------
-    try:
-        lens_component.set_editor_property("apply_distortion", True)
-        logger.info("LensComponent apply_distortion 已启用")
-    except (AttributeError, TypeError, Exception) as exc:  # noqa: BLE001
-        raise RuntimeError(
-            f"apply_distortion 启用失败: {exc}"
-        ) from exc
-
+    _configure_camera(camera_actor, sensor_width_mm, lens_file)
     logger.info(
-        "CineCameraActor 构建完成: label='%s', sensor_width=%.3f mm, lens_file=%s",
-        actor_label,
-        sensor_width_mm,
-        lens_file,
+        "CineCameraActor 构建完成（新建）: label='%s', sensor_width=%.3f mm",
+        actor_label, sensor_width_mm,
     )
-
     return camera_actor

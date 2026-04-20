@@ -74,15 +74,41 @@ def build_sequence(
         The created and saved LevelSequence asset.
     """
     # ------------------------------------------------------------------
-    # Step 1: Create LevelSequence asset
+    # Step 1: Create or reuse LevelSequence asset (idempotent)
     # ------------------------------------------------------------------
+    # 若资产已存在（上一次 Import 留下的）→ load 后清空所有 bindings。
+    # MovieSceneBindingProxy.Remove (MovieSceneBindingExtensions.h:143-144) 连同
+    # 其下所有 tracks / sections / keyframes 一起删除，等同于"清场重建"。
+    # 这样 Apply mapping 改动后重新 Import 能直接在 Sequencer 看到新轨迹。
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-    level_sequence: unreal.LevelSequence = asset_tools.create_asset(
-        asset_name,
-        package_path,
-        unreal.LevelSequence,
-        unreal.LevelSequenceFactoryNew(),
-    )
+    full_sequence_path = f"{package_path}/{asset_name}"
+
+    if unreal.EditorAssetLibrary.does_asset_exist(full_sequence_path):
+        level_sequence = unreal.EditorAssetLibrary.load_asset(full_sequence_path)
+        if level_sequence is None:
+            raise RuntimeError(
+                f"LevelSequence 资产存在但 load 失败: {full_sequence_path}"
+            )
+        # get_bindings (MovieSceneSequenceExtensions.h:382-383) 是 ScriptMethod
+        # UFUNCTION，返回 list[MovieSceneBindingProxy]。
+        existing_bindings = list(level_sequence.get_bindings())
+        for binding in existing_bindings:
+            binding.remove()
+        unreal.log(
+            f"[post_render_tool] LevelSequence 已存在，清空 "
+            f"{len(existing_bindings)} 个 bindings 后重建: {full_sequence_path}"
+        )
+    else:
+        level_sequence = asset_tools.create_asset(
+            asset_name,
+            package_path,
+            unreal.LevelSequence,
+            unreal.LevelSequenceFactoryNew(),
+        )
+        if level_sequence is None:
+            raise RuntimeError(
+                f"LevelSequence 资产创建失败: {full_sequence_path}"
+            )
 
     # ------------------------------------------------------------------
     # Step 2: Set frame rate
@@ -225,11 +251,10 @@ def build_sequence(
     # ------------------------------------------------------------------
     # Step 7: Save and log
     # ------------------------------------------------------------------
-    asset_full_path = f"{package_path}/{asset_name}"
-    unreal.EditorAssetLibrary.save_asset(asset_full_path)
+    unreal.EditorAssetLibrary.save_asset(full_sequence_path)
 
     unreal.log(
-        f"[post_render_tool] LevelSequence 创建完成：{asset_full_path}  "
+        f"[post_render_tool] LevelSequence 创建完成：{full_sequence_path}  "
         f"共 {csv_result.frame_count} 关键帧，帧跨度 {frame_span}，"
         f"帧率 {fps} fps（{numerator}/{denominator}）"
     )
