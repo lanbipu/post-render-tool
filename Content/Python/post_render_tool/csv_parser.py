@@ -111,6 +111,9 @@ def _validate_required_fields(headers: List[str], prefix: str) -> None:
 
 
 def _get_float(row: dict, key: str) -> float:
+    """Strict: empty value raises _EmptyFieldError — used for transform-
+    critical fields (position / rotation / focal length / sensor width)
+    where 0 is not a meaningful substitute."""
     val = row.get(key)
     if val is None or val == "":
         raise _EmptyFieldError(key)
@@ -122,6 +125,23 @@ def _get_required_int(row: dict, key: str) -> int:
     if val is None or val == "":
         raise _EmptyFieldError(key)
     return int(float(val))
+
+
+def _get_float_lenient(row: dict, key: str, blanks: dict) -> float:
+    """Lenient: empty value returns 0.0 and increments the blanks counter.
+
+    Use for optional camera metadata (distortion k1/k2/k3, centerShift,
+    aperture, focusDistance, fov_h) that some Disguise capture configurations
+    simply don't record. Silently zeroing them is acceptable because:
+      - distortion = 0 is a valid "no distortion" lens file
+      - aperture = 0 / focus = 0 are inert for Sequencer playback
+      - fov_h = 0 only affects validator warnings, not playback
+    """
+    val = row.get(key)
+    if val is None or val == "":
+        blanks[key] = blanks.get(key, 0) + 1
+        return 0.0
+    return float(val)
 
 
 def _get_opt_float(row: dict, key: str) -> Optional[float]:
@@ -178,13 +198,21 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
             return f"{prefix}.{suffix}"
 
         # --- Parse rows ---
-        # Disguise Designer 在 tracker 丢帧 / 校准未就绪时导出的 CSV 行中
-        # 必填字段可能是空串。按帧跳过 + 记数，避免整条 pipeline 因一行炸掉。
-        # frame_number 驱动 LevelSequence cadence，跳帧会在 sequence 里产生
-        # keyframe gap，UE 会线性插值，效果等价于"丢失帧用前后插值补"。
+        # Two-tier empty-field handling, calibrated to Disguise CSV reality:
+        #   TIER 1 (strict): frame / offset xyz / rotation xyz / focalLengthMM /
+        #     paWidthMM / aspectRatio. These drive transform and camera setup;
+        #     empty means unrecoverable → skip the whole row and log.
+        #   TIER 2 (lenient): k1/k2/k3, centerShiftMM xy, aperture, focusDistance,
+        #     fov_h. Some Disguise capture profiles never record these (e.g.
+        #     no distortion calibration session, no iris encoder). Empty →
+        #     substitute 0.0 and report aggregate counts at the end.
+        # frame_number drives LevelSequence cadence, so skipped rows create
+        # keyframe gaps that UE linear-interpolates across — functionally
+        # equivalent to "missing frames filled from neighbours".
         frames: List[FrameData] = []
         skipped = 0
         first_skip_sample: Optional[str] = None
+        lenient_blanks: dict = {}
 
         for row in reader:
             try:
@@ -201,14 +229,14 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
                     focal_length_mm=_get_float(row, col("focalLengthMM")),
                     sensor_width_mm=_get_float(row, col("paWidthMM")),
                     aspect_ratio=_get_float(row, col("aspectRatio")),
-                    aperture=_get_float(row, col("aperture")),
-                    focus_distance=_get_float(row, col("focusDistance")),
-                    k1=_get_float(row, col("k1k2k3.x")),
-                    k2=_get_float(row, col("k1k2k3.y")),
-                    k3=_get_float(row, col("k1k2k3.z")),
-                    center_shift_x_mm=_get_float(row, col("centerShiftMM.x")),
-                    center_shift_y_mm=_get_float(row, col("centerShiftMM.y")),
-                    fov_h=_get_float(row, col("fieldOfViewH")),
+                    aperture=_get_float_lenient(row, col("aperture"), lenient_blanks),
+                    focus_distance=_get_float_lenient(row, col("focusDistance"), lenient_blanks),
+                    k1=_get_float_lenient(row, col("k1k2k3.x"), lenient_blanks),
+                    k2=_get_float_lenient(row, col("k1k2k3.y"), lenient_blanks),
+                    k3=_get_float_lenient(row, col("k1k2k3.z"), lenient_blanks),
+                    center_shift_x_mm=_get_float_lenient(row, col("centerShiftMM.x"), lenient_blanks),
+                    center_shift_y_mm=_get_float_lenient(row, col("centerShiftMM.y"), lenient_blanks),
+                    fov_h=_get_float_lenient(row, col("fieldOfViewH"), lenient_blanks),
                     fov_v=_get_opt_float(row, col("fieldOfViewV")),
                     resolution_x=_get_opt_int(row, col("resolution.x")),
                     resolution_y=_get_opt_int(row, col("resolution.y")),
@@ -221,16 +249,30 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
             frames.append(fd)
 
         if skipped:
-            logger.warning(
-                "parse_csv_dense: skipped %d row(s) with empty required fields "
-                "(first example: %s). LevelSequence will interpolate across the gap.",
-                skipped, first_skip_sample,
+            msg = (
+                f"[csv_parser] skipped {skipped} row(s) with empty transform-critical "
+                f"field (first example: {first_skip_sample}). "
+                "LevelSequence will interpolate across the gap."
             )
+            logger.warning(msg)
+            print(msg)  # route to UE Output Log
+
+        if lenient_blanks:
+            summary = ", ".join(
+                f"{key}={count}" for key, count in sorted(lenient_blanks.items())
+            )
+            msg = (
+                f"[csv_parser] non-critical fields had empty values, defaulted to 0.0: "
+                f"{summary}. Distortion / aperture / focus may be degraded but "
+                "playback proceeds."
+            )
+            logger.warning(msg)
+            print(msg)  # route to UE Output Log
 
     if not frames:
         raise CsvParseError(
             f"No usable data rows found in file: {file_path} "
-            f"(skipped {skipped} row(s) with empty required fields)"
+            f"(skipped {skipped} row(s) with empty transform-critical field)"
         )
 
     focal_lengths = [f.focal_length_mm for f in frames]
