@@ -1,5 +1,10 @@
 # CLAUDE.md
 
+> **🚧 IN-PROGRESS 调试中**：Disguise CSV K → UE LensFile 的 distortion 映射
+> 还差最后 1-3 像素残差才 pixel-perfect。下次 session 接手前**先读
+> `docs/distortion-investigation.md`** —— 包含完整 context、两条解决路径、
+> 关键资产位置、不要重复踩的坑。
+
 ## Project Overview
 
 VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor + LensFile + LevelSequence.
