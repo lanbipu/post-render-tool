@@ -14,6 +14,7 @@ import unreal
 
 from . import config
 from .csv_parser import CsvDenseResult, FrameData
+from .distortion_packing import to_spherical_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -249,13 +250,20 @@ def build_lens_file(
         #   - FDistortionInfo.Parameters: TArray<float>       → parameters
         #   - FFocalLengthInfo.FxFy:      FVector2D           → fx_fy
         #   - FImageCenterInfo.PrincipalPoint: FVector2D      → principal_point
-        # focus=0（固定对焦点），zoom 用归一化焦距比（焦距/传感器宽度）
-        zoom_value = focal_mm / frame.sensor_width_mm
+        # focus=0（固定对焦点）。
+        # zoom key 单位必须是毫米，与运行时 LensComponent UseCameraSettings 模式
+        # 喂进来的 EvalInputs.Zoom 一致 —— LensComponent.cpp:100 把
+        # CineCameraComponent.CurrentFocalLength (mm) 缓存到 OriginalFocalLength,
+        # line 1017 直接赋给 EvalInputs.Zoom, line 136 再传给 EvaluateDistortionData。
+        # 历史 Bug：曾用归一化值 focal_mm/sensor_width_mm（0.5–2 量级），多焦距
+        # CSV 下运行时拿 mm 量级的 30/50/70 去查表会落在所有 key 的右侧极值，
+        # LensFile 内部 clamp 后只返回最后一组畸变 → 变焦时畸变与焦距脱钩。
+        zoom_value = float(focal_mm)
         try:
             distortion_info = unreal.DistortionInfo()
-            distortion_info.parameters = [
-                nd["k1"], nd["k2"], nd["p1"], nd["p2"], nd["k3"]
-            ]
+            # 必须按 FSphericalDistortionParameters 字段声明顺序 (K1, K2, K3, P1, P2)
+            # 打包，详见 distortion_packing.py 与 SphericalLensModel.h 注释。
+            distortion_info.parameters = to_spherical_parameters(nd)
 
             focal_info = unreal.FocalLengthInfo()
             focal_info.fx_fy = unreal.Vector2D(nd["fx"], nd["fy"])
@@ -274,7 +282,7 @@ def build_lens_file(
                 new_zoom=zoom_value,
                 new_point=image_center,
             )
-            logger.info("    写入成功 (zoom=%.4f)", zoom_value)
+            logger.info("    写入成功 (zoom=%.3f mm)", zoom_value)
             success_count += 1
         except Exception as exc:  # noqa: BLE001
             logger.error(

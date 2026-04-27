@@ -165,6 +165,24 @@ def _configure_camera(
             f"apply_distortion 启用失败: {exc}"
         ) from exc
 
+    # EvaluationMode：默认 UseLiveLink 在我们这条无 LiveLink 的 pipeline 里会让
+    # EvalInputs.bIsValid 永远为 false，导致 LensFile 在渲染期被跳过 —
+    # ULensComponent::UpdateLensFileEvaluationInputs (LensComponent.cpp:1002-1018)
+    # 仅在收到 LiveLink 帧时才填 EvalInputs；ApplyDistortion 入口
+    # (LensComponent.cpp:444) 看到 bIsValid=false 直接 return。
+    # 切到 UseCameraSettings 让 LensComponent 从同一 actor 上的 CineCameraComponent
+    # 直接读 CurrentFocusDistance/CurrentAperture/CurrentFocalLength 作为 FIZ 输入。
+    try:
+        lens_component.set_editor_property(
+            "evaluation_mode",
+            unreal.FIZEvaluationMode.USE_CAMERA_SETTINGS,
+        )
+        logger.info("LensComponent evaluation_mode 已切换到 USE_CAMERA_SETTINGS")
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"evaluation_mode 设置失败: {exc}"
+        ) from exc
+
 
 # ---------------------------------------------------------------------------
 # 公共 API
