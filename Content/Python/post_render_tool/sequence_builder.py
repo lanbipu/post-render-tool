@@ -94,9 +94,17 @@ def build_sequence(
         existing_bindings = list(level_sequence.get_bindings())
         for binding in existing_bindings:
             binding.remove()
+        # binding.remove() 只清 binding 自己挂的 tracks，sequence 根级的 master
+        # track（Camera Cut Track 就是 master track）不会被带走，必须主动清。
+        # 否则重新 Import 时会留下指向被删 binding 的悬挂 Camera Cut Section，
+        # MRQ 渲染会 fallback 到错的相机。
+        existing_tracks = list(level_sequence.get_tracks())
+        for track in existing_tracks:
+            level_sequence.remove_track(track)
         unreal.log(
             f"[post_render_tool] LevelSequence 已存在，清空 "
-            f"{len(existing_bindings)} 个 bindings 后重建: {full_sequence_path}"
+            f"{len(existing_bindings)} 个 bindings + {len(existing_tracks)} 个 "
+            f"master tracks 后重建: {full_sequence_path}"
         )
     else:
         level_sequence = asset_tools.create_asset(
@@ -140,6 +148,22 @@ def build_sequence(
     cine_comp = camera_actor.get_cine_camera_component()
     comp_binding: unreal.MovieSceneBindingProxy = level_sequence.add_possessable(
         cine_comp
+    )
+
+    # Camera Cut Track：MRQ 渲染必需。缺这条 track 时 MRQ 拿不到 sequence 当前
+    # 时间应该用哪个相机，会 fallback 到 World Outliner 第一个相机或 default
+    # camera —— 表现就是 Sequencer 预览正确、MRQ 渲染 FOV/姿态完全错位。
+    # binding id 必须从 actor possessable (camera_binding) 拿，不是 component
+    # binding —— FMovieSceneCameraCutSection 只接受 actor 级 binding。
+    camera_cut_track: unreal.MovieSceneCameraCutTrack = level_sequence.add_track(
+        unreal.MovieSceneCameraCutTrack
+    )
+    camera_cut_section: unreal.MovieSceneCameraCutSection = (
+        camera_cut_track.add_section()
+    )
+    camera_cut_section.set_range(0, frame_span)
+    camera_cut_section.set_camera_binding_id(
+        level_sequence.get_binding_id(camera_binding)
     )
 
     # ------------------------------------------------------------------
