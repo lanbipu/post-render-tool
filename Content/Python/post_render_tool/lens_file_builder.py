@@ -47,29 +47,38 @@ def _compute_normalized_distortion(frame_data: FrameData) -> dict:
     pa_height = pa_width / aspect
     cy = 0.5 + frame_data.center_shift_y_mm / pa_height
 
-    # K 系数直接透传（不取反）。Disguise CSV 里的 K1/K2/K3 跟 UE
-    # SphericalLensModel 用的 OpenCV Brown-Conrady forward distort 公式
-    # (SphericalDistortion.usf:39 `dr = 1 + K1·r² + K2·r⁴ + K3·r⁶`) 是
-    # 同一约定——K1 > 0 双方都产生 barrel direction（中心向外鼓）。
+    # K 系数取反号：Disguise 的 K1/K2/K3 跟 UE SphericalLensModel
+    # 用的 OpenCV Brown-Conrady forward distort 公式
+    # (SphericalDistortion.usf:39 `dr = 1 + K1·r² + K2·r⁴ + K3·r⁶`)
+    # 数值一致但**物理方向相反**——直接透传 UE 渲出 barrel，但 Disguise
+    # compositor 同样数值渲的是 pincushion。
     #
-    # 验证（2026-04-27 controlled experiment）：在 d3 端 stage 上摆 LED
-    # surface + 网格图 + Disguise camera 对准，K1 = 0.5 / K2 = K3 = 0，
-    # 通过 Transmission "export compositor frame" 导出 image 45：四条网格
-    # 边都向外凸（barrel）。OpenCV `1 + K·r²` 公式同样 K 值产生同样方向。
-    # 因此直接透传 CSV K 才是对的，不需要取反。
+    # 验证（2026-04-27 端到端 controlled experiment）：
+    # - Disguise designer：stage 上摆 LED surface + 完美 16:9 直线网格图，
+    #   Disguise camera 对准网格。K1=0.5 / K2=K3=0 → compositor 输出网格
+    #   "向内凹"（pincushion，边角被往画面中心拉）。
+    # - UE：用同一 CSV (K=0/centerShift=0)+ 同一相机轨迹 import，然后在
+    #   LensFile 资产里手动把 K1 改成 0.5。Sequencer 渲染同一帧 → 网格
+    #   "向外凸"（barrel）。
+    # - 两端方向完全相反，证明 Disguise 用 inverse 系数（"undistort 量"），
+    #   UE 用 forward（"distort 量"），同符号同数值视觉相反。
     #
-    # 历史教训：早期对照（image 36-42）误以为 Disguise 端 grid 是 pincushion
-    # 方向，那是 d3 designer 里 lens calibration overlay（undistortion grid
-    # 可视化），跟 compositor 实际输出方向相反。controlled experiment 才能
-    # 锁定真相。
+    # 修法：CSV → UE LensFile 时 K1/K2/K3 取反号。这是 forward ↔ inverse
+    # 的 0 阶 Taylor 近似，Disguise CSV 的 K 数量级在 ±0.4 内，残余 ~2%
+    # round-trip 误差，主要表现为高阶项（K2/K3）影响下角部畸变的微小幅
+    # 度差。如未来要 pixel-perfect 对位，需要做高阶反算或切 STMap 路径。
+    #
+    # 历史踩坑：commit 07459fb 用 -K 后 commit bd7ddc1 又改回 +K，是基于
+    # 我对 image 45 视觉方向的误判。用户做的端到端 controlled experiment
+    # （UE 和 Disguise 两端用同样 K=0.5 直接对照）才锁定真相是 -K。
     return {
         "fx": fx,
         "fy": fy,
         "cx": cx,
         "cy": cy,
-        "k1": frame_data.k1,
-        "k2": frame_data.k2,
-        "k3": frame_data.k3,
+        "k1": -frame_data.k1,
+        "k2": -frame_data.k2,
+        "k3": -frame_data.k3,
         "p1": 0.0,
         "p2": 0.0,
     }
