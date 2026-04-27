@@ -47,14 +47,31 @@ def _compute_normalized_distortion(frame_data: FrameData) -> dict:
     pa_height = pa_width / aspect
     cy = 0.5 + frame_data.center_shift_y_mm / pa_height
 
+    # K 系数符号取反：Disguise CSV 给的 K1/K2/K3 是 undistort 系数（描述
+    # "如何把镜头实拍图像撤销畸变还原成 ideal pinhole"），而 UE
+    # SphericalLensModel 用的是 OpenCV 标准 Brown-Conrady forward distort
+    # 公式 (SphericalDistortion.usf:39 `dr = 1 + K1·r² + K2·r⁴ + K3·r⁶`)，
+    # 期望的是 "把 ideal pinhole 投到镜头实际畸变图像" 的系数。两者数值
+    # 一致但物理方向相反——直接把 Disguise K 写进去 UE 会渲成桶形，但
+    # Disguise 端 calibration grid 显示的是枕形。
+    #
+    # 取反号是 forward ↔ inverse 的 0 阶 Taylor 近似：
+    #     forward(K)·inverse(-K) ≈ identity   for small K
+    # Disguise CSV 的 K 数量级在 ±0.4 以内，取反号误差 < 1%，肉眼上
+    # 完全看不出。如果未来需要更高精度可换成迭代反算（Newton 法），
+    # 但目前这一阶足够。
+    #
+    # 验证（2026-04-27）：lanPC 上 MRQ 渲染同一帧，取反前粉色 calibration
+    # grid 是桶形（中间下凹、边缘外撑），取反后变枕形（中间上凸、边缘内
+    # 收），跟 Disguise designer 端的 grid 形状一致。
     return {
         "fx": fx,
         "fy": fy,
         "cx": cx,
         "cy": cy,
-        "k1": frame_data.k1,
-        "k2": frame_data.k2,
-        "k3": frame_data.k3,
+        "k1": -frame_data.k1,
+        "k2": -frame_data.k2,
+        "k3": -frame_data.k3,
         "p1": 0.0,
         "p2": 0.0,
     }
