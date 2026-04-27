@@ -200,6 +200,32 @@ The plugin is exercised inside UE 5.7 Editor on `lanPC` (Windows 11 workstation)
 - For paths with spaces, use `-LiteralPath "forward/slash/path"` — PowerShell accepts `/` on Windows
 - `Get-ChildItem -Include *.uasset` only works with `-Path` + wildcard; with `-LiteralPath` use `-Filter "*.uasset"` instead
 
+### UE Python Remote Execution（从 Mac 直接 dispatch）
+
+走这条路就能跳过"复制 Python 到 UE Output Log"的来回，直接从 Mac 把 `unreal.*` 代码远程跑到 lanPC 上的 UE Editor。
+
+**一次性开关**（已设置好；新项目/新机器需要时再开）：
+- UE Editor → **Edit → Project Settings → Plugins → Python** → 勾 **Enable Remote Execution** → 重启 Editor
+
+**已就绪的资产**：
+- bridge 脚本：lanPC 上 `C:/temp/ue-remote/run_ue.py`（接受文件路径参数）
+
+**标准用法**：
+
+```bash
+# 1. Mac 上写诊断/补丁脚本（UTF-8，支持中文）
+cat > /tmp/ue_diag.py <<'PY'
+import unreal
+print(unreal.SystemLibrary.get_engine_version())
+PY
+
+# 2. SCP 过去 + 远程跑
+scp /tmp/ue_diag.py lanpc:C:/temp/ue-remote/diag.py
+ssh lanpc '"D:\Program Files\Epic Games\UE_5.7\Engine\Binaries\ThirdParty\Python3\Win64\python.exe" C:/temp/ue-remote/run_ue.py C:/temp/ue-remote/diag.py'
+```
+
+**注意**：脚本必须 SCP 文件传，不要 `cat | ssh ... powershell stdin`——PowerShell 默认 UTF-16 会把中文搞坏。
+
 <!-- DOCSMITH:KNOWLEDGE:BEGIN -->
 ## Knowledge Base (Managed by Docsmith)
 

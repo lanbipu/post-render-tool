@@ -183,6 +183,48 @@ def _configure_camera(
             f"evaluation_mode 设置失败: {exc}"
         ) from exc
 
+    # bAutoActivate：LensComponent 默认 false → ExecuteRegisterEvents 不调
+    # Activate(true) → bIsActive=false → TickComponent 整段被跳过 → LensFile 评估
+    # 永远不跑 → MID/SVE state 永远不挂到相机。
+    # ActorComponent.cpp:2797-2802 SetAutoActivate 在已 register 时静默忽略，必须
+    # 走 set_editor_property 直接写底层 UPROPERTY。再补一刀 activate() 让当前
+    # 实例立即生效（PIE/MRQ 的克隆体由 bAutoActivate=true 接管）。
+    try:
+        lens_component.set_editor_property("auto_activate", True)
+        if not lens_component.is_active():
+            lens_component.activate()
+        logger.info(
+            "LensComponent auto_activate=True, is_active=%s",
+            lens_component.is_active(),
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"LensComponent activate 失败: {exc}"
+        ) from exc
+
+    # LensModel：必须显式设到 LensComponent 上。Python 的
+    # set_editor_property("lens_file_picker", picker) 不会触发
+    # PostEditChangeProperty(FLensFilePicker.LensFile)（LensComponent.cpp:391-394
+    # 那一支只在 LensFile 内层字段被改时才 fire），SetLensFilePicker 不会被调，
+    # 因此 SetLensModel → CreateDistortionHandler 这条链路走不到，
+    # LensDistortionHandlerMap 永远空，TickComponent 第 121 行 FindRef 拿到 nullptr，
+    # distortion eval 整段被跳过。直接写 lens_model 走 PostEditChangeProperty(LensModel)
+    # 那一支 (line 395-398) 强制创建 handler。
+    try:
+        spherical_cls = unreal.load_class(
+            None, "/Script/CameraCalibrationCore.SphericalLensModel"
+        )
+        if spherical_cls is None:
+            raise RuntimeError(
+                "SphericalLensModel UClass 加载失败，请确认 Camera Calibration 插件已启用"
+            )
+        lens_component.set_editor_property("lens_model", spherical_cls)
+        logger.info("LensComponent lens_model 已设置为 SphericalLensModel")
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"LensComponent lens_model 设置失败: {exc}"
+        ) from exc
+
 
 # ---------------------------------------------------------------------------
 # 公共 API

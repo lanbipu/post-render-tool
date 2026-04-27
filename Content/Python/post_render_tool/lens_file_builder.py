@@ -211,13 +211,25 @@ def build_lens_file(
     try:
         lens_info = lens_file.get_editor_property("lens_info")
         lens_info.sensor_dimensions = unreal.Vector2D(pa_width, pa_height)
+        # LensInfo.LensModel 显式写为 Spherical：默认 None 时 LensComponent 走
+        # SetLensFilePicker → SetLensModel(null) 路径 (LensComponent.cpp:602)，
+        # CreateDistortionHandler 不会跑、LensDistortionHandlerMap 留空、
+        # TickComponent 拿不到 handler → distortion 整段静默跳过。
+        # camera_builder 那边也独立写了一次（双保险），这里写在资产上让所有
+        # 路径（LensFile Editor preview、ICVFX 等）共享同一个真相源。
+        spherical_cls = unreal.load_class(
+            None, "/Script/CameraCalibrationCore.SphericalLensModel"
+        )
+        if spherical_cls is not None:
+            lens_info.lens_model = spherical_cls
         lens_file.set_editor_property("lens_info", lens_info)
         logger.info(
-            "LensInfo.SensorDimensions 已设置: %.3f x %.3f mm", pa_width, pa_height
+            "LensInfo 已设置: SensorDimensions=%.3fx%.3f mm, LensModel=%s",
+            pa_width, pa_height, lens_info.lens_model,
         )
     except Exception as exc:  # noqa: BLE001
         raise RuntimeError(
-            f"LensInfo.SensorDimensions 写入失败: {exc}"
+            f"LensInfo 写入失败: {exc}"
         ) from exc
 
     # ------------------------------------------------------------------
