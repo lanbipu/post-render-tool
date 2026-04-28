@@ -4,10 +4,10 @@ M_RAT6 fit (commit 8164938, Path A K1 sweep):
     r' = r · (1 + a·K·r² + b·K²·r⁴ + c·K³·r⁶)
         / (1 + d·K·r² + e·K²·r⁴ + f·K³·r⁶)
 
-Maps to UE BrownConradyUDLensModel:
-    K1 = a·csv_K · fx²    K4 = d·csv_K · fx²
-    K2 = b·csv_K² · fx⁴   K5 = e·csv_K² · fx⁴
-    K3 = c·csv_K³ · fx⁶   K6 = f·csv_K³ · fx⁶
+Maps to UE BrownConradyUDLensModel (with HW-norm → fx-norm scaling):
+    K1 = a·csv_K · (2·fx)²    K4 = d·csv_K · (2·fx)²
+    K2 = b·csv_K² · (2·fx)⁴   K5 = e·csv_K² · (2·fx)⁴
+    K3 = c·csv_K³ · (2·fx)⁶   K6 = f·csv_K³ · (2·fx)⁶
 plus CSV K2/K3 sign-flip pass-through on UE K2/K3 (legacy, TODO: K2/K3 sweep).
 """
 from __future__ import annotations
@@ -71,10 +71,10 @@ class TestRationalMapping(unittest.TestCase):
         frame = _StubFrame(k1=-0.5)
         fx = frame.focal_length_mm / frame.sensor_width_mm
         nd = compute_normalized_distortion(frame)
-        # K1, K3, K4, K6 是 csv_K1 / csv_K1³ 项 (sign-tracking)
-        # K2, K5 是 csv_K1² 项 (永远跟 sign-of-coef 同号, 不随 csv_K1 翻)
-        self.assertLess(nd["k1"] * (-0.5), 0, "ue_K1 must oppose csv_K1 sign")
-        self.assertLess(nd["k4"] * (-0.5), 0, "ue_K4 must oppose csv_K1 sign")
+        # M_RAT6_A < 0 且 M_RAT6_D < 0, 所以 ue_K1/K4 必反向于 csv_K1.
+        # K2, K5 是 csv_K1² 项 (永远跟 sign-of-coef 同号, 不随 csv_K1 翻).
+        self.assertLess(nd["k1"] * (-0.5), 0, "ue_K1 must oppose csv_K1 sign (M_RAT6_A < 0)")
+        self.assertLess(nd["k4"] * (-0.5), 0, "ue_K4 must oppose csv_K1 sign (M_RAT6_D < 0)")
         self._check(frame, _expected_ue(-0.5, 0.0, 0.0, fx))
 
     def test_csv_k2_k3_passthrough_when_k1_zero(self):
