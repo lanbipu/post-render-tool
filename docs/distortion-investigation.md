@@ -1,7 +1,11 @@
 # Lens Distortion Investigation — 接力交班文档
 
 > **状态**：进行中。Disguise CSV K → UE LensFile 的映射做到了 95-98% 视觉匹配，
-> 还差最后 ~1-3 像素残差未达到 pixel-perfect。明天接着做。
+> 还差最后 ~1-3 像素残差未达到 pixel-perfect。
+>
+> **2026-04-28 更新**：用户决定走 **Path A**（不是文档原推荐的 Path B）。
+> Mac 端工具链已就绪，等用户在 d3 端渲 11 张 transmission frame。
+> 详见 `scripts/distortion_calibration/README.md` 和 `USER_INSTRUCTIONS.md`。
 
 ## 目标
 
@@ -133,6 +137,71 @@ LensFile 资产路径: /Game/PostRender/shot_1_take_13_dense/LF_shot_1_take_13_d
 
 如果路径 B 不通（UE LensFile API 不支持 STMap 写入或别的卡点），再做路径 A。
 
+### 2026-04-28：用户决定走 Path A（覆盖上面的推荐）
+
+理由由用户掌握。Path A 的 Mac 端工具链已落地。
+
+**第一版（已废弃）**：标准棋盘格（17×9 × 64 px，128 角点，r_max=0.55）。
+用户指出"四周白边浪费空间"，重新审视后发现根本约束是
+`findChessboardCornersSB` 全或无检测：K=+0.5 pincushion 把外圈角点推出帧 →
+整张图检测失败。**plain chess 不能铺满全帧**。
+
+**最终版：ChArUco**（2026-04-28 切换）：
+
+- `charuco_1920x1080.png`：DICT_5X5_250 字典，24 cols × 13 rows × 80 px squares，
+  marker 48 px（60% 比例，留 16 px 角点周围空白给 cornerSubPix），垂直留 20 px 白边。
+- **23 × 12 = 276 内角点，r 覆盖 0.04 ~ 1.03**（几乎全帧）。
+- 每个角点自带 ChArUco ID —— 部分检出可用、不依赖拓扑、抗 tangential。
+- cornerSubPix 自定义 winSize=(11,11) 提升单点精度从默认的 0.05-0.10 px 到 0.02-0.05 px。
+- CharucoParameters 调参：`checkMarkers=False`（绕过 quadrilateral integrity check，
+  在 K=-0.5 重 barrel 下 markers 会被压扁但 hamming distance 仍可识别）、
+  `minMarkers=1`（让外圈只有 1 个邻 marker 的角点也能插值）。
+- `generate_charuco_board.py` → `analyze_renders.py` → `fit_distortion_models.py`
+  端到端跑通；3 个 self-test 全过：
+    - 角点检测 RMS = 0.0000 px（无噪声 reference 完全归零）
+    - 合成 K=±0.3 畸变反测：K=-0.3 inner_rms 0.33 px、K=+0.3 inner_rms 0.06 px
+      （median 都在 0.05-0.10 px；max 偶尔 8 px 是 cv2.remap LANCZOS4 在外圈
+      severely-aliased markers 上 cornerSubPix 飘的合成 artifact，不是真实 pipeline 问题）
+    - synthetic α=1.5 polynomial + 0.5 px 噪声拟合，BIC 选回 M1，α 反推 1.5005
+- 拟合候选模型 5 个（M1 polynomial / M2 division / M3 mixed-K-order / M4 free radial
+  exponent / M5 OpenCV K1-only style），全局对所有 (K, r, dr) tuple 联合拟合，
+  自带 robust outlier 过滤（trim top 5% residuals 在 baseline M1 fit 之后），
+  按 RMS + **BIC**（带复杂度惩罚）双排序——避免 M3/M5 这种含 M1 作为特例的过拟合
+  candidate "白白胜出"。
+- venv 隔离在 `scripts/distortion_calibration/.venv/`（cv2 4.13、scipy、numpy、Pillow），
+  跟项目 UE Python 互不干扰。
+
+接下来等用户：
+
+1. 把 `charuco_1920x1080.png` 上 LED（1:1 像素，不要 resize）**或直接 mapping 到
+   d3 相机的 image overlay**（后者推荐，外圈数据更全，不被 LED 边缘问题污染）
+2. 用 image 44/45 那个相同相机
+3. 渲 11 张 transmission frame：K1 ∈ {0, ±0.1, ±0.2, ±0.3, ±0.4, ±0.5}，
+   K2 = K3 = 0，CenterShift = 0
+4. 命名照 `disguise_K_zero.png` / `disguise_K_p0p3.png` / `disguise_K_n0p3.png`
+   (`p`=positive、`n`=negative，第二个 `p` 是小数点)
+5. 放 `/tmp/disguise_renders/`
+
+详细步骤见 `scripts/distortion_calibration/USER_INSTRUCTIONS.md`。
+
+收到后跑：
+
+```bash
+cd scripts/distortion_calibration
+.venv/bin/python analyze_renders.py --input-dir /tmp/disguise_renders
+.venv/bin/python fit_distortion_models.py
+```
+
+输出会指向 BIC-best model + 参数。然后把这个公式注入 `lens_file_builder.py`
+（可能需要 Newton 迭代反算把 Disguise forward 变成 UE 期望的 K1/K2/K3 三阶
+polynomial 系数；或者直接在 lens_file_builder 里换一套公式生成 distortion table）
+→ 重渲 → 跟 Disguise 端 A/B → 残差应该 ≈ 全黑。
+
+**附记 K2/K3**：本轮工具只测 K1（K2=K3=0 sweep）。等 K1 公式确认后，再决定是否
+做第二轮 K2 sweep + 第三轮 K3 sweep + 第四轮联合验证。如果 K1 sweep 直接
+证明 Disguise 是标准 OpenCV polynomial（M5 胜出且 a≈1, b≈0, c≈0），那 K2/K3
+大概率自动正确，只需联合验证 5 帧；否则还需 ~12 帧扫 K2/K3 形态。
+
 ## 路径 B 的明天第一步
 
 明天 session 开始就这么干：
@@ -222,3 +291,90 @@ calibration overlay 误导**。Calibration overlay 显示的是 inverse / undist
 > 当前状态：commit 3468a67 完成 -K 取反，UE 端跟 Disguise compositor 视觉
 > 95-98% 匹配，还差最后 1-3 像素残差。今天确认了 1.5x 单一 scale factor
 > 不能 pixel-perfect，明天走 STMap 路径（路径 B）从棋盘格反推每像素位移。
+
+---
+
+## 2026-04-28（晚）：用户改回 Path B + UE LensFile STMap API 完成调研
+
+> 上面 4-28 决定走 Path A 的笔记不删除，留作历史。当前最新决策：**用 Path B**，
+> 用 UV 渐变图代替棋盘格做密集位移测量。Path A Mac 端工具链保留为 fallback。
+
+### 关键决策：用 UV 渐变图代替棋盘格
+
+棋盘格法只有 ~200 个稀疏角点，靠 RBF / TPS 插值到 200 万像素，引入额外插值误差。
+**UV 渐变图法**：把 identity STMap 自身（红绿渐变图）扔到 LED，Disguise 渲染后输出
+直接就是 distortion 真值，不需要插值。
+
+实施细节：
+- 探针文件：`scripts/distortion_calibration/uv_probe_1920x1080.exr`
+  （32-bit float，R=(x+0.5)/W、G=(y+0.5)/H、B=0；pixel-center 约定）
+- 必须 EXR 32-bit float，不能 PNG 8-bit（量化误差 ±7 px）
+- LED surface 必须 linear pass-through（无 gamma / LUT），否则 R/G 通道废
+- 必须 transmission compositor frame export（不是 calibration overlay，方向反）
+- ChArUco 板（`charuco_1920x1080.png`）保留作为方向验证副本
+- 用户操作指引：`scripts/distortion_calibration/USER_INSTRUCTIONS_PATH_B.md`
+
+### B4 调研结论：UE 5.7 LensFile STMap API（已验证）
+
+**UFUNCTION**：`ULensFile::AddSTMapPoint(float NewFocus, float NewZoom, const FSTMapInfo& NewPoint)`
+（LensFile.h:190-191）→ Python: `lens_file.add_stmap_point(new_focus, new_zoom, new_point)`。
+存在调用范例：`SLensDataAddPointDialog.cpp:876`。
+
+**FSTMapInfo 结构**（LensData.h:194-206，BlueprintType）：
+- `DistortionMap: TObjectPtr<UTexture>`  ←  4 通道 RGBA 纹理
+- `MapFormat: FCalibratedMapFormat`       ←  通道布局元数据
+
+**FCalibratedMapFormat 默认值**（CalibratedMapFormat.h:32-48）：
+- `PixelOrigin = TopLeft`
+- `UndistortionChannels = RG`  ← 默认 R/G 是 undistortion direction
+- `DistortionChannels = BA`    ← 默认 B/A 是 distortion direction
+
+**Shader 语义**（DistortionSTMapProcessor.usf:32-61）确认：
+- 在均匀 UV grid 上采样 STMap 纹理
+- `RG` 槽 → 在 distorted 输出 pixel 位置上，给出 undistorted 源 UV
+- `BA` 槽 → 在 undistorted CG pixel 位置上，给出 distorted 输出 UV
+- 输出 displacement = 采样值 - 当前 UV
+
+**关键洞察**：Disguise 渲染我们的 identity-UV 探针时，输出 R/G 直接就是 UE 期望的
+**undistortion direction**（在 distorted 像素位置看 undistorted 源在哪）。
+distortion direction（在 undistorted 像素位置看 distorted 输出在哪）需要做 inverse
+interpolation（输入空间在 undistorted UV 上不是均匀分布），结果存到 B/A。
+
+**纹理导入**：`unreal.AssetImportTask` + `AssetTools.import_asset_tasks()` 走 EXR
+（UE 内置 ExrImageWrapper 支持），产生 UTexture2D 资产。然后构造 `unreal.STMapInfo()`
+赋 `distortion_map = texture`，MapFormat 走默认。
+
+### Mac 端 STMap 构造（已落地）
+
+`scripts/distortion_calibration/build_stmap.py`：
+- 输入：3 通道 EXR（Disguise 渲染产物）
+- 输出：4 通道 BGRA EXR
+  - cv2 storage [B, G, R, A] = [distortion_U, undistortion_V, undistortion_U, distortion_V]
+  - EXR 内部按通道名存（A/B/G/R），UE 按名读取，不需要 RGBA reorder
+- 距离方向通过 `scipy.interpolate.griddata` cubic 反插（NaN 区域 nearest 兜底）
+- 自带 sanity report（avg / max 像素误差 vs identity）
+- `_self_test_stmap.py` 合成 K=0.3 barrel 验证：in-frame 64% 区域内 max 0.7 px、avg 0.0 px
+
+### UE 端 STMap 写入（已落地，待远程实测）
+
+`Content/Python/post_render_tool/stmap_writer.py`：
+- `add_stmap_to_lensfile(lens_file_path, stmap_exr_path, focus=0, zoom=0, ...)`
+- 经 `AssetImportTask` 导入 EXR → UTexture2D
+- 构造 `unreal.STMapInfo()`，`distortion_map = texture`，MapFormat 用默认
+- `lens_file.add_stmap_point(new_focus, new_zoom, new_point=info)`
+- `EditorAssetLibrary.save_loaded_asset(lens_file)` 持久化
+- AST 语法已通过；`unreal` 调用形式待 lanPC 远程实测确认（`unreal.STMapInfo` /
+  `unreal.CalibratedMapFormat` 是否完整暴露字段，以及 `add_stmap_point` 的关键字
+  参数名是否与 `add_distortion_point` 同款）
+
+### 当前 Path B 进度清单
+
+- [x] B1：生成 UV 渐变探针 EXR（`generate_uv_probe.py` + EXR roundtrip 0 误差）
+- [x] B4：UE 5.7 LensFile STMap API 调研 + 路径文档化
+- [x] B3：Mac 端 STMap 构造工具（`build_stmap.py` + 合成自测）
+- [x] B5 雏形：UE 端写入脚本（`stmap_writer.py`，待远程实测）
+- [ ] B2：用户在 d3 端渲两帧 transmission frame 回传
+- [ ] 远程实测 B5：lanPC 上跑 import + add_stmap_point，验证 API 形参
+- [ ] 闭环验证：UE 渲染同帧 → 跟 Disguise transmission frame diff，应 ≈ 全黑
+
+接下来阻塞在 B2（等用户在 d3 端渲帧）。Mac 与 UE 两端工具链已经准备就绪。
