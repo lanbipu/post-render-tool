@@ -29,7 +29,7 @@ def to_spherical_parameters(normalized: dict) -> list[float]:
     Parameters
     ----------
     normalized:
-        ``_compute_normalized_distortion`` 的返回字典，必须包含
+        ``distortion_math.compute_normalized_distortion`` 的返回字典，必须包含
         ``k1, k2, k3, p1, p2`` 五个键。
 
     Returns

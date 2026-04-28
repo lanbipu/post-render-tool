@@ -65,6 +65,51 @@ def _m5(KR: tuple[np.ndarray, np.ndarray], a: float, b: float, c: float) -> np.n
     return r * K * (a * r ** 2 + b * r ** 4 + c * r ** 6)
 
 
+def _m6(
+    KR: tuple[np.ndarray, np.ndarray], a: float, b: float, c: float,
+) -> np.ndarray:
+    """M3 + K^3·r^6 term — full K-cubic radial polynomial."""
+    K, r = KR
+    return a * K * r ** 3 + b * K ** 2 * r ** 5 + c * K ** 3 * r ** 7
+
+
+def _m7(
+    KR: tuple[np.ndarray, np.ndarray], a: float, b: float,
+) -> np.ndarray:
+    """K-coupled rational: r' = r·(1+a·K·r²)/(1+b·K·r²) → dr = K·r³·(a-b)/(1+b·K·r²)."""
+    K, r = KR
+    denom = 1.0 + b * K * r ** 2
+    return K * r ** 3 * (a - b) / denom
+
+
+def _m8(
+    KR: tuple[np.ndarray, np.ndarray], a: float, b: float, c: float,
+) -> np.ndarray:
+    """M3 with separate K and K^2 coefficients on r^4 term."""
+    K, r = KR
+    return a * K * r ** 3 + (b * K + c * K ** 2) * r ** 5
+
+
+def _m9(
+    KR: tuple[np.ndarray, np.ndarray],
+    a: float, b: float, c: float, d: float,
+) -> np.ndarray:
+    """M6 + K^4·r^8 — 4-K-power radial polynomial."""
+    K, r = KR
+    return a * K * r ** 3 + b * K ** 2 * r ** 5 + c * K ** 3 * r ** 7 + d * K ** 4 * r ** 9
+
+
+def _m10(
+    KR: tuple[np.ndarray, np.ndarray],
+    a: float, b: float, c: float, d: float,
+) -> np.ndarray:
+    """Extended rational with K^2 terms in both numerator and denominator."""
+    K, r = KR
+    num = 1.0 + a * K * r ** 2 + b * K ** 2 * r ** 4
+    denom = 1.0 + c * K * r ** 2 + d * K ** 2 * r ** 4
+    return r * (num / denom - 1.0)
+
+
 MODELS: tuple[FitModel, ...] = (
     FitModel(
         name="M1",
@@ -90,6 +135,33 @@ MODELS: tuple[FitModel, ...] = (
         name="M5",
         description="r' = r * (1 + a*K*r^2 + b*K*r^4 + c*K*r^6)  (OpenCV-K1-only style)",
         func=_m5, p0=(1.0, 0.0, 0.0), param_names=("a", "b", "c"),
+    ),
+    FitModel(
+        name="M6",
+        description="r' = r * (1 + a*K*r^2 + b*K^2*r^4 + c*K^3*r^6)  (M3 + K^3 term)",
+        func=_m6, p0=(-0.262, 0.195, 0.0), param_names=("a", "b", "c"),
+    ),
+    FitModel(
+        name="M7",
+        description="r' = r * (1 + a*K*r^2) / (1 + b*K*r^2)  (K-coupled rational)",
+        func=_m7, p0=(-0.262, 0.0), param_names=("a", "b"),
+    ),
+    FitModel(
+        name="M8",
+        description="r' = r * (1 + a*K*r^2 + (b*K + c*K^2)*r^4)  (M3 + K*r^4 cross)",
+        func=_m8, p0=(-0.262, 0.0, 0.195), param_names=("a", "b", "c"),
+    ),
+    FitModel(
+        name="M9",
+        description="r' = r * (1 + a*K*r^2 + b*K^2*r^4 + c*K^3*r^6 + d*K^4*r^8)  (M6 + K^4 term)",
+        func=_m9, p0=(-0.251, 0.210, -0.193, 0.0),
+        param_names=("a", "b", "c", "d"),
+    ),
+    FitModel(
+        name="M10",
+        description="r' = r * (1 + a*K*r^2 + b*K^2*r^4) / (1 + c*K*r^2 + d*K^2*r^4)  (extended rational)",
+        func=_m10, p0=(0.531, 0.0, 0.784, 0.0),
+        param_names=("a", "b", "c", "d"),
     ),
 )
 
