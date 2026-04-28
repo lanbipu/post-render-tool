@@ -49,6 +49,21 @@ def compute_normalized_distortion(frame_data: FrameData) -> dict:
     ``k3``, ``p1``, ``p2``. Tangential P1/P2 are zero — Disguise's CSV
     schema doesn't carry them.
 
+    Normalization-space conversion (Tier 2 fix, commit TBD):
+        M6 was fit in HALF-WIDTH-normalized r space (r = pixel_offset / (W/2)).
+        UE LensFile applies the polynomial in FOCAL-LENGTH-normalized r space
+        (r = pixel_offset / fx_pixels). Same physical r maps to different
+        numeric values in the two spaces:
+            r_HW = (2 · fx_uv) · r_fx
+        For the polynomial r·(1 + K·r² + ...) to describe the same physical
+        distortion in both normalizations, the coefficients must scale:
+            K1_fx = K1_HW · (2 · fx_uv)²
+            K2_fx = K2_HW · (2 · fx_uv)⁴
+            K3_fx = K3_HW · (2 · fx_uv)⁶
+        For typical 30mm-on-35mm-sensor (fx_uv ≈ 0.866), these factors are
+        roughly 3x, 9x, 27x — sizable. Without the conversion UE under-applies
+        distortion by 3-30x at the K3 corner term and Tier 2 fails by ~30 px.
+
     Parameters
     ----------
     frame_data:
@@ -64,10 +79,16 @@ def compute_normalized_distortion(frame_data: FrameData) -> dict:
     pa_height = pa_width / aspect
     cy = 0.5 + frame_data.center_shift_y_mm / pa_height
 
+    # HW-norm → fx-norm scaling (see docstring)
+    fx_scale = 2.0 * fx
+    fx2 = fx_scale * fx_scale
+    fx4 = fx2 * fx2
+    fx6 = fx4 * fx2
+
     csv_k1 = frame_data.k1
-    ue_k1 = M6_A * csv_k1
-    ue_k2 = M6_B * csv_k1 * csv_k1 - frame_data.k2
-    ue_k3 = M6_C * csv_k1 * csv_k1 * csv_k1 - frame_data.k3
+    ue_k1 = M6_A * csv_k1 * fx2
+    ue_k2 = M6_B * csv_k1 * csv_k1 * fx4 - frame_data.k2
+    ue_k3 = M6_C * csv_k1 * csv_k1 * csv_k1 * fx6 - frame_data.k3
 
     return {
         "fx": fx,
