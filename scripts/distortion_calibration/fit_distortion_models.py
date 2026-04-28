@@ -110,6 +110,27 @@ def _m10(
     return r * (num / denom - 1.0)
 
 
+def _m_rat6(
+    KR: tuple[np.ndarray, np.ndarray],
+    a: float, b: float, c: float, d: float, e: float, f: float,
+) -> np.ndarray:
+    """6-coefficient rational matching UE BrownConradyUD shader form.
+
+    r' = r · (1 + a·K·r² + b·K²·r⁴ + c·K³·r⁶) / (1 + d·K·r² + e·K²·r⁴ + f·K³·r⁶)
+
+    Direct map to UE FBrownConradyUDDistortionParameters:
+        K1 = a·csv_K  K2 = b·csv_K²  K3 = c·csv_K³
+        K4 = d·csv_K  K5 = e·csv_K²  K6 = f·csv_K³
+    """
+    K, r = KR
+    r2 = r * r
+    K2 = K * K
+    K3 = K2 * K
+    num = 1.0 + a * K * r2 + b * K2 * r2 * r2 + c * K3 * r2 * r2 * r2
+    den = 1.0 + d * K * r2 + e * K2 * r2 * r2 + f * K3 * r2 * r2 * r2
+    return r * (num / den - 1.0)
+
+
 MODELS: tuple[FitModel, ...] = (
     FitModel(
         name="M1",
@@ -162,6 +183,13 @@ MODELS: tuple[FitModel, ...] = (
         description="r' = r * (1 + a*K*r^2 + b*K^2*r^4) / (1 + c*K*r^2 + d*K^2*r^4)  (extended rational)",
         func=_m10, p0=(0.531, 0.0, 0.784, 0.0),
         param_names=("a", "b", "c", "d"),
+    ),
+    FitModel(
+        name="M_RAT6",
+        description="r·(1+a·K·r²+b·K²·r⁴+c·K³·r⁶)/(1+d·K·r²+e·K²·r⁴+f·K³·r⁶)  (UE BrownConradyUD)",
+        func=_m_rat6,
+        p0=(-0.251, 0.21, -0.19, 0.0, 0.0, 0.0),
+        param_names=("a", "b", "c", "d", "e", "f"),
     ),
 )
 
