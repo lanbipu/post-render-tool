@@ -43,3 +43,38 @@ def to_spherical_parameters(normalized: dict) -> list[float]:
         缺失任一必需键时抛出，避免静默把 0.0 塞到错误槽位。
     """
     return [float(normalized[key]) for key in SPHERICAL_PARAMETER_ORDER]
+
+
+_BROWN_CONRADY_UD_KEYS: tuple[str, ...] = ("k1", "k2", "k3", "k4", "k5", "k6", "p1", "p2")
+
+
+def to_brown_conrady_ud_parameters(normalized: dict) -> list[float]:
+    """按 UE BrownConradyUD 模型的 K1-K6 + P1, P2 顺序打包归一化畸变参数。
+
+    UE shader (BrownConradyUDDistortion.usf:48-50) 用 polynomial division 形态:
+        dr = (1 + K1·r² + K2·r⁴ + K3·r⁶) / (1 + K4·r² + K5·r⁴ + K6·r⁶)
+
+    UE 在 ``ULensModel::FromArray_Internal`` 用 ``TFieldIterator<FProperty>`` 按
+    UPROPERTY 声明顺序 (BrownConradyUDLensModel.h:23-52) 把数组回填到 struct 字段;
+    错位会让 K2-K6 / P1/P2 互窜.
+
+    Parameters
+    ----------
+    normalized:
+        ``distortion_math.compute_normalized_distortion`` 的返回字典, 必须包含
+        ``k1, k2, k3, k4, k5, k6, p1, p2`` 八个键.
+
+    Returns
+    -------
+    list[float]
+        长度 8, 顺序匹配 FBrownConradyUDDistortionParameters 字段顺序.
+
+    Raises
+    ------
+    KeyError
+        缺任一必需键时抛出.
+    """
+    missing = [k for k in _BROWN_CONRADY_UD_KEYS if k not in normalized]
+    if missing:
+        raise KeyError(f"missing required keys for BrownConradyUD: {missing}")
+    return [float(normalized[k]) for k in _BROWN_CONRADY_UD_KEYS]

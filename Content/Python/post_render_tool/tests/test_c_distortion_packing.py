@@ -47,5 +47,46 @@ class TestSphericalParameterOrder(unittest.TestCase):
             self.assertIsInstance(v, float)
 
 
+class TestBrownConradyUDOrder(unittest.TestCase):
+    """to_brown_conrady_ud_parameters 顺序必须严格匹配
+    FBrownConradyUDDistortionParameters 的 UPROPERTY 声明顺序 (BrownConradyUDLensModel.h:23-52):
+        K1, K2, K3, K4, K5, K6, P1, P2
+    """
+
+    def test_packs_in_declared_order(self):
+        from post_render_tool.distortion_packing import to_brown_conrady_ud_parameters
+        nd = {
+            "k1": 1.0, "k2": 2.0, "k3": 3.0,
+            "k4": 4.0, "k5": 5.0, "k6": 6.0,
+            "p1": 7.0, "p2": 8.0,
+        }
+        result = to_brown_conrady_ud_parameters(nd)
+        self.assertEqual(result, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
+
+    def test_returns_floats(self):
+        from post_render_tool.distortion_packing import to_brown_conrady_ud_parameters
+        nd = {"k1": 1, "k2": 2, "k3": 3, "k4": 4, "k5": 5, "k6": 6, "p1": 7, "p2": 8}
+        result = to_brown_conrady_ud_parameters(nd)
+        for v in result:
+            self.assertIsInstance(v, float)
+
+    def test_missing_key_raises(self):
+        from post_render_tool.distortion_packing import to_brown_conrady_ud_parameters
+        nd = {"k1": 0.0, "k2": 0.0, "k3": 0.0, "k4": 0.0, "k5": 0.0, "k6": 0.0, "p1": 0.0}
+        with self.assertRaises(KeyError):
+            to_brown_conrady_ud_parameters(nd)
+
+    def test_extra_keys_ignored(self):
+        from post_render_tool.distortion_packing import to_brown_conrady_ud_parameters
+        nd = {
+            "k1": 0.0, "k2": 0.0, "k3": 0.0,
+            "k4": 0.0, "k5": 0.0, "k6": 0.0,
+            "p1": 0.0, "p2": 0.0,
+            "fx": 999, "fy": 999, "cx": 999, "cy": 999,
+        }
+        result = to_brown_conrady_ud_parameters(nd)
+        self.assertEqual(len(result), 8)
+
+
 if __name__ == "__main__":
     unittest.main()
