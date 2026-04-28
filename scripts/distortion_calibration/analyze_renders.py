@@ -1,29 +1,28 @@
-"""Detect ChArUco chess corners in Disguise transmission frames, match each
-corner across frames by its stable charuco ID, emit per-corner displacement
-records to displacements.csv.
+"""Per-pixel distortion measurement from Disguise UV-probe transmission renders.
 
-Why ChArUco (vs plain chess board): each chess corner is identified by ID
-from the surrounding ArUco markers. Three direct gains over plain chess:
-  1. Partial detection — outer ring clipping at high pincushion K leaves
-     mid/inner ring data intact (plain chess fails the whole frame).
-  2. No topology guessing — corner k in frame A and corner k in frame B are
-     the same physical corner. canonicalize_grid sort-by-y bin tricks gone.
-  3. Robust to non-radial distortion (P1/P2 tangential) — IDs decouple
-     from spatial layout.
+Path A (system identification) pipeline using UV gradient probe instead of
+ChArUco corner detection. Each rendered EXR contains a forward distortion
+sample at every pixel — ~2M data points per frame, 80x denser than the
+276-corner ChArUco version, no detection / topology / interpolation overhead.
 
-Custom precision tweak: after CharucoDetector returns corners, we re-run
-cornerSubPix with winSize=(11,11) (vs detector's smaller default) for
-0.02-0.03 px precision instead of 0.05-0.10 px.
+Per output pixel (px, py) of a Disguise-rendered uv_probe transmission frame:
+  EXR R channel = u_undist (source U the output pixel sampled from)
+  EXR G channel = v_undist (source V)
+  Source position in pixels: (R*W, G*H)
+  Output position in pixels: (px + 0.5, py + 0.5)
+  r_undistorted = norm((R*W - cx, G*H - cy)) / half_width
+  r_distorted   = norm((px + 0.5 - cx, py + 0.5 - cy)) / half_width
+  dr            = r_distorted - r_undistorted
 
-Conventions:
-  - Pixel coordinates: OpenCV pixel-center origin (pixel (0,0) = top-left CENTER).
-  - r normalized by image half-width (W/2). r=1 at horizontal image edge.
-  - dr = r_dist - r_anchor (positive = pushed outward / barrel-like in source).
+The (K, r_undistorted, dr) tuples drive curve_fit in fit_distortion_models.py.
 
 File naming (place renders under --input-dir):
-  disguise_K_zero.png              K = 0.0 (mandatory anchor)
-  disguise_K_p0p1.png              K = +0.1     ('p'=positive, second 'p'=decimal point)
-  disguise_K_n0p3.png              K = -0.3     ('n'=negative)
+  disguise_K_zero.exr      K = 0.0 (sanity check, optional)
+  disguise_K_p0p1.exr      K = +0.1     ('p'=positive, second 'p'=decimal point)
+  disguise_K_n0p3.exr      K = -0.3     ('n'=negative)
+
+EXR MUST be 32-bit float (cv2 BGR layout). PNG / 16-bit half are NOT supported
+— 8-bit quantization injects ~7 px noise; 16-bit half is borderline at 0.03 px.
 
 Usage (after delivery):
   ./.venv/bin/python analyze_renders.py \\
@@ -33,67 +32,35 @@ Usage (after delivery):
 from __future__ import annotations
 
 import argparse
-import csv
 import re
 from pathlib import Path
 
-import cv2
 import numpy as np
 
-HERE = Path(__file__).resolve().parent
-TRUTH_NPZ = HERE / "charuco_truth.npz"
+from _exr import (
+    HERE, build_identity_uv_grid, load_probe_meta, read_uvprobe_exr,
+)
 
-# cornerSubPix tuning — winSize=(11,11) gives a 23x23 patch which lands
-# strictly inside the 16-px white margin around each chess corner (no
-# overlap with marker pattern), so gradient noise from the marker doesn't
-# bias the saddle-point fit.
-SUBPIX_WIN = (11, 11)
-SUBPIX_ZERO_ZONE = (-1, -1)
-SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-5)
+# Per-frame random subsample. 30k × 11 frames = 330k rows total — far more
+# than ChArUco's ~3000, well under curve_fit's comfort zone, keeps CSV size
+# under ~30 MB. Reproducible via --seed.
+SAMPLES_PER_FRAME = 30000
 
+# Skip pixels at exact 0/1 in either channel — those are border/edge-clipped
+# samples (Disguise sourced from outside the LED surface or hit FOV mask).
+# 0.005 = ~10 px inset, generous against numerical near-zero precision noise.
+VALID_UV_MIN = 0.005
+VALID_UV_MAX = 0.995
 
-def load_truth() -> tuple[cv2.aruco.CharucoBoard, np.ndarray, tuple[int, int]]:
-    truth = np.load(TRUTH_NPZ)
-    cols, rows = (int(v) for v in truth["board_squares"])
-    square_px = int(truth["square_px"])
-    marker_px = int(truth["marker_px"])
-    dict_id = int(truth["dictionary_id"])
-    dictionary = cv2.aruco.getPredefinedDictionary(dict_id)
-    board = cv2.aruco.CharucoBoard(
-        size=(cols, rows),
-        squareLength=float(square_px),
-        markerLength=float(marker_px),
-        dictionary=dictionary,
-    )
-    image_size = tuple(int(v) for v in truth["image_size"])
-    return board, truth["corners_px"], image_size
+# Anchor (K=0) sanity gate: above this normalized deviation the LED gamma /
+# color transform / transmission-vs-overlay pipeline is suspect.
+ANCHOR_DEVIATION_WARN = 0.01
 
-
-def detect_corners(
-    image_path: Path,
-    detector: cv2.aruco.CharucoDetector,
-) -> tuple[np.ndarray, np.ndarray] | None:
-    """Returns (charuco_ids, refined_corners) or None if detection fails.
-
-    Pipeline:
-      1. CharucoDetector.detectBoard finds markers, decodes IDs, locates
-         chess corners between markers (already subpixel via internal logic).
-      2. Custom cornerSubPix(winSize=(11,11)) tightens saddle-point fit.
-    """
-    img = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        raise RuntimeError(f"cannot read image: {image_path}")
-    charuco_corners, charuco_ids, _, _ = detector.detectBoard(img)
-    if charuco_corners is None or len(charuco_corners) == 0:
-        return None
-    refined = cv2.cornerSubPix(
-        img,
-        charuco_corners.astype(np.float32),
-        SUBPIX_WIN,
-        SUBPIX_ZERO_ZONE,
-        SUBPIX_CRITERIA,
-    ).reshape(-1, 2).astype(np.float64)
-    return charuco_ids.flatten().astype(np.int32), refined
+CSV_FIELDS = (
+    "K", "pixel_id",
+    "src_x_norm", "src_y_norm", "out_x_norm", "out_y_norm",
+    "r_anchor", "r_dist", "dr",
+)
 
 
 _K_PATTERN = re.compile(
@@ -111,118 +78,132 @@ def parse_k_value(stem: str) -> float:
     return sign * float(m.group(3).replace("p", "."))
 
 
-def discover_anchor(input_dir: Path) -> Path:
-    candidates = list(input_dir.glob("disguise_K_zero*.png"))
-    if not candidates:
-        raise SystemExit(
-            f"no anchor render found under {input_dir} "
-            f"(expected disguise_K_zero.png)"
-        )
-    if len(candidates) > 1:
-        print(f"warning: multiple anchor renders found, using {candidates[0]}")
-    return candidates[0]
+def compute_displacements(
+    R: np.ndarray, G: np.ndarray, K: float, rng: np.random.Generator,
+) -> dict[str, np.ndarray] | None:
+    """Sample-first per-pixel (K, r, dr) extraction.
+
+    Builds the validity mask on R/G only, draws SAMPLES_PER_FRAME indices,
+    then computes the 8 normalized scalars on the sample. Avoids the
+    full-resolution np.indices + r_dist + r_undist arrays that would peak
+    at ~120 MB for a 1920x1080 float64 frame.
+    """
+    H, W = R.shape
+    cx = W / 2.0
+    cy = H / 2.0
+    half_w = W / 2.0
+
+    valid = (
+        (R > VALID_UV_MIN) & (R < VALID_UV_MAX) &
+        (G > VALID_UV_MIN) & (G < VALID_UV_MAX)
+    )
+    valid_idx = np.flatnonzero(valid.ravel())
+    if len(valid_idx) == 0:
+        return None
+
+    n_sample = min(SAMPLES_PER_FRAME, len(valid_idx))
+    sample = rng.choice(valid_idx, size=n_sample, replace=False)
+    ys, xs = np.unravel_index(sample, (H, W))
+    R_s = R.ravel()[sample]
+    G_s = G.ravel()[sample]
+
+    out_x_norm = (xs.astype(np.float64) + 0.5 - cx) / half_w
+    out_y_norm = (ys.astype(np.float64) + 0.5 - cy) / half_w
+    src_x_norm = (R_s * W - cx) / half_w
+    src_y_norm = (G_s * H - cy) / half_w
+    r_dist = np.hypot(out_x_norm, out_y_norm)
+    r_undist = np.hypot(src_x_norm, src_y_norm)
+
+    return {
+        "K": np.full(n_sample, K),
+        "pixel_id": sample.astype(np.int32),
+        "src_x_norm": src_x_norm,
+        "src_y_norm": src_y_norm,
+        "out_x_norm": out_x_norm,
+        "out_y_norm": out_y_norm,
+        "r_anchor": r_undist,
+        "r_dist": r_dist,
+        "dr": r_dist - r_undist,
+    }
+
+
+def anchor_sanity_check(anchor_path: Path, W: int, H: int) -> None:
+    """K=0 frame should reproduce the source UV grid almost exactly.
+
+    Large deviations flag pipeline issues (LED gamma not linear, color
+    transform applied, EXR resolution mismatch) that would corrupt
+    downstream fits.
+    """
+    R0, G0 = read_uvprobe_exr(anchor_path)
+    u_truth, v_truth = build_identity_uv_grid(W, H)
+    u_dev = float(np.abs(R0 - u_truth).max())
+    v_dev = float(np.abs(G0 - v_truth).max())
+    print(f"K=0 anchor sanity ({anchor_path.name}):")
+    print(f"  R channel max deviation: {u_dev:.5f}  ({u_dev * W:.2f} px)")
+    print(f"  G channel max deviation: {v_dev:.5f}  ({v_dev * H:.2f} px)")
+    if u_dev > ANCHOR_DEVIATION_WARN or v_dev > ANCHOR_DEVIATION_WARN:
+        print("  [WARN] >1% deviation — investigate LED gamma / color transform / "
+              "transmission-vs-overlay before trusting fits")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--input-dir", type=Path, default=Path("/tmp/disguise_renders"),
-        help="directory of disguise_K_*.png renders",
+        help="directory of disguise_K_*.exr renders",
     )
     ap.add_argument(
         "--output", type=Path, default=HERE / "displacements.csv",
         help="output CSV path",
+    )
+    ap.add_argument(
+        "--seed", type=int, default=42,
+        help="reproducible per-frame subsample",
     )
     args = ap.parse_args()
 
     if not args.input_dir.is_dir():
         raise SystemExit(f"input dir not found: {args.input_dir}")
 
-    board, truth_corners, image_size = load_truth()
-    # checkMarkers=False bypasses the marker quadrilateral integrity check
-    # which falsely rejects markers warped by heavy barrel distortion (K<0
-    # squashes markers near the image periphery). DICT_5X5_250 has strong
-    # Hamming distance so misidentification risk is low even without it.
-    # minMarkers=1 lets corners be interpolated from a single neighboring
-    # marker (vs default 2), recovering the outer-most corners.
-    cparams = cv2.aruco.CharucoParameters()
-    cparams.checkMarkers = False
-    cparams.minMarkers = 1
-    cparams.tryRefineMarkers = True
-    detector = cv2.aruco.CharucoDetector(board, cparams)
-    W, H = image_size
-    cx, cy = W / 2.0, H / 2.0
-    half_width = W / 2.0
-    n_total = truth_corners.shape[0]
+    W, H = load_probe_meta()
+    rng = np.random.default_rng(args.seed)
 
-    # 1. Anchor (K=0): sets the reference position for each corner ID.
-    #    These positions, not truth_corners, are used as r_anchor —
-    #    captures any subpixel shift the rendering pipeline introduces
-    #    even at K=0 (camera/projection geometry).
-    anchor_path = discover_anchor(args.input_dir)
-    anchor_result = detect_corners(anchor_path, detector)
-    if anchor_result is None:
-        raise SystemExit(f"anchor detection failed on {anchor_path}")
-    anchor_ids, anchor_corners = anchor_result
-    anchor_map: dict[int, np.ndarray] = {
-        int(i): c for i, c in zip(anchor_ids, anchor_corners)
-    }
+    anchor_path = args.input_dir / "disguise_K_zero.exr"
+    if anchor_path.exists():
+        anchor_sanity_check(anchor_path, W, H)
 
-    # Anchor sanity vs static truth (sub-px expected on a flat-LED 1:1 setup;
-    # any large RMS here flags a camera/projection mismatch worth investigating
-    # before trusting downstream fits).
-    truth_in_anchor = truth_corners[anchor_ids]
-    anchor_err = anchor_corners - truth_in_anchor
-    anchor_rms = float(np.sqrt(np.mean(np.sum(anchor_err ** 2, axis=1))))
-    print(f"anchor: {anchor_path.name} — {len(anchor_corners)}/{n_total} corners")
-    print(f"anchor rms vs static truth: {anchor_rms:.3f} px")
-
-    # 2. For every render, detect, look up by ID, emit displacement rows.
-    rows: list[dict[str, float]] = []
+    batches: list[dict[str, np.ndarray]] = []
     seen_K: list[float] = []
-    for png in sorted(args.input_dir.glob("disguise_K_*.png")):
+    for png in sorted(args.input_dir.glob("disguise_K_*.exr")):
         K = parse_k_value(png.stem)
         seen_K.append(K)
-        result = detect_corners(png, detector)
-        if result is None:
-            print(f"  [warn] {png.name}: detection failed (skipping)")
+        if abs(K) < 1e-9:
             continue
-        det_ids, det_corners = result
-        n_matched = 0
-        n_missing_anchor = 0
-        for cid, det in zip(det_ids, det_corners):
-            cid_int = int(cid)
-            if cid_int not in anchor_map:
-                n_missing_anchor += 1
-                continue
-            ax, ay = anchor_map[cid_int]
-            dx, dy = det
-            r_a = float(np.hypot(ax - cx, ay - cy) / half_width)
-            r_d = float(np.hypot(dx - cx, dy - cy) / half_width)
-            rows.append({
-                "K": K,
-                "corner_id": cid_int,
-                "ax_px": float(ax),
-                "ay_px": float(ay),
-                "dx_px": float(dx),
-                "dy_px": float(dy),
-                "r_anchor": r_a,
-                "r_dist": r_d,
-                "dr": r_d - r_a,
-            })
-            n_matched += 1
-        warn = f", {n_missing_anchor} not in anchor" if n_missing_anchor else ""
-        print(f"  {png.name}: K={K:+.3f}, {n_matched}/{n_total} matched{warn}")
+        R, G = read_uvprobe_exr(png)
+        result = compute_displacements(R, G, K, rng)
+        if result is None:
+            print(f"  [warn] {png.name}: no valid pixels (whole frame masked?)")
+            continue
+        batches.append(result)
+        n = len(result["K"])
+        r_lo, r_hi = float(result["r_anchor"].min()), float(result["r_anchor"].max())
+        dr_lo, dr_hi = float(result["dr"].min()), float(result["dr"].max())
+        print(f"  {png.name}: K={K:+.3f}, sampled {n}/{W * H} pixels "
+              f"(r ∈ [{r_lo:.3f}, {r_hi:.3f}], dr ∈ [{dr_lo:+.4f}, {dr_hi:+.4f}])")
 
-    if not rows:
-        raise SystemExit("no rows emitted — check input directory")
+    if not batches:
+        raise SystemExit("no rows emitted — check input directory and EXR validity")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(rows)
-    print(f"wrote {len(rows)} rows to {args.output}")
+    all_rows = np.concatenate(
+        [np.column_stack([b[name] for name in CSV_FIELDS]) for b in batches]
+    )
+    np.savetxt(
+        args.output, all_rows,
+        delimiter=",", fmt="%.8g",
+        header=",".join(CSV_FIELDS), comments="",
+    )
+    print(f"wrote {all_rows.shape[0]} rows to {args.output}")
     print(f"K values: {sorted(set(seen_K))}")
 
 
