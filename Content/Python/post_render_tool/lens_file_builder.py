@@ -15,7 +15,7 @@ import unreal
 from . import config
 from .csv_parser import CsvDenseResult, FrameData
 from .distortion_math import compute_normalized_distortion
-from .distortion_packing import to_spherical_parameters
+from .distortion_packing import to_brown_conrady_ud_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -180,17 +180,19 @@ def build_lens_file(
     try:
         lens_info = lens_file.get_editor_property("lens_info")
         lens_info.sensor_dimensions = unreal.Vector2D(pa_width, pa_height)
-        # LensInfo.LensModel 显式写为 Spherical：默认 None 时 LensComponent 走
+        # LensInfo.LensModel 显式写为 BrownConradyUD：默认 None 时 LensComponent 走
         # SetLensFilePicker → SetLensModel(null) 路径 (LensComponent.cpp:602)，
         # CreateDistortionHandler 不会跑、LensDistortionHandlerMap 留空、
         # TickComponent 拿不到 handler → distortion 整段静默跳过。
         # camera_builder 那边也独立写了一次（双保险），这里写在资产上让所有
         # 路径（LensFile Editor preview、ICVFX 等）共享同一个真相源。
-        spherical_cls = unreal.load_class(
-            None, "/Script/CameraCalibrationCore.SphericalLensModel"
+        # BrownConradyUD 跟 Spherical 不同, 用 8 系数 rational division shader
+        # (BrownConradyUDDistortion.usf:48-50): dr = num(K1-K3) / den(K4-K6).
+        bcud_cls = unreal.load_class(
+            None, "/Script/CameraCalibrationCore.BrownConradyUDLensModel"
         )
-        if spherical_cls is not None:
-            lens_info.lens_model = spherical_cls
+        if bcud_cls is not None:
+            lens_info.lens_model = bcud_cls
         lens_file.set_editor_property("lens_info", lens_info)
         logger.info(
             "LensInfo 已设置: SensorDimensions=%.3fx%.3f mm, LensModel=%s",
@@ -242,9 +244,10 @@ def build_lens_file(
         zoom_value = float(focal_mm)
         try:
             distortion_info = unreal.DistortionInfo()
-            # 必须按 FSphericalDistortionParameters 字段声明顺序 (K1, K2, K3, P1, P2)
-            # 打包，详见 distortion_packing.py 与 SphericalLensModel.h 注释。
-            distortion_info.parameters = to_spherical_parameters(nd)
+            # 必须按 FBrownConradyUDDistortionParameters 字段声明顺序
+            # (K1, K2, K3, K4, K5, K6, P1, P2) 打包, 详见 distortion_packing.py
+            # 与 BrownConradyUDLensModel.h:23-52 注释.
+            distortion_info.parameters = to_brown_conrady_ud_parameters(nd)
 
             focal_info = unreal.FocalLengthInfo()
             focal_info.fx_fy = unreal.Vector2D(nd["fx"], nd["fy"])
