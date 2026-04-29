@@ -87,6 +87,36 @@ class TestBrownConradyUDOrder(unittest.TestCase):
         result = to_brown_conrady_ud_parameters(nd)
         self.assertEqual(len(result), 8)
 
+    def test_packs_non_zero_tangential(self):
+        """Round 2 P1/P2 不再为 0, 验证 packing 顺序仍正确."""
+        from post_render_tool.distortion_packing import to_brown_conrady_ud_parameters
+        nd = {
+            "k1": -4.7, "k2": +16.3, "k3": +17.3,
+            "k4": -4.4, "k5": +14.2, "k6": +25.3,
+            "p1": -0.5, "p2": +0.3,  # 非零切向
+        }
+        result = to_brown_conrady_ud_parameters(nd)
+        self.assertEqual(result, [-4.7, +16.3, +17.3, -4.4, +14.2, +25.3, -0.5, +0.3])
+        self.assertEqual(len(result), 8)
+
+    def test_round2_production_packing(self):
+        """Round 2 production CSV 计算结果, 验证全 8 槽都有非零值"""
+        from post_render_tool.distortion_packing import to_brown_conrady_ud_parameters
+        # Production-like ND 字典 (M_BCUD_FULL × production CSV 量级)
+        nd = {
+            "k1": -2.7e-3, "k2": +4.0e-3, "k3": -1.1e-2,
+            "k4": -2.5e-3, "k5": +4.6e-6, "k6": +4.7e-9,
+            "p1": +5.0e-3, "p2": -1.4e-2,
+        }
+        result = to_brown_conrady_ud_parameters(nd)
+        self.assertEqual(len(result), 8)
+        for v in result:
+            self.assertIsInstance(v, float)
+        # 顺序自检: K1 在 [0], P1 在 [6], P2 在 [7]
+        self.assertEqual(result[0], -2.7e-3)
+        self.assertEqual(result[6], +5.0e-3)
+        self.assertEqual(result[7], -1.4e-2)
+
 
 if __name__ == "__main__":
     unittest.main()
