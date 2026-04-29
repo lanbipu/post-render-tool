@@ -138,10 +138,50 @@ UE 5.7 LensDistortion plugin 理论支持 **STMap mode**（per-pixel displacemen
 
 ---
 
-## 6 · 后续实验记录占位
+## 6 · 后续实验记录
 
-- [ ] 6.1 cvar `r.LensDistortion.DisplacementMapResolution 2048` 实验，量化 LUT jitter 主导项
-- [ ] 6.2 UE 5.7 STMap mode 是否走通 + 实测残差
-- [ ] 6.3 ChArUco 物理 calibration 路径调研（cv2.calibrateCamera vs system ID）
+### 6.1 LUT 分辨率实验 (256 vs 2048 vs no-LUT, 2026-04-29)
 
-每个实验跑完结果回写本文件。
+**结论：调高 LUT 对这个数据集几乎没用** — 修正 §3 残差细分里"LUT jitter 1-2 px 主导"的判断。
+
+设置：
+- `DefaultGame.ini` 加 `[/Script/CameraCalibrationCore.CameraCalibrationSettings]` + `DisplacementMapResolution=(X=2048,Y=2048)`
+- 重启 UE，verify CCS 实际生效（handler RT 实测 2048×2048 ✓）
+- LUT 2048 + LUT 256 + 无 LUT (Mac full-res cv2.remap) 三种配置渲染 K=+0.5 source 网格图，跟 Disguise actual diff
+
+实测 PNG RMS 对比：
+
+| 配置 | 中心 RMS | 中圈 RMS | 外圈 RMS |
+|---|---|---|---|
+| LUT 256 (UE 默认) | 1.53 | 5.54 | **25.41** |
+| LUT 2048 | 1.55 | 5.60 | 25.44 |
+| 无 LUT (full-res Mac 公式) | 1.55 | 5.60 | 25.44 |
+
+displacement field 差异（LUT 256 vs full-res）：
+- 中心 max 0.003 px
+- 中圈 max 0.282 px
+- 外圈 max **1.455 px**
+
+LUT 256 确实在外圈引入了 ~1.5 px 单点 displacement 偏差，但**这种 sub-pixel 误差不会放大成 PNG RMS 改善** —— 因为公式预测的位移已经对了主体，多 1-2 px LUT 量化只影响极少数 texel 边界点，整图统计上看不见。
+
+**真正的残差瓶颈不是 LUT，是**：
+1. **公式预测的位移本身仍有 ~1-3 px 误差**（fit residual + model mismatch 总和）
+2. **sparse high-contrast 测试图的强度爆放大效应**：网格线在 K=+0.5 后被 sub-pixel 位移搞错 anti-aliased 边缘 intensity → RMS 暴涨
+
+### 6.2 ST_MAP mode 实验（待跑）
+
+UE 5.7 LensFile 原生支持 `LensDataMode.ST_MAP`，shader 路径见 `LensDistortionSceneViewExtension.cpp:170` + `DistortionSTMapProcessor.usf`。
+
+**关键发现（源码分析）**：STMap shader pipeline 仍把高分辨率 STMap 通过 compute shader 采样到 256×256 displacement RT (`OutDistortionDisplacementMap[ThreadId.xy]`)。也就是说 **STMap mode 不绕过 LUT**——LUT 量化限制依然存在。但根据 §6.1 实测 LUT 影响很小，所以 STMap 主要价值在**绕过公式 fit residual**。
+
+预期效果：
+- 用 `disguise_K_p0p5.exr` 反推 displacement texture（每像素 source UV 是实测真值，无公式 fit）
+- 写入 LensFile，切 `data_mode = ST_MAP`
+- 残差只剩 cv2.remap bilinear + PNG 量化 + LUT bilinear (< 0.5 px)
+- 应能从外圈 RMS 25 → 1-3 px 量级（强度差还会被 anti-aliased 边缘放大，但 displacement 本身 sub-pixel）
+
+待跑确认。
+
+### 6.3 ChArUco 物理 calibration 路径调研（待跑）
+
+Disguise system identification 路径绕开，直接物理标定 lens intrinsics + distortion via cv2.calibrateCamera. 精度 0.05 px @ 1080p (cv2 行业标准)。需要 stage 操作配合，单工程师无法闭环。
