@@ -134,6 +134,79 @@ def _m_rat6(
     return r * (num / den - 1.0)
 
 
+def _m_rat8(
+    KR: tuple[np.ndarray, np.ndarray],
+    a: float, b: float, c: float, d: float, e: float, f: float, g: float, h: float,
+) -> np.ndarray:
+    """8-coefficient rational, 4 阶 numerator + 4 阶 denominator (K1 only).
+
+    r' = r · (1 + a·K·r² + b·K²·r⁴ + c·K³·r⁶ + g·K⁴·r⁸)
+        / (1 + d·K·r² + e·K²·r⁴ + f·K³·r⁶ + h·K⁴·r⁸)
+
+    比 M_RAT6 多两个 r⁸ 项, 在外圈 r > 0.9 处对发散控制更精确.
+    BIC 应该跟 M_RAT6 接近 (Round 1 数据范围下), 但 Round 2 高密度数据可能
+    显示 M_RAT8 表面下 r⁸ 项的真实贡献.
+    """
+    K, r = KR
+    r2 = r * r; r4 = r2 * r2; r6 = r4 * r2; r8 = r4 * r4
+    K2 = K * K; K3 = K2 * K; K4 = K3 * K
+    num = 1.0 + a * K * r2 + b * K2 * r4 + c * K3 * r6 + g * K4 * r8
+    den = 1.0 + d * K * r2 + e * K2 * r4 + f * K3 * r6 + h * K4 * r8
+    return r * (num / den - 1.0)
+
+
+def _m_rat_kkk_cross(
+    KR: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    a1: float, a2: float, a3: float,    # numerator 单 K 系数
+    b12: float, b13: float, b23: float, # numerator cross-term 系数 K1·K2 / K1·K3 / K2·K3
+    d1: float, d2: float, d3: float,    # denominator 单 K 系数
+) -> np.ndarray:
+    """Joint K1/K2/K3 rational with cross-terms.
+
+    r' = r · (1 + a1·K1·r² + a2·K2·r⁴ + a3·K3·r⁶
+              + b12·K1·K2·r² + b13·K1·K3·r² + b23·K2·K3·r²)
+        / (1 + d1·K1·r² + d2·K2·r⁴ + d3·K3·r⁶)
+
+    9 参数 (vs M_RAT6 的 6). 显式建模 K1/K2/K3 三轴各自贡献 + 两两 cross-term.
+    如果 BIC 选这个, 说明 Disguise 内部公式不是简单 OpenCV Brown-Conrady,
+    而是有 K1·K2 类 cross 项耦合.
+    """
+    K1, K2, K3, r = KR
+    r2 = r * r; r4 = r2 * r2; r6 = r4 * r2
+    num = (1.0
+           + a1 * K1 * r2 + a2 * K2 * r4 + a3 * K3 * r6
+           + b12 * K1 * K2 * r2 + b13 * K1 * K3 * r2 + b23 * K2 * K3 * r2)
+    den = 1.0 + d1 * K1 * r2 + d2 * K2 * r4 + d3 * K3 * r6
+    return r * (num / den - 1.0)
+
+
+def _m_bcud_full(
+    KR: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    a: float, b: float, c: float, d: float, e: float, f: float,
+    p1_scale: float, p2_scale: float,
+) -> np.ndarray:
+    """UE BrownConradyUD 8 槽完整 fit, 含 P1/P2 切向项贡献.
+
+    Radial part 同 M_RAT6:
+        r' = r · (1 + a·K1·r² + b·K1²·r⁴ + c·K1³·r⁶)
+            / (1 + d·K1·r² + e·K1²·r⁴ + f·K1³·r⁶)
+
+    切向项贡献到 dr (径向位移上的近似投影):
+        dr_tangential ≈ p1_scale · K2 · r² + p2_scale · K3 · r²
+
+    8 参数 (a-f + p1_scale + p2_scale). 假设切向贡献只在径向投影上有效项,
+    本质上是 OpenCV BrownConrady 的 P1/P2 在径向距离上的小角度近似.
+    """
+    K1, K2, K3, r = KR
+    r2 = r * r; r4 = r2 * r2; r6 = r4 * r2
+    K1_sq = K1 * K1; K1_cu = K1_sq * K1
+    num = 1.0 + a * K1 * r2 + b * K1_sq * r4 + c * K1_cu * r6
+    den = 1.0 + d * K1 * r2 + e * K1_sq * r4 + f * K1_cu * r6
+    radial = r * (num / den - 1.0)
+    tangential = p1_scale * K2 * r2 + p2_scale * K3 * r2
+    return radial + tangential
+
+
 MODELS: tuple[FitModel, ...] = (
     FitModel(
         name="M1",
@@ -193,6 +266,30 @@ MODELS: tuple[FitModel, ...] = (
         func=_m_rat6,
         p0=(-0.251, 0.21, -0.19, 0.0, 0.0, 0.0),
         param_names=("a", "b", "c", "d", "e", "f"),
+    ),
+    FitModel(
+        name="M_RAT8",
+        description="r·(1+a·K·r²+b·K²·r⁴+c·K³·r⁶+g·K⁴·r⁸)/(1+d·K·r²+...+h·K⁴·r⁸)",
+        func=_m_rat8,
+        p0=(-3.18, +7.24, +5.12, -2.93, +6.30, +7.51, 0.0, 0.0),
+        param_names=("a", "b", "c", "d", "e", "f", "g", "h"),
+        uses_joint_K=False,
+    ),
+    FitModel(
+        name="M_RAT_K1K2K3_CROSS",
+        description="联合 K1/K2/K3 rational + cross-terms (K1·K2 / K1·K3 / K2·K3)",
+        func=_m_rat_kkk_cross,
+        p0=(-3.18, -1.0, +1.0, 0.0, 0.0, 0.0, -2.93, -1.0, +1.0),
+        param_names=("a1", "a2", "a3", "b12", "b13", "b23", "d1", "d2", "d3"),
+        uses_joint_K=True,
+    ),
+    FitModel(
+        name="M_BCUD_FULL",
+        description="UE BrownConradyUD 8 槽 (radial M_RAT6 + P1/P2 切向 K2/K3 贡献)",
+        func=_m_bcud_full,
+        p0=(-3.18, +7.24, +5.12, -2.93, +6.30, +7.51, -1.0, +1.0),
+        param_names=("a", "b", "c", "d", "e", "f", "p1_scale", "p2_scale"),
+        uses_joint_K=True,
     ),
 )
 
