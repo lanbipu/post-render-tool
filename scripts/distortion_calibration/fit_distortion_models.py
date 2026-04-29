@@ -27,6 +27,8 @@ from typing import Callable
 import numpy as np
 from scipy.optimize import curve_fit
 
+from _exr import load_probe_meta
+
 HERE = Path(__file__).resolve().parent
 
 
@@ -274,6 +276,7 @@ def robust_filter(
         # Use only K1-driven samples for baseline (ignore K2/K3-only frames)
         K1_only_mask = (np.abs(K2) < 1e-9) & (np.abs(K3) < 1e-9) & (np.abs(K1) > 1e-9)
         if K1_only_mask.sum() < 10:
+            print(f"[warn] only {int(K1_only_mask.sum())} K1-only samples; skipping outlier trim")
             return K1, K2, K3, r, dr, 0
         popt, _ = curve_fit(_m1, (K1[K1_only_mask], r[K1_only_mask]),
                               dr[K1_only_mask], p0=(1.0,), maxfev=10000)
@@ -315,10 +318,9 @@ def main() -> None:
 
     if args.half_width_px is None:
         # Auto-detect from probe metadata (matching what analyze_renders.py used)
-        from _exr import load_probe_meta
-        W, _ = load_probe_meta(args.probe_truth)
+        W, H = load_probe_meta(args.probe_truth)
         half_w = W / 2.0
-        print(f"[auto] half_width_px = {half_w:.1f} (from {W}x*)")
+        print(f"[auto] half_width_px = {half_w:.1f} (from probe {W}x{H})")
     else:
         half_w = args.half_width_px
 
