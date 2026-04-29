@@ -15,13 +15,35 @@ import cv2
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-PROBE_EXR = HERE / "uv_probe_1920x1080.exr"
-PROBE_TRUTH_NPZ = HERE / "uv_probe_truth.npz"
+
+# Round 1 (1080p, 11 帧 K1 sweep) 和 Round 2 (4K, 153 帧 K1/K2/K3 sweep) 共存.
+# 默认查找顺序: 4K 优先 → 1080p fallback. 跑分析脚本时通过 --probe 显式指定.
+PROBE_4K = HERE / "uv_probe_3840x2160.exr"
+PROBE_4K_TRUTH = HERE / "uv_probe_truth_3840x2160.npz"
+PROBE_1080P = HERE / "uv_probe_1920x1080.exr"
+PROBE_1080P_TRUTH = HERE / "uv_probe_truth_1920x1080.npz"
+# 兼容旧脚本 (commit 5311d4f 以前)
+PROBE_LEGACY_TRUTH = HERE / "uv_probe_truth.npz"
 
 
-def load_probe_meta() -> tuple[int, int]:
-    truth = np.load(PROBE_TRUTH_NPZ, allow_pickle=True)
+def load_probe_meta(truth_path: Path | None = None) -> tuple[int, int]:
+    """Returns (width, height) from probe truth npz.
+
+    If truth_path is None, tries 4K first, then 1080p, then legacy.
+    """
+    if truth_path is None:
+        for cand in (PROBE_4K_TRUTH, PROBE_1080P_TRUTH, PROBE_LEGACY_TRUTH):
+            if cand.exists():
+                truth_path = cand
+                break
+        if truth_path is None:
+            raise FileNotFoundError("no probe truth npz found")
+    truth = np.load(truth_path, allow_pickle=True)
     return int(truth["width"]), int(truth["height"])
+
+
+PROBE_EXR = PROBE_4K if PROBE_4K.exists() else PROBE_1080P  # alias for legacy scripts (4K-preferred to match auto-detect)
+PROBE_TRUTH_NPZ = PROBE_4K_TRUTH if PROBE_4K_TRUTH.exists() else PROBE_1080P_TRUTH
 
 
 def read_uvprobe_exr(
