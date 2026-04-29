@@ -2,8 +2,9 @@
 
 Path A (system identification) pipeline using UV gradient probe instead of
 ChArUco corner detection. Each rendered EXR contains a forward distortion
-sample at every pixel — ~2M data points per frame, 80x denser than the
-276-corner ChArUco version, no detection / topology / interpolation overhead.
+sample at every pixel — ~2M data points per frame at 1080p, ~8M at 4K,
+80x denser than the 276-corner ChArUco version, no detection / topology /
+interpolation overhead.
 
 Per output pixel (px, py) of a Disguise-rendered uv_probe transmission frame:
   EXR R channel = u_undist (source U the output pixel sampled from)
@@ -14,20 +15,40 @@ Per output pixel (px, py) of a Disguise-rendered uv_probe transmission frame:
   r_distorted   = norm((px + 0.5 - cx, py + 0.5 - cy)) / half_width
   dr            = r_distorted - r_undistorted
 
-The (K, r_undistorted, dr) tuples drive curve_fit in fit_distortion_models.py.
+The (K1, K2, K3, r_undistorted, dr) tuples drive curve_fit in
+fit_distortion_models.py. Only one axis is non-zero per frame (single-axis
+sweep); the fitter sees the union of all three sweeps.
 
 File naming (place renders under --input-dir):
-  disguise_K_zero.exr      K = 0.0 (sanity check, optional)
-  disguise_K_p0p1.exr      K = +0.1     ('p'=positive, second 'p'=decimal point)
-  disguise_K_n0p3.exr      K = -0.3     ('n'=negative)
+  Round 1 (legacy, single-axis K1, flat directory):
+    disguise_K_zero.exr      K1 = 0.0   (sanity check, optional)
+    disguise_K_p0p1.exr      K1 = +0.1  ('p'=positive, second 'p'=decimal point)
+    disguise_K_n0p3.exr      K1 = -0.3  ('n'=negative)
+  Round 2 (tri-axis K1/K2/K3, flat or k{1,2,3}_sweep/ subdirs — rglob picks both):
+    disguise_K1_zero.exr     K1 = 0.0
+    disguise_K1_p0p02.exr    K1 = +0.02
+    disguise_K2_n0p20.exr    K2 = -0.20
+    disguise_K3_p0p36.exr    K3 = +0.36
 
 EXR MUST be 32-bit float (cv2 BGR layout). PNG / 16-bit half are NOT supported
 — 8-bit quantization injects ~7 px noise; 16-bit half is borderline at 0.03 px.
 
-Usage (after delivery):
-  ./.venv/bin/python analyze_renders.py \\
-      --input-dir /tmp/disguise_renders \\
-      --output displacements.csv
+Per-frame subsample size scales with resolution: 30k / frame at 1080p (default,
+~330k rows for 11-frame Round 1) is plenty; bump --samples-per-frame to 100k+
+for 4K Round 2 (153 frames × 100k ≈ 15M rows, ~1.5 GB CSV — still under
+curve_fit's comfort zone, fits in RAM on a workstation).
+
+Usage:
+  Round 1 regression (1080p, 11 frames):
+    ./.venv/bin/python analyze_renders.py \\
+        --input-dir /tmp/disguise_renders \\
+        --probe-truth uv_probe_truth_1920x1080.npz \\
+        --output displacements.csv
+  Round 2 default (4K, 153 frames, auto-detect probe truth):
+    ./.venv/bin/python analyze_renders.py \\
+        --input-dir /tmp/disguise_renders_round2 \\
+        --samples-per-frame 100000 \\
+        --output displacements.csv
 """
 from __future__ import annotations
 
@@ -82,7 +103,7 @@ def parse_k_value(stem: str) -> tuple[int, float]:
     if m.group("zero"):
         return axis, 0.0
     sign = +1.0 if m.group("sign").lower() == "p" else -1.0
-    return axis, sign * float(m.group("value").replace("p", "."))
+    return axis, sign * float(m.group("value").lower().replace("p", "."))
 
 
 def compute_displacements(
