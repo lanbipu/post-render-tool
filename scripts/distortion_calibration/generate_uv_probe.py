@@ -1,11 +1,11 @@
-"""Generate the identity-UV probe image for path B (STMap direct solve).
+"""Generate identity-UV probe image(s) for system identification.
 
 Outputs:
-  - uv_probe_1920x1080.exr   32-bit float, 3-channel
-                             R = (x + 0.5) / W   pixel-center U coord, [0,1]
-                             G = (y + 0.5) / H   pixel-center V coord, [0,1]
-                             B = 0
-  - uv_probe_truth.npz       sanity metadata + 4-corner expected values
+  - uv_probe_<W>x<H>.exr      32-bit float, 3-channel
+                              R = (x + 0.5) / W   pixel-center U coord, [0,1]
+                              G = (y + 0.5) / H   pixel-center V coord, [0,1]
+                              B = 0
+  - uv_probe_truth_<W>x<H>.npz   sanity metadata + 4-corner expected values
 
 Pipeline role:
   1. User puts uv_probe.exr onto the LED surface in Disguise (identity mapping)
@@ -13,9 +13,15 @@ Pipeline role:
   3. Output EXR ~= distortion STMap directly (per-pixel displacement)
   4. Mac side reads it back, optionally builds undistortion via inverse
      interpolation, then writes both to UE LensFile.
+
+Usage:
+  python generate_uv_probe.py                # default 1920x1080 + 3840x2160
+  python generate_uv_probe.py --resolution 1920x1080
+  python generate_uv_probe.py --resolution 3840x2160
 """
 from __future__ import annotations
 
+import argparse
 import os
 from pathlib import Path
 
@@ -24,13 +30,12 @@ os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
 import cv2
 import numpy as np
 
-W, H = 1920, 1080
+
 OUT_DIR = Path(__file__).resolve().parent
-OUT_EXR = OUT_DIR / "uv_probe_1920x1080.exr"
-OUT_NPZ = OUT_DIR / "uv_probe_truth.npz"
+DEFAULT_RESOLUTIONS = [(1920, 1080), (3840, 2160)]
 
 
-def build_probe() -> np.ndarray:
+def build_probe(W: int, H: int) -> np.ndarray:
     xs = (np.arange(W, dtype=np.float32) + 0.5) / W
     ys = (np.arange(H, dtype=np.float32) + 0.5) / H
     u = np.broadcast_to(xs[None, :], (H, W)).astype(np.float32)
@@ -39,31 +44,37 @@ def build_probe() -> np.ndarray:
     return np.stack([b, v, u], axis=-1)
 
 
-def main() -> None:
-    img = build_probe()
+def write_one(W: int, H: int) -> None:
+    img = build_probe(W, H)
 
-    if not cv2.imwrite(str(OUT_EXR), img):
-        raise RuntimeError(f"cv2.imwrite failed for {OUT_EXR}")
+    out_exr = OUT_DIR / f"uv_probe_{W}x{H}.exr"
+    out_npz = OUT_DIR / f"uv_probe_truth_{W}x{H}.npz"
 
-    rt = cv2.imread(str(OUT_EXR), cv2.IMREAD_UNCHANGED)
+    if not cv2.imwrite(str(out_exr), img):
+        raise RuntimeError(f"cv2.imwrite failed for {out_exr}")
+
+    rt = cv2.imread(str(out_exr), cv2.IMREAD_UNCHANGED)
     if rt is None or rt.dtype != np.float32 or rt.shape != (H, W, 3):
-        raise RuntimeError(f"EXR roundtrip failed: dtype={rt.dtype if rt is not None else None}, shape={rt.shape if rt is not None else None}")
+        raise RuntimeError(
+            f"EXR roundtrip failed: dtype={rt.dtype if rt is not None else None}, "
+            f"shape={rt.shape if rt is not None else None}"
+        )
 
-    diff = np.abs(rt - img).max()
+    diff = float(np.abs(rt - img).max())
     if diff > 1e-6:
         raise RuntimeError(f"EXR roundtrip max-diff {diff} exceeds 1e-6")
 
-    # 4-corner expected (cv2 BGR order)
+    # 4-corner + center expected (cv2 BGR order)
     expected = {
-        "px_0_0":           tuple(img[0, 0].tolist()),
-        "px_W-1_0":         tuple(img[0, W - 1].tolist()),
-        "px_0_H-1":         tuple(img[H - 1, 0].tolist()),
-        "px_W-1_H-1":       tuple(img[H - 1, W - 1].tolist()),
-        "px_center":        tuple(img[H // 2, W // 2].tolist()),
+        "px_0_0":     tuple(img[0, 0].tolist()),
+        "px_W-1_0":   tuple(img[0, W - 1].tolist()),
+        "px_0_H-1":   tuple(img[H - 1, 0].tolist()),
+        "px_W-1_H-1": tuple(img[H - 1, W - 1].tolist()),
+        "px_center":  tuple(img[H // 2, W // 2].tolist()),
     }
 
     np.savez(
-        OUT_NPZ,
+        out_npz,
         width=W,
         height=H,
         channel_layout="BGR (cv2 native); R=U=(x+0.5)/W, G=V=(y+0.5)/H, B=0",
@@ -72,12 +83,36 @@ def main() -> None:
         corners=expected,
     )
 
-    print(f"[ok] wrote {OUT_EXR}")
-    print(f"[ok] wrote {OUT_NPZ}")
+    print(f"[ok] wrote {out_exr}  ({out_exr.stat().st_size / 1024 / 1024:.1f} MB)")
+    print(f"[ok] wrote {out_npz}")
     print(f"[verify] roundtrip max-diff = {diff:.2e}")
     for name, bgr in expected.items():
         b_, g_, r_ = bgr
         print(f"        {name:14s}  R={r_:.6f} G={g_:.6f} B={b_:.6f}")
+    print()
+
+
+def parse_resolution(spec: str) -> tuple[int, int]:
+    parts = spec.lower().replace("×", "x").split("x")
+    if len(parts) != 2:
+        raise argparse.ArgumentTypeError(f"resolution must be WxH, got {spec!r}")
+    return int(parts[0]), int(parts[1])
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument(
+        "--resolution", "-r",
+        type=parse_resolution,
+        action="append",
+        help="resolution WxH (e.g., 3840x2160). May be specified multiple times. "
+             "Default generates both 1920x1080 and 3840x2160 if omitted.",
+    )
+    args = ap.parse_args()
+
+    resolutions = args.resolution or DEFAULT_RESOLUTIONS
+    for W, H in resolutions:
+        write_one(W, H)
 
 
 if __name__ == "__main__":
