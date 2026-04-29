@@ -210,16 +210,23 @@ def _configure_camera(
     # LensDistortionHandlerMap 永远空，TickComponent 第 121 行 FindRef 拿到 nullptr，
     # distortion eval 整段被跳过。直接写 lens_model 走 PostEditChangeProperty(LensModel)
     # 那一支 (line 395-398) 强制创建 handler。
+    #
+    # ⚠️ 必须跟 lens_file_builder.py 写到 LensFile.lens_info.lens_model 的同一个
+    # UClass 对齐 (BrownConradyUDLensModel, commit ddccdc3+). UE 是按 LensComponent
+    # 上的 lens_model 决定 CreateDistortionHandler 的具体子类的; 如果这边写
+    # SphericalLensModel 但 LensFile 写的是 BrownConradyUD, runtime 跑的是
+    # SphericalLensDistortionModelHandler, 它读前 5 槽当 (K1,K2,K3,P1,P2),
+    # 把 BrownConradyUD 8 槽里的 K4,K5 当成 P1,P2 切向项 — 系数错位渲染失真.
     try:
-        spherical_cls = unreal.load_class(
-            None, "/Script/CameraCalibrationCore.SphericalLensModel"
+        bcud_cls = unreal.load_class(
+            None, "/Script/CameraCalibrationCore.BrownConradyUDLensModel"
         )
-        if spherical_cls is None:
+        if bcud_cls is None:
             raise RuntimeError(
-                "SphericalLensModel UClass 加载失败，请确认 Camera Calibration 插件已启用"
+                "BrownConradyUDLensModel UClass 加载失败，请确认 Camera Calibration 插件已启用"
             )
-        lens_component.set_editor_property("lens_model", spherical_cls)
-        logger.info("LensComponent lens_model 已设置为 SphericalLensModel")
+        lens_component.set_editor_property("lens_model", bcud_cls)
+        logger.info("LensComponent lens_model 已设置为 BrownConradyUDLensModel")
     except Exception as exc:  # noqa: BLE001
         raise RuntimeError(
             f"LensComponent lens_model 设置失败: {exc}"
