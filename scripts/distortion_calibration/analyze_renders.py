@@ -57,36 +57,50 @@ VALID_UV_MAX = 0.995
 ANCHOR_DEVIATION_WARN = 0.01
 
 CSV_FIELDS = (
-    "K", "pixel_id",
+    "K1", "K2", "K3", "pixel_id",
     "src_x_norm", "src_y_norm", "out_x_norm", "out_y_norm",
     "r_anchor", "r_dist", "dr",
 )
 
 
+# 支持 Round 1 (单轴: disguise_K_zero / disguise_K_p0p1) 和
+# Round 2 (三轴: disguise_K1_zero / disguise_K2_p0p02 / disguise_K3_n0p50).
+# 命名约定: 'p' = positive, 'n' = negative, 'p' (after digit) = decimal point.
 _K_PATTERN = re.compile(
-    r"^disguise_K_(?:(zero)|([pn])(\d+(?:p\d+)?))$", re.IGNORECASE,
+    r"^disguise_K(?P<axis>[123]?)_(?:(?P<zero>zero)|(?P<sign>[pn])(?P<value>\d+(?:p\d+)?))$",
+    re.IGNORECASE,
 )
 
 
-def parse_k_value(stem: str) -> float:
+def parse_k_value(stem: str) -> tuple[int, float]:
+    """Returns (axis, value). axis ∈ {1, 2, 3}; Round 1 命名无 axis 数字, 默认 axis=1."""
     m = _K_PATTERN.match(stem)
     if not m:
         raise ValueError(f"cannot parse K from filename stem: {stem}")
-    if m.group(1):
-        return 0.0
-    sign = +1.0 if m.group(2).lower() == "p" else -1.0
-    return sign * float(m.group(3).replace("p", "."))
+    axis_str = m.group("axis") or "1"  # Round 1 命名缺 axis 数字, 默认 K1
+    axis = int(axis_str)
+    if m.group("zero"):
+        return axis, 0.0
+    sign = +1.0 if m.group("sign").lower() == "p" else -1.0
+    return axis, sign * float(m.group("value").replace("p", "."))
 
 
 def compute_displacements(
-    R: np.ndarray, G: np.ndarray, K: float, rng: np.random.Generator,
+    R: np.ndarray, G: np.ndarray, axis: int, K_value: float, rng: np.random.Generator,
+    n_samples: int = SAMPLES_PER_FRAME,
 ) -> dict[str, np.ndarray] | None:
-    """Sample-first per-pixel (K, r, dr) extraction.
+    """Sample-first per-pixel (K1, K2, K3, r, dr) extraction.
 
-    Builds the validity mask on R/G only, draws SAMPLES_PER_FRAME indices,
+    Builds the validity mask on R/G only, draws n_samples indices,
     then computes the 8 normalized scalars on the sample. Avoids the
     full-resolution np.indices + r_dist + r_undist arrays that would peak
-    at ~120 MB for a 1920x1080 float64 frame.
+    at ~120 MB for a 1920x1080 float64 frame (4K = 4× larger, MUST sample).
+
+    Parameters
+    ----------
+    axis: 1, 2, or 3 — which K axis is non-zero in this frame.
+    K_value: the non-zero K coefficient for that axis (other two = 0).
+    n_samples: per-frame random subsample size (default SAMPLES_PER_FRAME = 30000).
     """
     H, W = R.shape
     cx = W / 2.0
@@ -101,7 +115,7 @@ def compute_displacements(
     if len(valid_idx) == 0:
         return None
 
-    n_sample = min(SAMPLES_PER_FRAME, len(valid_idx))
+    n_sample = min(n_samples, len(valid_idx))
     sample = rng.choice(valid_idx, size=n_sample, replace=False)
     ys, xs = np.unravel_index(sample, (H, W))
     R_s = R.ravel()[sample]
@@ -114,8 +128,12 @@ def compute_displacements(
     r_dist = np.hypot(out_x_norm, out_y_norm)
     r_undist = np.hypot(src_x_norm, src_y_norm)
 
+    K1 = np.full(n_sample, K_value if axis == 1 else 0.0)
+    K2 = np.full(n_sample, K_value if axis == 2 else 0.0)
+    K3 = np.full(n_sample, K_value if axis == 3 else 0.0)
+
     return {
-        "K": np.full(n_sample, K),
+        "K1": K1, "K2": K2, "K3": K3,
         "pixel_id": sample.astype(np.int32),
         "src_x_norm": src_x_norm,
         "src_y_norm": src_y_norm,
@@ -149,12 +167,21 @@ def anchor_sanity_check(anchor_path: Path, W: int, H: int) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
-        "--input-dir", type=Path, default=Path("/tmp/disguise_renders"),
-        help="directory of disguise_K_*.exr renders",
+        "--input-dir", type=Path, default=Path("/tmp/disguise_renders_round2"),
+        help="directory of disguise_K[1-3]_*.exr renders. "
+             "Round 1 layout (flat dir of disguise_K_*.exr) also supported.",
     )
     ap.add_argument(
         "--output", type=Path, default=HERE / "displacements.csv",
         help="output CSV path",
+    )
+    ap.add_argument(
+        "--samples-per-frame", type=int, default=SAMPLES_PER_FRAME,
+        help=f"per-frame random subsample size (default {SAMPLES_PER_FRAME})",
+    )
+    ap.add_argument(
+        "--probe-truth", type=Path, default=None,
+        help="probe truth npz (auto-detect 4K → 1080p → legacy if omitted)",
     )
     ap.add_argument(
         "--seed", type=int, default=42,
@@ -165,30 +192,44 @@ def main() -> None:
     if not args.input_dir.is_dir():
         raise SystemExit(f"input dir not found: {args.input_dir}")
 
-    W, H = load_probe_meta()
+    W, H = load_probe_meta(args.probe_truth)
     rng = np.random.default_rng(args.seed)
 
-    anchor_path = args.input_dir / "disguise_K_zero.exr"
-    if anchor_path.exists():
-        anchor_sanity_check(anchor_path, W, H)
+    # 收集所有 disguise_K*_*.exr (递归 + flat 都支持)
+    exr_files = list(args.input_dir.rglob("disguise_K*.exr"))
+    if not exr_files:
+        raise SystemExit(f"no disguise_K*.exr in {args.input_dir}")
+
+    # Anchor sanity check for each axis (zero frame)
+    for axis_name in ("K1", "K2", "K3", "K"):  # K = legacy Round 1
+        for cand in args.input_dir.rglob(f"disguise_{axis_name}_zero.exr"):
+            anchor_sanity_check(cand, W, H)
+            break  # 一组只查一张
 
     batches: list[dict[str, np.ndarray]] = []
-    seen_K: list[float] = []
-    for png in sorted(args.input_dir.glob("disguise_K_*.exr")):
-        K = parse_k_value(png.stem)
-        seen_K.append(K)
-        if abs(K) < 1e-9:
+    seen_axes: dict[int, list[float]] = {1: [], 2: [], 3: []}
+    for exr_path in sorted(exr_files):
+        try:
+            axis, K_value = parse_k_value(exr_path.stem)
+        except ValueError as exc:
+            print(f"  [skip] {exr_path.name}: {exc}")
             continue
-        R, G = read_uvprobe_exr(png)
-        result = compute_displacements(R, G, K, rng)
+        seen_axes[axis].append(K_value)
+        if abs(K_value) < 1e-9:
+            continue
+        R, G = read_uvprobe_exr(exr_path)
+        if R.shape != (H, W):
+            print(f"  [skip] {exr_path.name}: shape {R.shape} ≠ probe {(H, W)}")
+            continue
+        result = compute_displacements(R, G, axis, K_value, rng, args.samples_per_frame)
         if result is None:
-            print(f"  [warn] {png.name}: no valid pixels (whole frame masked?)")
+            print(f"  [warn] {exr_path.name}: no valid pixels (whole frame masked?)")
             continue
         batches.append(result)
-        n = len(result["K"])
+        n = len(result["K1"])
         r_lo, r_hi = float(result["r_anchor"].min()), float(result["r_anchor"].max())
         dr_lo, dr_hi = float(result["dr"].min()), float(result["dr"].max())
-        print(f"  {png.name}: K={K:+.3f}, sampled {n}/{W * H} pixels "
+        print(f"  {exr_path.name}: axis K{axis}={K_value:+.3f}, sampled {n}/{W * H} pixels "
               f"(r ∈ [{r_lo:.3f}, {r_hi:.3f}], dr ∈ [{dr_lo:+.4f}, {dr_hi:+.4f}])")
 
     if not batches:
@@ -204,7 +245,10 @@ def main() -> None:
         header=",".join(CSV_FIELDS), comments="",
     )
     print(f"wrote {all_rows.shape[0]} rows to {args.output}")
-    print(f"K values: {sorted(set(seen_K))}")
+    for axis in (1, 2, 3):
+        if seen_axes[axis]:
+            ks = sorted(set(seen_axes[axis]))
+            print(f"  K{axis} values ({len(ks)}): {ks[:5]}...{ks[-2:]}" if len(ks) > 7 else f"  K{axis} values: {ks}")
 
 
 if __name__ == "__main__":
