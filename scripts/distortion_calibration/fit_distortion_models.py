@@ -37,6 +37,7 @@ class FitModel:
     func: Callable[..., np.ndarray]  # signed residual, dr_pred = func(K, r, *params)
     p0: tuple[float, ...]
     param_names: tuple[str, ...]
+    uses_joint_K: bool = False  # True for joint K1/K2/K3 candidates
 
 
 def _m1(KR: tuple[np.ndarray, np.ndarray], alpha: float) -> np.ndarray:
@@ -194,71 +195,113 @@ MODELS: tuple[FitModel, ...] = (
 )
 
 
-def load_data(csv_path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    K, r, dr = [], [], []
+def load_data(
+    csv_path: Path,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Load (K1, K2, K3, r_anchor, dr) columns from displacements.csv.
+
+    Skips rows where all three K are ~0 (anchor frames contribute no signal).
+    """
+    K1, K2, K3, r, dr = [], [], [], [], []
     with open(csv_path, newline="") as f:
         for row in csv.DictReader(f):
-            k = float(row["K"])
-            if abs(k) < 1e-9:
-                continue  # K=0 anchor contributes no signal
-            K.append(k)
+            k1 = float(row.get("K1", row.get("K", 0.0)))  # backward compat: legacy "K" column = K1
+            k2 = float(row.get("K2", 0.0))
+            k3 = float(row.get("K3", 0.0))
+            if abs(k1) < 1e-9 and abs(k2) < 1e-9 and abs(k3) < 1e-9:
+                continue
+            K1.append(k1); K2.append(k2); K3.append(k3)
             r.append(float(row["r_anchor"]))
             dr.append(float(row["dr"]))
-    return np.array(K), np.array(r), np.array(dr)
+    return np.array(K1), np.array(K2), np.array(K3), np.array(r), np.array(dr)
 
 
-def fit_one(model: FitModel, K: np.ndarray, r: np.ndarray, dr: np.ndarray):
+def fit_one(model: FitModel, K1: np.ndarray, K2: np.ndarray, K3: np.ndarray,
+            r: np.ndarray, dr: np.ndarray):
+    """Fit a single candidate. K2, K3 only consumed by joint candidates;
+    legacy K1-only candidates ignore K2/K3 via partial application."""
     try:
-        popt, _ = curve_fit(model.func, (K, r), dr, p0=model.p0, maxfev=20000)
+        if model.uses_joint_K:
+            popt, _ = curve_fit(model.func, (K1, K2, K3, r), dr,
+                                 p0=model.p0, maxfev=20000)
+        else:
+            popt, _ = curve_fit(model.func, (K1, r), dr,
+                                 p0=model.p0, maxfev=20000)
     except (RuntimeError, ValueError) as exc:
         return None, None, None, None, str(exc)
-    dr_pred = model.func((K, r), *popt)
+    if model.uses_joint_K:
+        dr_pred = model.func((K1, K2, K3, r), *popt)
+    else:
+        dr_pred = model.func((K1, r), *popt)
     err = dr - dr_pred
     rms = float(np.sqrt(np.mean(err ** 2)))
     max_e = float(np.max(np.abs(err)))
     return popt, rms, max_e, err, None
 
 
-def per_k_breakdown(K: np.ndarray, err: np.ndarray) -> list[tuple[float, float, float]]:
+def per_k_breakdown(K1: np.ndarray, K2: np.ndarray, K3: np.ndarray,
+                    err: np.ndarray) -> list[tuple[str, float, float, float]]:
+    """Group residuals by (axis, K_value) and report RMS / max per group."""
     out = []
-    for k in sorted(set(K.tolist())):
-        mask = np.abs(K - k) < 1e-9
-        sub = err[mask]
-        out.append((k, float(np.sqrt(np.mean(sub ** 2))), float(np.max(np.abs(sub)))))
+    for axis_name, K_arr in (("K1", K1), ("K2", K2), ("K3", K3)):
+        # Find unique non-zero K values along this axis (other axes should be 0)
+        unique_K = sorted(set(K_arr.tolist()))
+        for k in unique_K:
+            if abs(k) < 1e-9:
+                continue
+            mask = np.abs(K_arr - k) < 1e-9
+            sub = err[mask]
+            if len(sub) > 0:
+                out.append((f"{axis_name}={k:+.3f}",
+                            k, float(np.sqrt(np.mean(sub ** 2))),
+                            float(np.max(np.abs(sub)))))
     return out
 
 
 def robust_filter(
-    K: np.ndarray, r: np.ndarray, dr: np.ndarray, trim_pct: float = 5.0,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
-    """Drop the top `trim_pct` % of points by residual under a baseline M1 fit.
+    K1: np.ndarray, K2: np.ndarray, K3: np.ndarray, r: np.ndarray, dr: np.ndarray,
+    trim_pct: float = 5.0,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]:
+    """Drop the top `trim_pct` % of points by residual under a baseline M1 fit on K1.
 
-    Designed to remove measurement outliers (marker-decode glitches,
-    cornerSubPix flailing on heavily-aliased edge markers) without
-    discarding genuinely-informative high-r samples — those will have
-    structurally-correct dr that lines up with the true formula and
-    won't appear as residual outliers under a reasonable baseline.
+    M1 baseline only uses K1 axis (single-radial). Joint-K outliers detection
+    needs higher-order baseline; for our use case 5% trim removes obvious
+    cornerSubPix-equivalent artifacts which are independent of joint behavior.
     """
     if trim_pct <= 0:
-        return K, r, dr, 0
+        return K1, K2, K3, r, dr, 0
     try:
-        popt, _ = curve_fit(_m1, (K, r), dr, p0=(1.0,), maxfev=10000)
+        # Use only K1-driven samples for baseline (ignore K2/K3-only frames)
+        K1_only_mask = (np.abs(K2) < 1e-9) & (np.abs(K3) < 1e-9) & (np.abs(K1) > 1e-9)
+        if K1_only_mask.sum() < 10:
+            return K1, K2, K3, r, dr, 0
+        popt, _ = curve_fit(_m1, (K1[K1_only_mask], r[K1_only_mask]),
+                              dr[K1_only_mask], p0=(1.0,), maxfev=10000)
+        baseline = np.zeros_like(dr)
+        baseline[K1_only_mask] = _m1((K1[K1_only_mask], r[K1_only_mask]), *popt)
+        resid = np.abs(dr - baseline)
+        # Only filter the K1-only subset; keep all K2/K3 samples (their outliers
+        # would be filtered by their own per-axis pass, but for round 2 we
+        # accept this as conservative).
+        cutoff = np.percentile(resid[K1_only_mask], 100.0 - trim_pct)
+        keep = ~K1_only_mask | (resid <= cutoff)
+        return K1[keep], K2[keep], K3[keep], r[keep], dr[keep], int((~keep).sum())
     except (RuntimeError, ValueError) as exc:
         print(f"[warn] robust_filter baseline fit failed ({exc}); skipping outlier trim")
-        return K, r, dr, 0
-    baseline = _m1((K, r), *popt)
-    resid = np.abs(dr - baseline)
-    cutoff = np.percentile(resid, 100.0 - trim_pct)
-    keep = resid <= cutoff
-    return K[keep], r[keep], dr[keep], int((~keep).sum())
+        return K1, K2, K3, r, dr, 0
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--input", type=Path, default=HERE / "displacements.csv")
     ap.add_argument(
-        "--half-width-px", type=float, default=960.0,
-        help="r-normalization constant (W/2 in pixels) for px conversion",
+        "--half-width-px", type=float, default=None,
+        help="r-normalization constant (W/2 in pixels). Auto-detect from "
+             "probe metadata if omitted. 4K=1920, 1080p=960.",
+    )
+    ap.add_argument(
+        "--probe-truth", type=Path, default=None,
+        help="probe truth npz for half-width auto-detect (default 4K → 1080p)",
     )
     ap.add_argument(
         "--trim-pct", type=float, default=5.0,
@@ -270,39 +313,45 @@ def main() -> None:
     if not args.input.exists():
         raise SystemExit(f"missing {args.input} — run analyze_renders.py first")
 
-    K, r, dr = load_data(args.input)
-    print(f"loaded {len(K)} samples, K values: {sorted(set(K.tolist()))}")
-    print(f"r range: [{r.min():.3f}, {r.max():.3f}]  dr range: [{dr.min():+.4f}, {dr.max():+.4f}]")
+    if args.half_width_px is None:
+        # Auto-detect from probe metadata (matching what analyze_renders.py used)
+        from _exr import load_probe_meta
+        W, _ = load_probe_meta(args.probe_truth)
+        half_w = W / 2.0
+        print(f"[auto] half_width_px = {half_w:.1f} (from {W}x*)")
+    else:
+        half_w = args.half_width_px
+
+    K1, K2, K3, r, dr = load_data(args.input)
+    print(f"loaded {len(K1)} samples")
+    print(f"  K1 range: [{K1.min():+.3f}, {K1.max():+.3f}]  non-zero: {(np.abs(K1) > 1e-9).sum()}")
+    print(f"  K2 range: [{K2.min():+.3f}, {K2.max():+.3f}]  non-zero: {(np.abs(K2) > 1e-9).sum()}")
+    print(f"  K3 range: [{K3.min():+.3f}, {K3.max():+.3f}]  non-zero: {(np.abs(K3) > 1e-9).sum()}")
+    print(f"  r range: [{r.min():.3f}, {r.max():.3f}]  dr range: [{dr.min():+.4f}, {dr.max():+.4f}]")
     if args.trim_pct > 0:
-        K, r, dr, dropped = robust_filter(K, r, dr, args.trim_pct)
-        print(f"robust trim: dropped {dropped} outliers (top {args.trim_pct}% by M1 residual)")
-        print(f"after trim: {len(K)} samples, r range: [{r.min():.3f}, {r.max():.3f}]")
+        K1, K2, K3, r, dr, dropped = robust_filter(K1, K2, K3, r, dr, args.trim_pct)
+        print(f"robust trim: dropped {dropped} outliers (top {args.trim_pct}% by M1 K1-baseline residual)")
     print()
 
-    half_w = args.half_width_px
-    N = len(K)
+    N = len(K1)
     results = []
     for m in MODELS:
-        popt, rms, max_e, err, fail = fit_one(m, K, r, dr)
+        popt, rms, max_e, err, fail = fit_one(m, K1, K2, K3, r, dr)
         if fail is not None:
             print(f"=== {m.name}  FAIL: {fail}")
             continue
         rms_px = rms * half_w
         max_px = max_e * half_w
         k_params = len(popt)
-        # Sum of squared residuals in normalized r units
         ssr = float(np.sum(err ** 2))
-        # AIC / BIC use ln(SSR/N); add tiny epsilon to avoid log(0)
         aic = N * np.log(max(ssr / N, 1e-30)) + 2 * k_params
         bic = N * np.log(max(ssr / N, 1e-30)) + k_params * np.log(N)
-        params = ", ".join(
-            f"{name}={val:+.5f}" for name, val in zip(m.param_names, popt)
-        )
+        params = ", ".join(f"{name}={val:+.5f}" for name, val in zip(m.param_names, popt))
         print(f"=== {m.name}  rms={rms_px:.3f} px  max={max_px:.3f} px  "
               f"AIC={aic:.1f}  BIC={bic:.1f}  ({params})")
         print(f"    {m.description}")
-        for k, rms_k, max_k in per_k_breakdown(K, err):
-            print(f"    K={k:+.2f}  rms={rms_k * half_w:6.3f} px  max={max_k * half_w:6.3f} px")
+        for label, _, rms_k, max_k in per_k_breakdown(K1, K2, K3, err):
+            print(f"    {label}  rms={rms_k * half_w:6.3f} px  max={max_k * half_w:6.3f} px")
         results.append({
             "name": m.name, "model": m, "popt": popt,
             "rms_px": rms_px, "max_px": max_px, "aic": aic, "bic": bic,
