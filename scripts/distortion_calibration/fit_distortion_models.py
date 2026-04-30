@@ -414,10 +414,13 @@ def main() -> None:
         raise SystemExit(f"missing {args.input} — run analyze_renders.py first")
 
     if args.half_width_px is None:
-        # Auto-detect from probe metadata (matching what analyze_renders.py used)
-        W, H = load_probe_meta(args.probe_truth)
-        half_w = W / 2.0
-        print(f"[auto] half_width_px = {half_w:.1f} (from probe {W}x{H})")
+        # Auto-detect from probe metadata. 用 CAMERA half-width (不是 probe), 保持
+        # over-scan probe 跟 1× probe 的 fit 系数都在同一物理参考系下.
+        W_probe, H_probe, W_camera, H_camera = load_probe_meta(args.probe_truth)
+        half_w = W_camera / 2.0
+        overscan = W_probe / W_camera
+        print(f"[auto] half_width_px = {half_w:.1f} (from camera {W_camera}x{H_camera}, "
+              f"probe {W_probe}x{H_probe}, overscan={overscan:.2f}x)")
     else:
         half_w = args.half_width_px
 
