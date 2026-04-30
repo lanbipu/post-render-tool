@@ -106,11 +106,71 @@ def parse_k_value(stem: str) -> tuple[int, float]:
     return axis, sign * float(m.group("value").lower().replace("p", "."))
 
 
+def detect_overscan_from_anchor(
+    R: np.ndarray, G: np.ndarray, edge_margin_px: int = 4,
+) -> tuple[float, float]:
+    """从 K=0 anchor 帧 R/G 通道反推 Disguise over-scan 比例和 margin.
+
+    Disguise 1.5× over-scan 在导出 EXR 时把渲染范围裁回 nominal, R/G 范围被
+    仿射拉伸: R_observed = R_uncorrected * (1/S) + margin, 其中 S 是
+    over-scan factor, margin = (1 - 1/S) / 2.
+
+    实测 1.5× over-scan: R 范围 [0.1667, 0.8330], margin = 1/6 ≈ 0.1667, S = 1.5
+    无 over-scan (S=1.0): R 范围 [0, 1], margin = 0
+
+    Returns
+    -------
+    (overscan_factor, margin)
+
+    Raises
+    ------
+    ValueError if R/G shapes mismatch or detection failure.
+    """
+    if R.shape != G.shape:
+        raise ValueError(f"R/G shape mismatch: {R.shape} vs {G.shape}")
+    H, W = R.shape
+
+    # 用中心行 R 通道 (整行避开边缘像素 noise) 推 R 范围
+    cr = H // 2
+    R_row = R[cr, edge_margin_px : W - edge_margin_px]
+    R_min = float(R_row.min())
+    R_max = float(R_row.max())
+
+    # 用中心列 G 通道推 G 范围 (理论上应当跟 R 范围对称)
+    cc = W // 2
+    G_col = G[edge_margin_px : H - edge_margin_px, cc]
+    G_min = float(G_col.min())
+    G_max = float(G_col.max())
+
+    # 取 R/G 范围中位 (避免某一通道有 noise)
+    span_R = R_max - R_min
+    span_G = G_max - G_min
+    span = (span_R + span_G) / 2.0
+
+    if span < 0.5:
+        raise ValueError(
+            f"detected R/G span = {span:.3f} < 0.5, over-scan factor would be > 2× "
+            f"(R: [{R_min:.4f}, {R_max:.4f}], G: [{G_min:.4f}, {G_max:.4f}]). "
+            f"Probe data likely corrupted."
+        )
+    overscan_factor = 1.0 / span
+    margin = (R_min + G_min) / 2.0
+
+    # Sanity: margin = (1 - span) / 2 应当接近 R_min
+    expected_margin = (1.0 - span) / 2.0
+    if abs(margin - expected_margin) > 0.01:
+        print(f"  [warn] margin asymmetry: detected {margin:.4f}, expected {expected_margin:.4f}")
+
+    return overscan_factor, margin
+
+
 def compute_displacements(
     R: np.ndarray, G: np.ndarray,
     W_probe: int, H_probe: int, W_camera: int, H_camera: int,
     axis: int, K_value: float, rng: np.random.Generator,
     n_samples: int = SAMPLES_PER_FRAME,
+    *,
+    overscan_factor: float = 1.0, overscan_margin: float = 0.0,
 ) -> dict[str, np.ndarray] | None:
     """Sample-first per-pixel (K1, K2, K3, r, dr) extraction.
 
@@ -132,6 +192,9 @@ def compute_displacements(
     axis: 1, 2, or 3 — which K axis is non-zero in this frame.
     K_value: the non-zero K coefficient for that axis (other two = 0).
     n_samples: per-frame random subsample size (default SAMPLES_PER_FRAME = 30000).
+    overscan_factor: Disguise lens over-scan factor (1.0 = no over-scan, 1.5 = 1.5×).
+    overscan_margin: affine margin from over-scan, (1 - 1/S) / 2.  R/G are
+        de-affined before coordinate computation when factor > 1 or margin > 0.
     """
     H, W = R.shape
     if (H, W) != (H_probe, W_probe):
@@ -154,6 +217,12 @@ def compute_displacements(
     ys, xs = np.unravel_index(sample, (H, W))
     R_s = R.ravel()[sample]
     G_s = G.ravel()[sample]
+
+    # Over-scan 反仿射补偿
+    if overscan_factor > 1.01 or abs(overscan_margin) > 1e-6:
+        usable_span = 1.0 - 2.0 * overscan_margin
+        R_s = (R_s - overscan_margin) / usable_span
+        G_s = (G_s - overscan_margin) / usable_span
 
     out_x_norm = (xs.astype(np.float64) + 0.5 - cx) / half_w
     out_y_norm = (ys.astype(np.float64) + 0.5 - cy) / half_w
@@ -251,6 +320,28 @@ def main() -> None:
             anchor_sanity_check(cand, W_probe, H_probe)
             zero_seen.add(axis)
 
+    # Over-scan 自动检测 (从 K1=0 anchor 的 R/G 范围反推)
+    overscan_factor = 1.0
+    overscan_margin = 0.0
+    for cand in sorted(exr_files):
+        try:
+            axis, K_value = parse_k_value(cand.stem)
+        except ValueError:
+            continue
+        if abs(K_value) < 1e-9 and axis == 1:
+            R_anchor, G_anchor = read_uvprobe_exr(cand)
+            try:
+                overscan_factor, overscan_margin = detect_overscan_from_anchor(R_anchor, G_anchor)
+                print(f"  [over-scan] detected factor = {overscan_factor:.3f}×, margin = {overscan_margin:.4f}")
+                if overscan_factor > 1.01:
+                    usable = 1.0 - 2.0 * overscan_margin
+                    print(f"  [over-scan] R/G 补偿: R_corrected = (R - {overscan_margin:.4f}) / {usable:.4f}")
+            except ValueError as e:
+                print(f"  [over-scan] detection failed: {e}, 假设 no over-scan (factor=1.0)")
+                overscan_factor = 1.0
+                overscan_margin = 0.0
+            break
+
     batches: list[dict[str, np.ndarray]] = []
     seen_axes: dict[int, list[float]] = {1: [], 2: [], 3: []}
     for exr_path in sorted(exr_files):
@@ -270,6 +361,7 @@ def main() -> None:
             R, G,
             W_probe, H_probe, W_camera, H_camera,
             axis, K_value, rng, args.samples_per_frame,
+            overscan_factor=overscan_factor, overscan_margin=overscan_margin,
         )
         if result is None:
             print(f"  [warn] {exr_path.name}: no valid pixels (whole frame masked?)")
