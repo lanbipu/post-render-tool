@@ -44,8 +44,13 @@ def build_probe(W: int, H: int) -> np.ndarray:
     return np.stack([b, v, u], axis=-1)
 
 
-def write_one(W: int, H: int) -> None:
+def write_one(W: int, H: int, camera_w: int | None = None, camera_h: int | None = None) -> None:
     img = build_probe(W, H)
+
+    cam_w = camera_w if camera_w is not None else W
+    cam_h = camera_h if camera_h is not None else H
+    over_x = W / cam_w
+    over_y = H / cam_h
 
     out_exr = OUT_DIR / f"uv_probe_{W}x{H}.exr"
     out_npz = OUT_DIR / f"uv_probe_truth_{W}x{H}.npz"
@@ -77,6 +82,8 @@ def write_one(W: int, H: int) -> None:
         out_npz,
         width=W,
         height=H,
+        camera_width=cam_w,
+        camera_height=cam_h,
         channel_layout="BGR (cv2 native); R=U=(x+0.5)/W, G=V=(y+0.5)/H, B=0",
         u_step=1.0 / W,
         v_step=1.0 / H,
@@ -86,6 +93,7 @@ def write_one(W: int, H: int) -> None:
     print(f"[ok] wrote {out_exr}  ({out_exr.stat().st_size / 1024 / 1024:.1f} MB)")
     print(f"[ok] wrote {out_npz}")
     print(f"[verify] roundtrip max-diff = {diff:.2e}")
+    print(f"[meta] probe={W}x{H}  camera={cam_w}x{cam_h}  over-scan={over_x:.4f}x / {over_y:.4f}y")
     for name, bgr in expected.items():
         b_, g_, r_ = bgr
         print(f"        {name:14s}  R={r_:.6f} G={g_:.6f} B={b_:.6f}")
@@ -105,14 +113,26 @@ def main() -> None:
         "--resolution", "-r",
         type=parse_resolution,
         action="append",
-        help="resolution WxH (e.g., 3840x2160). May be specified multiple times. "
+        help="probe resolution WxH (e.g., 3840x2160). May be specified multiple times. "
              "Default generates both 1920x1080 and 3840x2160 if omitted.",
+    )
+    ap.add_argument(
+        "--camera-resolution",
+        type=parse_resolution,
+        default=None,
+        help="Camera frame resolution as WxH (e.g., '3840x2160'). 默认等于 --resolution "
+             "(no over-scan). Over-scan factor 隐式由 probe_W / camera_W 推出. "
+             "若提供, 同一个 camera 尺寸应用到所有 --resolution 条目.",
     )
     args = ap.parse_args()
 
     resolutions = args.resolution or DEFAULT_RESOLUTIONS
+    cam_dims = args.camera_resolution  # tuple or None
     for W, H in resolutions:
-        write_one(W, H)
+        if cam_dims is None:
+            write_one(W, H)
+        else:
+            write_one(W, H, cam_dims[0], cam_dims[1])
 
 
 if __name__ == "__main__":
