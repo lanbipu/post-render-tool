@@ -147,9 +147,9 @@ def detect_overscan_from_anchor(
     span_G = G_max - G_min
     span = (span_R + span_G) / 2.0
 
-    if span < 0.5:
+    if span < 0.3:
         raise ValueError(
-            f"detected R/G span = {span:.3f} < 0.5, over-scan factor would be > 2× "
+            f"detected R/G span = {span:.3f} < 0.3, over-scan factor would be > 3× "
             f"(R: [{R_min:.4f}, {R_max:.4f}], G: [{G_min:.4f}, {G_max:.4f}]). "
             f"Probe data likely corrupted."
         )
