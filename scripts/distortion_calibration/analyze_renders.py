@@ -216,16 +216,25 @@ def main() -> None:
     W, H = load_probe_meta(args.probe_truth)
     rng = np.random.default_rng(args.seed)
 
-    # 收集所有 disguise_K*_*.exr (递归 + flat 都支持)
-    exr_files = list(args.input_dir.rglob("disguise_K*.exr"))
+    # 收集所有 disguise_*.exr (递归 + flat 都支持). pathlib.Path.rglob 在 POSIX 是
+    # case-sensitive, 用 'disguise_K*' 会漏掉 'disguise_k1_*' 之类小写命名;
+    # 这里 broaden 到 'disguise_*.exr', 由 parse_k_value 的 IGNORECASE regex
+    # 兜底过滤无关文件 (走 [skip] 分支).
+    exr_files = list(args.input_dir.rglob("disguise_*.exr"))
     if not exr_files:
-        raise SystemExit(f"no disguise_K*.exr in {args.input_dir}")
+        raise SystemExit(f"no disguise_*.exr in {args.input_dir}")
 
-    # Anchor sanity check for each axis (zero frame)
-    for axis_name in ("K1", "K2", "K3", "K"):  # K = legacy Round 1
-        for cand in args.input_dir.rglob(f"disguise_{axis_name}_zero.exr"):
+    # Anchor sanity check: 每个 axis 取首个 K=0 帧, 用 parse_k_value 解析
+    # (它已 IGNORECASE), 不再走 case-sensitive 的 axis_name rglob.
+    zero_seen: set[int] = set()
+    for cand in sorted(exr_files):
+        try:
+            axis, K_value = parse_k_value(cand.stem)
+        except ValueError:
+            continue
+        if abs(K_value) < 1e-9 and axis not in zero_seen:
             anchor_sanity_check(cand, W, H)
-            break  # 一组只查一张
+            zero_seen.add(axis)
 
     batches: list[dict[str, np.ndarray]] = []
     seen_axes: dict[int, list[float]] = {1: [], 2: [], 3: []}

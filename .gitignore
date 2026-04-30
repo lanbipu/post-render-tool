@@ -4,3 +4,7 @@ __pycache__/
 
 # Claude Code superpowers worktrees — 不应进入 P4 graph depot
 .claude/worktrees/
+
+# Disguise 渲染产出 (Round 2 K1/K2/K3 sweep, 单文件 ~3-4 MB, 全套 ~200 MB)
+# 不入仓; 探针 EXR (uv_probe_*.exr) 在上一级目录, 不被此规则覆盖
+scripts/distortion_calibration/validation_results/**/*.exr
