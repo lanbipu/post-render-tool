@@ -56,17 +56,27 @@ from .csv_parser import FrameData
 # M6_B = +0.2097  K²·r⁵
 # M6_C = -0.1931  K³·r⁷
 
-# ── M_RAT6 rational coefficients (Path A round 1, commit 8164938) ────────
-# fit_distortion_models.py M_RAT6 BIC-best on 300k pixel samples:
+# ── M_RAT6 rational coefficients ────────────────────────────────────────────
+# Path A round 1 (commit 8164938): 11-frame K1 sweep @ 1080p, RMS 0.401 px
+# Path A round 2.1 (commit xxx): 51-frame K1 sweep @ 4K + 1.5× over-scan, RMS 1.135 px @ 4K
+#
+# Round 2.1 BIC-best M_RAT6 on 5M samples (after 5% robust trim):
 #     r' = r · (1 + a·K·r² + b·K²·r⁴ + c·K³·r⁶)
 #         / (1 + d·K·r² + e·K²·r⁴ + f·K³·r⁶)
-# RMS 0.401 px ≈ noise floor, 跟 UE BrownConradyUDLensModel rational shader 同构.
-M_RAT6_A: float = -3.18050
-M_RAT6_B: float = +7.24462
-M_RAT6_C: float = +5.12035
-M_RAT6_D: float = -2.93087
-M_RAT6_E: float = +6.30678
-M_RAT6_F: float = +7.51125
+# Trimmed RMS 1.135 px @ 4K (≈0.57 px @ 1080p), trimmed max 5.786 px @ 4K
+# Full-set RMS 1.9 px, full-set max 39.5 px (K=-0.5 extreme).
+# M_RAT8 (BIC -70.99M vs M_RAT6 -70.62M) adds r⁸ terms but UE shader only
+# has K1-K6 slots → M_RAT6 is the deployable ceiling for BrownConradyUD.
+#
+# 注意: Round 2.1 系数绝对值很大 (10²~10⁶), 是 r 扩展到 1.33 (over-scan) 后
+# 的数值现象, numerator/denominator 近似抵消后净效果跟 Round 1 类似.
+# production K1 ≈ 3e-4 时 M_RAT6 项贡献 sub-1e-7, 主导项仍是 legacy K2/K3 sign-flip.
+M_RAT6_A: float = +602.25734
+M_RAT6_B: float = +812547.17935
+M_RAT6_C: float = +395029.04330
+M_RAT6_D: float = +602.66929
+M_RAT6_E: float = +814809.12141
+M_RAT6_F: float = +601028.79343
 
 
 def compute_normalized_distortion(frame_data: FrameData) -> dict:
