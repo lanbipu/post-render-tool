@@ -107,7 +107,9 @@ def parse_k_value(stem: str) -> tuple[int, float]:
 
 
 def compute_displacements(
-    R: np.ndarray, G: np.ndarray, axis: int, K_value: float, rng: np.random.Generator,
+    R: np.ndarray, G: np.ndarray,
+    W_probe: int, H_probe: int, W_camera: int, H_camera: int,
+    axis: int, K_value: float, rng: np.random.Generator,
     n_samples: int = SAMPLES_PER_FRAME,
 ) -> dict[str, np.ndarray] | None:
     """Sample-first per-pixel (K1, K2, K3, r, dr) extraction.
@@ -117,16 +119,27 @@ def compute_displacements(
     full-resolution np.indices + r_dist + r_undist arrays that would peak
     at ~120 MB for a 1920x1080 float64 frame (4K = 4× larger, MUST sample).
 
+    Coordinates: r is normalized to camera half-width (W_camera/2), centered
+    on probe center (W_probe/2). For 1× (no over-scan), W_probe == W_camera
+    so this reduces to traditional [-1, +1] normalization. For 1.5× over-scan
+    (W_probe = 1.5 × W_camera), R/G ∈ [0, 1] of probe maps to camera-normalized
+    [-1.5, +1.5]; output pixels still cover the same range since render = probe.
+
     Parameters
     ----------
+    W_probe, H_probe: probe (render) dimensions in pixels — must match R.shape.
+    W_camera, H_camera: camera reference frame dimensions; r normalized to W_camera/2.
     axis: 1, 2, or 3 — which K axis is non-zero in this frame.
     K_value: the non-zero K coefficient for that axis (other two = 0).
     n_samples: per-frame random subsample size (default SAMPLES_PER_FRAME = 30000).
     """
     H, W = R.shape
-    cx = W / 2.0
-    cy = H / 2.0
-    half_w = W / 2.0
+    if (H, W) != (H_probe, W_probe):
+        raise ValueError(f"R/G shape {R.shape} ≠ probe {(H_probe, W_probe)}")
+
+    cx = W_probe / 2.0
+    cy = H_probe / 2.0
+    half_w = W_camera / 2.0
 
     valid = (
         (R > VALID_UV_MIN) & (R < VALID_UV_MAX) &
@@ -213,7 +226,9 @@ def main() -> None:
     if not args.input_dir.is_dir():
         raise SystemExit(f"input dir not found: {args.input_dir}")
 
-    W, H = load_probe_meta(args.probe_truth)
+    W_probe, H_probe, W_camera, H_camera = load_probe_meta(args.probe_truth)
+    overscan = W_probe / W_camera
+    print(f"[probe] {W_probe}x{H_probe}  camera={W_camera}x{H_camera}  overscan={overscan:.2f}x")
     rng = np.random.default_rng(args.seed)
 
     # 收集所有 disguise_*.exr (递归 + flat 都支持). pathlib.Path.rglob 在 POSIX 是
@@ -233,7 +248,7 @@ def main() -> None:
         except ValueError:
             continue
         if abs(K_value) < 1e-9 and axis not in zero_seen:
-            anchor_sanity_check(cand, W, H)
+            anchor_sanity_check(cand, W_probe, H_probe)
             zero_seen.add(axis)
 
     batches: list[dict[str, np.ndarray]] = []
@@ -248,10 +263,14 @@ def main() -> None:
         if abs(K_value) < 1e-9:
             continue
         R, G = read_uvprobe_exr(exr_path)
-        if R.shape != (H, W):
-            print(f"  [skip] {exr_path.name}: shape {R.shape} ≠ probe {(H, W)}")
+        if R.shape != (H_probe, W_probe):
+            print(f"  [skip] {exr_path.name}: shape {R.shape} ≠ probe {(H_probe, W_probe)}")
             continue
-        result = compute_displacements(R, G, axis, K_value, rng, args.samples_per_frame)
+        result = compute_displacements(
+            R, G,
+            W_probe, H_probe, W_camera, H_camera,
+            axis, K_value, rng, args.samples_per_frame,
+        )
         if result is None:
             print(f"  [warn] {exr_path.name}: no valid pixels (whole frame masked?)")
             continue
@@ -259,7 +278,7 @@ def main() -> None:
         n = len(result["K1"])
         r_lo, r_hi = float(result["r_anchor"].min()), float(result["r_anchor"].max())
         dr_lo, dr_hi = float(result["dr"].min()), float(result["dr"].max())
-        print(f"  {exr_path.name}: axis K{axis}={K_value:+.3f}, sampled {n}/{W * H} pixels "
+        print(f"  {exr_path.name}: axis K{axis}={K_value:+.3f}, sampled {n}/{W_probe * H_probe} pixels "
               f"(r ∈ [{r_lo:.3f}, {r_hi:.3f}], dr ∈ [{dr_lo:+.4f}, {dr_hi:+.4f}])")
 
     if not batches:
