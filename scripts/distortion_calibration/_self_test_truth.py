@@ -16,7 +16,7 @@ from _exr import (
 IDENTITY_TOL = 1e-5
 
 
-W, H = load_probe_meta()
+W, H, _, _ = load_probe_meta()
 R, G = read_uvprobe_exr(PROBE_EXR)
 u_truth, v_truth = build_identity_uv_grid(W, H)
 
