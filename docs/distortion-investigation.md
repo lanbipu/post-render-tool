@@ -1,11 +1,11 @@
 # Lens Distortion Investigation — 接力交班文档
 
-> **状态**：进行中。Disguise CSV K → UE LensFile 的映射做到了 95-98% 视觉匹配，
-> 还差最后 ~1-3 像素残差未达到 pixel-perfect。
+> **状态**：Round 2.1 M_RAT6 系数已落地（commit `ecb997a`），production 精度 3.3× 改善。
+> 下一步：lanPC UE Editor 端到端验证 production CSV。
 >
-> **2026-04-28 更新**：用户决定走 **Path A**（不是文档原推荐的 Path B）。
-> Mac 端工具链已就绪，等用户在 d3 端渲 11 张 transmission frame。
-> 详见 `scripts/distortion_calibration/README.md` 和 `USER_INSTRUCTIONS.md`。
+> **2026-04-30 更新**：Round 2.1 完成 — 51 帧 4K + 1.5× over-scan K1 sweep → fit → 系数更新。
+> Production |K1|≤0.1: RMS 1.09 px, max 3.5 px（vs Round 1 RMS 3.6 px, max 8.5 px）。
+> 详见下方 §Round 2.1 进度。
 
 ## 目标
 
@@ -376,5 +376,62 @@ interpolation（输入空间在 undistorted UV 上不是均匀分布），结果
 - [ ] B2：用户在 d3 端渲两帧 transmission frame 回传
 - [ ] 远程实测 B5：lanPC 上跑 import + add_stmap_point，验证 API 形参
 - [ ] 闭环验证：UE 渲染同帧 → 跟 Disguise transmission frame diff，应 ≈ 全黑
+
+---
+
+## Round 2.1 进度记录（2026-04-30）
+
+### 完成的工作
+
+1. **51 帧 4K EXR 数据采集** — Disguise lens over-scan 1.5×，K1 ∈ {-0.50, ..., +0.50} 步进 0.02
+   - 存放位置：`/Volumes/Docs/temp/k_sweep/`（已重命名为项目命名规范 `disguise_K1_*.exr`）
+   - Over-scan 检测：factor=1.505×，margin=0.1677（理论 1/6=0.1667，偏差 0.001）
+   - R/G 反仿射补偿自动应用
+
+2. **analyze_renders.py 运行** — 100k samples/frame × 50 non-zero 帧 = 5M rows
+   - 输出：`/Volumes/Docs/temp/k_sweep/displacements.csv`（467 MB）
+
+3. **fit_distortion_models.py 运行** — 13 候选模型
+   - BIC 最优：**M_RAT8**（-70.99M，RMS 1.091 px，max 4.426 px）
+   - 次优：**M_RAT6**（-70.62M，RMS 1.135 px，max 5.786 px）
+   - M_RAT8 有 r⁸ 项，但 UE BrownConradyUDLensModel shader 只有 K1-K6 槽位 → **无法部署**
+   - **M_RAT6 是能完整映射到 UE shader 的最高阶 rational 模型**
+
+4. **distortion_math.py 系数更新**（commit `ecb997a`）
+   - Round 1 旧系数：a=-3.18, b=+7.24, c=+5.12, d=-2.93, e=+6.31, f=+7.51
+   - Round 2.1 新系数：a=+602.26, b=+812547.18, c=+395029.04, d=+602.67, e=+814809.12, f=+601028.79
+   - 绝对值很大是 r 扩展到 1.33（over-scan）的数值现象，num/den 近似抵消后净效果跟 Round 1 类似
+   - Production K1≈3e-4 时 M_RAT6 项贡献 sub-1e-7，主导项仍是 legacy K2/K3 sign-flip
+
+5. **Tier 1 验证**（通过）
+   - 无极点（min denominator 0.89 @ K=-0.5, r=0.03）
+   - Production K1=3e-4：dr sub-1e-4，行为正常
+
+6. **Tier 2 验证**（production 范围通过，极端 K 有退化）
+   - Production |K1|≤0.1：RMS **1.09 px**，max **3.5 px**（Round 1: RMS 3.6 px, max 8.5 px → **3.3× 改善**）
+   - Full K∈[-0.5,0.5]：RMS 1.9 px，max 39.5 px（K=-0.5 极端帧外圈，production 不会遇到）
+   - 验证对比图：`scripts/.../mrq_v2_r21_validation.png`
+
+### 关键数据对比
+
+| 指标 | Round 1 (1080p) | Round 2.1 (4K) | 改善 |
+|---|---|---|---|
+| Production RMS | 3.6 px | 1.1 px | 3.3× |
+| Production max | 8.5 px | 3.5 px | 2.4× |
+| Fit data量 | 300k (11 帧) | 5M (50 帧) | 17× |
+| r 范围 | [0, 1.0] | [0, 1.33] | 33% 扩展 |
+
+### 明天要做
+
+- [ ] **lanPC UE Editor 端到端验证**：用真实 production CSV 跑完整 pipeline（parse → transform → LensFile → render），跟 Disguise 直渲帧 diff
+- [ ] **如果端到端残差仍 > 2 px**：排查是 K1 M_RAT6 残差还是 K2/K3 sign-flip 误差，决定是否需要 K2/K3 sweep
+- [ ] **更新 distortion-precision-analysis.md**：加入 Round 2.1 的实际精度档次定位
+- [ ] **如果精度满意**：更新 `docs/K1-implementation.md` 加 Round 2.1 章节，关闭 distortion 调试
+
+### 注意事项
+
+- fit 报告的 "max 5.786 px" 是 **5% robust trim 后**的指标；全量数据 max 39.5 px（K=-0.5 极端帧）
+- Over-scan margin 精度 0.1677 vs 理论 0.1667 → 引入 ~5 px 系统性 scale 误差（K=0 帧）
+- 这个 scale 误差对 production（K1≈3e-4）无影响（M_RAT6 项贡献 sub-1e-7）
 
 接下来阻塞在 B2（等用户在 d3 端渲帧）。Mac 与 UE 两端工具链已经准备就绪。
