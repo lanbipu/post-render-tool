@@ -133,7 +133,8 @@ def _create_material() -> "unreal.Material":
 def _set_post_process_domain(material: "unreal.Material") -> None:
     """Domain = PostProcess, BlendableLocation = AfterTonemapping."""
     material.set_editor_property("material_domain", unreal.MaterialDomain.MD_POST_PROCESS)
-    material.set_editor_property("blendable_location", unreal.BlendableLocation.BL_AFTER_TONEMAPPING)
+    # UE 5.7 enum 实际名 BL_SCENE_COLOR_AFTER_TONEMAPPING (不是 BL_AFTER_TONEMAPPING).
+    material.set_editor_property("blendable_location", unreal.BlendableLocation.BL_SCENE_COLOR_AFTER_TONEMAPPING)
     material.set_editor_property("blendable_priority", 0)
     logger.info("Material Domain = PostProcess, BlendableLocation = AfterTonemapping")
 
@@ -204,7 +205,8 @@ def run_build() -> "unreal.Material":
     n_SceneTex.set_editor_property("scene_texture_id", unreal.SceneTextureId.PPI_POST_PROCESS_INPUT0)
     # 默认 bFiltered=False = point sampling, 跟 cv2.remap INTER_LINEAR 离线 reference
     # 对不上 (subpixel sourceUV 会 stair-step). 显式开 bilinear.
-    n_SceneTex.set_editor_property("b_filtered", True)
+    # UE 5.7 Python 把 bFiltered 暴露成 "filtered" (去 Hungarian b 前缀).
+    n_SceneTex.set_editor_property("filtered", True)
 
     # ── In-bounds mask Custom node ──
     # sourceUV 出界 [0,1]² 时输出 0, 在界内输出 1. 后面跟 SceneTexture.Color 相乘
