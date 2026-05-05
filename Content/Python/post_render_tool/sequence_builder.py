@@ -150,6 +150,24 @@ def build_sequence(
         cine_comp
     )
 
+    # Path C distortion controller component (camera_builder 已经挂上去)
+    controller_cls = getattr(unreal, "PostRenderDistortionControllerComponent", None)
+    if controller_cls is None:
+        raise RuntimeError(
+            "unreal.PostRenderDistortionControllerComponent 不可见 — "
+            "检查 plugin UBT 是否重新编译, Editor 是否重启."
+        )
+    controller_comps = camera_actor.get_components_by_class(controller_cls)
+    if not controller_comps:
+        raise RuntimeError(
+            f"camera_actor '{camera_actor.get_actor_label()}' 上找不到 "
+            "PostRenderDistortionControllerComponent. 检查 build_camera 是否正常执行."
+        )
+    distortion_controller = controller_comps[0]
+    controller_binding: unreal.MovieSceneBindingProxy = level_sequence.add_possessable(
+        distortion_controller
+    )
+
     # Camera Cut Track：MRQ 渲染必需。缺这条 track 时 MRQ 拿不到 sequence 当前
     # 时间应该用哪个相机，会 fallback 到 World Outliner 第一个相机或 default
     # camera —— 表现就是 Sequencer 预览正确、MRQ 渲染 FOV/姿态完全错位。
@@ -209,6 +227,19 @@ def build_sequence(
         "FocusSettings.ManualFocusDistance",
     )
 
+    # Path C controller float tracks: 7 个 Interp UPROPERTY → Sequencer keyframes.
+    # 名字必须是 C++ UPROPERTY 的 PascalCase (Python 反射的 snake_case 是 getter 入口,
+    # Sequencer track 用 reflected property name 即 PascalCase).
+    k1_section = _add_float_track(controller_binding, "K1", "K1")
+    k2_section = _add_float_track(controller_binding, "K2", "K2")
+    k3_section = _add_float_track(controller_binding, "K3", "K3")
+    center_u_section = _add_float_track(controller_binding, "CenterU", "CenterU")
+    center_v_section = _add_float_track(controller_binding, "CenterV", "CenterV")
+    aspect_section = _add_float_track(controller_binding, "Aspect", "Aspect")
+    weight_section = _add_float_track(
+        controller_binding, "DistortionWeight", "DistortionWeight"
+    )
+
     # ------------------------------------------------------------------
     # Step 6: Write keyframes
     # ------------------------------------------------------------------
@@ -231,6 +262,15 @@ def build_sequence(
     ch_focal    = focal_channels[0]
     ch_aperture = aperture_channels[0]
     ch_focus    = focus_channels[0]
+
+    # Path C controller channels
+    ch_k1       = k1_section.get_all_channels()[0]
+    ch_k2       = k2_section.get_all_channels()[0]
+    ch_k3       = k3_section.get_all_channels()[0]
+    ch_center_u = center_u_section.get_all_channels()[0]
+    ch_center_v = center_v_section.get_all_channels()[0]
+    ch_aspect   = aspect_section.get_all_channels()[0]
+    ch_weight   = weight_section.get_all_channels()[0]
 
     interp = unreal.MovieSceneKeyInterpolation.LINEAR
 
@@ -271,6 +311,24 @@ def build_sequence(
         # Focus distance: m → cm
         focus_cm = transform_focus_distance(frame.focus_distance)
         ch_focus.add_key(frame_number, focus_cm, interpolation=interp)
+
+        # Path C distortion: K1/K2/K3 透传 CSV, CenterU/V 按 plan §2.5 公式算,
+        # Aspect 取 CSV per-frame (变焦 take 可能变), DistortionWeight 始终 1.0.
+        ch_k1.add_key(frame_number, frame.k1, interpolation=interp)
+        ch_k2.add_key(frame_number, frame.k2, interpolation=interp)
+        ch_k3.add_key(frame_number, frame.k3, interpolation=interp)
+
+        sensor_height_mm = frame.sensor_width_mm / frame.aspect_ratio
+        center_u = 0.5 + frame.center_shift_x_mm / frame.sensor_width_mm
+        center_v = 0.5 + frame.center_shift_y_mm / sensor_height_mm
+        ch_center_u.add_key(frame_number, center_u, interpolation=interp)
+        ch_center_v.add_key(frame_number, center_v, interpolation=interp)
+
+        ch_aspect.add_key(frame_number, frame.aspect_ratio, interpolation=interp)
+
+    # DistortionWeight 全程 1.0, 不必每帧打 key. 在 frame 0 打一个常值 key 让
+    # Sequencer 里这条 track 仍然可见 (方便手动暂时调 0 验证 identity 路径).
+    ch_weight.add_key(unreal.FrameNumber(0), 1.0, interpolation=interp)
 
     # ------------------------------------------------------------------
     # Step 7: Save and log

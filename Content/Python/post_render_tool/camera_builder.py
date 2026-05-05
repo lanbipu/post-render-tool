@@ -20,6 +20,12 @@ logger = logging.getLogger(__name__)
 
 _LENS_COMPONENT_CLASS_PATH = "/Script/LensComponent.LensComponent"
 
+# Path C: Custom Post-Process Material distortion 路径用的资产 / 类.
+# Material 通过 build_distortion_material.run_build() 在 UE Editor 内手工触发构建
+# (commandlet 跑不了 MaterialEditingLibrary), 资产路径硬编码在 plugin Content 下.
+_DISTORTION_MATERIAL_PATH = "/PostRenderTool/Materials/M_PRT_OfficialSensorInverse"
+_DISTORTION_CONTROLLER_CLASS = "PostRenderDistortionControllerComponent"
+
 
 def _check_camera_calibration_plugin() -> None:
     """验证 Camera Calibration 与 Lens Component 插件均已加载。
@@ -117,6 +123,57 @@ def _ensure_lens_component(camera: "unreal.Actor") -> "unreal.ActorComponent":
     return lens_component
 
 
+def _ensure_distortion_controller(
+    camera: "unreal.Actor",
+) -> "unreal.ActorComponent":
+    """Path C: 返回 camera 上的 PostRenderDistortionControllerComponent.
+
+    已有复用, 没有则通过 SubobjectSubsystem 添加. 添加后:
+    1. 加载 M_PRT_OfficialSensorInverse material 资产
+    2. 设到 controller.base_material
+    3. controller 的 BeginPlay 会自动创建 MID 挂到 camera blendable
+
+    资产不存在时 raise RuntimeError 让用户先跑 build_distortion_material.run_build().
+    """
+    py_cls = getattr(unreal, _DISTORTION_CONTROLLER_CLASS, None)
+    if py_cls is None:
+        raise RuntimeError(
+            f"unreal.{_DISTORTION_CONTROLLER_CLASS} 不可见。\n"
+            "检查 plugin UBT 是否重新编译, Editor 是否重启 (UPROPERTY 增改"
+            "Live Coding 不支持)."
+        )
+    # `unreal.<Component>` attribute access 返回 Python wrapper 类型 (有自己的元类),
+    # 但 SubobjectDataSubsystem.add_new_subobject + UClass.get_name() 都期望
+    # `unreal.Class` (UClass) 实例. 用 .static_class() 转一下. get_components_by_class
+    # 接受任一形态, 但 .get_name() 在 Python wrapper 上是 unbound method 报错
+    # (实测 dry-run 翻车点).
+    controller_cls = py_cls.static_class()
+
+    existing = camera.get_components_by_class(controller_cls)
+    if existing:
+        controller = existing[0]
+        logger.info("复用现有 PostRenderDistortionControllerComponent")
+    else:
+        controller = _add_component_via_subobject_subsystem(camera, controller_cls)
+        logger.info("已添加 PostRenderDistortionControllerComponent")
+
+    material = unreal.EditorAssetLibrary.load_asset(_DISTORTION_MATERIAL_PATH)
+    if material is None:
+        raise RuntimeError(
+            f"找不到 distortion material: {_DISTORTION_MATERIAL_PATH}\n"
+            "请先在 UE Editor Python console 跑:\n"
+            "    from post_render_tool import build_distortion_material\n"
+            "    build_distortion_material.run_build()\n"
+            "或通过 SSH + Remote Execution 触发等价命令."
+        )
+    controller.set_editor_property("base_material", material)
+    logger.info(
+        "Controller.base_material 已绑定到 %s",
+        material.get_path_name(),
+    )
+    return controller
+
+
 def _configure_camera(
     camera_actor: "unreal.CineCameraActor",
     sensor_width_mm: float,
@@ -157,12 +214,21 @@ def _configure_camera(
             f"LensFile 关联到 LensComponent.lens_file_picker 失败: {exc}"
         ) from exc
 
+    # Path C: distortion 由 PostRenderDistortionControllerComponent + Custom
+    # Post-Process Material 完成, LensComponent 不再做 distortion. apply_distortion
+    # 必须设 False, 否则 LensComponent 也会往 camera blendable 推一层 distortion,
+    # 跟 material 的 distortion 叠加 = 双倍畸变. LensComponent / LensFile 仍然挂在
+    # 相机上 (dormant) 是为了让 LensFile 资产可见可对比, Path C 端到端验证过后
+    # 再把整段 LensComponent / LensFile 配置代码删掉.
     try:
-        lens_component.set_editor_property("apply_distortion", True)
-        logger.info("LensComponent apply_distortion 已启用")
+        lens_component.set_editor_property("apply_distortion", False)
+        logger.info(
+            "LensComponent apply_distortion 已设 False (Path C: 由 Controller + "
+            "M_PRT_OfficialSensorInverse material 接管 distortion)"
+        )
     except (AttributeError, TypeError, Exception) as exc:  # noqa: BLE001
         raise RuntimeError(
-            f"apply_distortion 启用失败: {exc}"
+            f"apply_distortion 设置失败: {exc}"
         ) from exc
 
     # EvaluationMode：默认 UseLiveLink 在我们这条无 LiveLink 的 pipeline 里会让
@@ -231,6 +297,11 @@ def _configure_camera(
         raise RuntimeError(
             f"LensComponent lens_model 设置失败: {exc}"
         ) from exc
+
+    # Path C 接入: 挂 PostRenderDistortionControllerComponent + 绑 Material.
+    # 必须放在 LensComponent 配置之后 — 上面把 apply_distortion 关了,
+    # 这里 controller 的 BeginPlay 才是 camera 上唯一的 distortion blendable 来源.
+    _ensure_distortion_controller(camera_actor)
 
 
 # ---------------------------------------------------------------------------

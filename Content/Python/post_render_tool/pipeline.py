@@ -1,7 +1,15 @@
 """Pipeline Orchestrator — VP Post-Render Tool.
 
 主入口：将 Disguise Designer CSV Dense 文件导入为 UE 资产。
-流程：CSV 解析 → LensFile → CineCameraActor → LevelSequence → 验证报告。
+流程：CSV 解析 → LensFile (dormant) → CineCameraActor + DistortionController
+     → LevelSequence (含 7 条 distortion 关键帧轨) → 验证报告。
+
+Path C 接入说明 (2026-05-05):
+- LensFile 仍然构建 (build_lens_file), 但 LensComponent.apply_distortion 已设 False,
+  纯作 dormant 资产保留, 方便对比. Path C 端到端验证过后整段删除.
+- distortion 实际由 PostRenderDistortionControllerComponent + M_PRT_OfficialSensorInverse
+  post-process material 完成, 每帧 K1/K2/K3/CenterU/CenterV/Aspect/DistortionWeight
+  通过 Sequencer Interp float track 驱动.
 
 仅能在 UE Editor Python 环境中运行。
 """
@@ -131,34 +139,38 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
         _ensure_directory(package_path)
 
         # ------------------------------------------------------------------
-        # 步骤 2/5: 构建 LensFile
+        # 步骤 2/5: 构建 LensFile (Path A 老路, 现 dormant)
         # ------------------------------------------------------------------
-        unreal.log("[pipeline] 步骤 2/5 — 构建 LensFile 资产...")
+        # Path C 接入后 LensFile 不再参与 distortion (LensComponent.apply_distortion
+        # 在 build_camera 里设 False), 但仍然写出资产方便对比 + 留 fallback.
+        unreal.log("[pipeline] 步骤 2/5 — 构建 LensFile 资产 (dormant)...")
         lens_file = build_lens_file(
             csv_result=csv_result,
             asset_name=f"LF_{stem}",
             package_path=package_path,
         )
-        unreal.log("[pipeline] LensFile 构建完成。")
+        unreal.log("[pipeline] LensFile 构建完成 (apply_distortion 在 camera 上已关).")
 
         # ------------------------------------------------------------------
-        # 步骤 3/5: 创建 CineCameraActor
+        # 步骤 3/5: 创建 CineCameraActor + 挂 DistortionController
         # ------------------------------------------------------------------
         # Disguise Designer 不直接导出 sensor_height，aspectRatio 是 image aspect
         # (w/h)，所以 h = w / aspect。aspect/width 校验已前置在 step 1 之后。
-        unreal.log("[pipeline] 步骤 3/5 — 创建 CineCameraActor...")
+        # build_camera 内部还会挂 PostRenderDistortionControllerComponent + 绑
+        # M_PRT_OfficialSensorInverse material (Path C distortion 实施层).
+        unreal.log("[pipeline] 步骤 3/5 — 创建 CineCameraActor + 挂 DistortionController...")
         camera_actor = build_camera(
             sensor_width_mm=csv_result.sensor_width_mm,
             sensor_height_mm=sensor_height_mm,
             lens_file=lens_file,
             actor_label=f"CineCamera_{stem}",
         )
-        unreal.log("[pipeline] CineCameraActor 创建完成。")
+        unreal.log("[pipeline] CineCameraActor 创建完成 (含 DistortionController).")
 
         # ------------------------------------------------------------------
-        # 步骤 4/5: 构建 LevelSequence
+        # 步骤 4/5: 构建 LevelSequence (含 7 条 Path C distortion 关键帧轨)
         # ------------------------------------------------------------------
-        unreal.log("[pipeline] 步骤 4/5 — 构建 LevelSequence 资产...")
+        unreal.log("[pipeline] 步骤 4/5 — 构建 LevelSequence 资产 (含 distortion tracks)...")
         level_sequence = build_sequence(
             csv_result=csv_result,
             camera_actor=camera_actor,
@@ -166,7 +178,7 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
             asset_name=f"LS_{stem}",
             package_path=package_path,
         )
-        unreal.log("[pipeline] LevelSequence 构建完成。")
+        unreal.log("[pipeline] LevelSequence 构建完成 (7 条 distortion 关键帧轨已写).")
 
         # ------------------------------------------------------------------
         # 步骤 5/5: 生成验证报告
