@@ -30,22 +30,6 @@ ROTATION_OFFSET_DEG = {
     "roll": 0.0,
 }
 
-# --- Distortion Mode ---
-# 切换 distortion 渲染管线: 老路 (LensFile + UE BrownConradyUD) vs 新路 (自定义
-# post-process material). 默认 LEGACY_LENS_FILE 保护生产数据; 改成
-# CUSTOM_POST_PROCESS 后 pipeline 在 build 阶段会跳过 LensFile 写入并改挂
-# PostRenderDistortionControllerComponent + M_PRT_OfficialSensorInverse material.
-# 详见 docs/custom-postprocess-distortion-final-plan.md.
-
-class DistortionMode:
-    LEGACY_LENS_FILE = "legacy_lens_file"
-    CUSTOM_POST_PROCESS = "custom_post_process"
-    NONE = "none"
-
-
-DISTORTION_MODE: str = DistortionMode.LEGACY_LENS_FILE
-
-
 # --- Asset Paths ---
 ASSET_BASE_PATH = "/Game/PostRender"  # Base path in Content Browser
 
