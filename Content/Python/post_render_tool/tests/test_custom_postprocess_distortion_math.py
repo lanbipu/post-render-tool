@@ -45,30 +45,30 @@ class TestK1RadialDisplacement(unittest.TestCase):
 
     def test_K1_positive_right_edge_samples_outward(self):
         # UV = (1.0, 0.5), center = (0.5, 0.5), K1 = +0.5, aspect = 16:9
-        # d = (0.5, 0), r = (1.0, 0), r2 = 1.0, fac = 0.5
-        # sourceUV = (1.0 + 0.5*0.5, 0.5) = (1.25, 0.5)
+        # d = (0.5, 0), r = (0.5, 0),  r2 = 0.25, fac = 0.5*0.25 = 0.125
+        # sourceUV = (1.0 + 0.125*0.5, 0.5) = (1.0625, 0.5)
         u, v = official_sensor_inverse_uv(
             1.0, 0.5, k1=0.5, k2=0.0, k3=0.0, aspect=ASPECT_16_9
         )
-        self.assertAlmostEqual(u, 1.25, places=6)
+        self.assertAlmostEqual(u, 1.0625, places=6)
         self.assertAlmostEqual(v, 0.5, places=6)
 
     def test_K1_positive_left_edge_samples_outward(self):
-        # UV = (0.0, 0.5): d = (-0.5, 0), r2 = 1.0, fac = 0.5
-        # sourceUV = (0.0 + 0.5*(-0.5), 0.5) = (-0.25, 0.5)
+        # UV = (0.0, 0.5): d = (-0.5, 0), r = (-0.5, 0), r2 = 0.25, fac = 0.125
+        # sourceUV = (0.0 + 0.125*(-0.5), 0.5) = (-0.0625, 0.5)
         u, v = official_sensor_inverse_uv(
             0.0, 0.5, k1=0.5, k2=0.0, k3=0.0, aspect=ASPECT_16_9
         )
-        self.assertAlmostEqual(u, -0.25, places=6)
+        self.assertAlmostEqual(u, -0.0625, places=6)
         self.assertAlmostEqual(v, 0.5, places=6)
 
     def test_K1_negative_right_edge_samples_inward(self):
         # K1 = -0.5 时方向反过来, 边缘往中心靠
-        # fac = -0.5, sourceUV = (1.0 + (-0.5)*0.5, 0.5) = (0.75, 0.5)
+        # fac = -0.125, sourceUV = (1.0 + (-0.125)*0.5, 0.5) = (0.9375, 0.5)
         u, v = official_sensor_inverse_uv(
             1.0, 0.5, k1=-0.5, k2=0.0, k3=0.0, aspect=ASPECT_16_9
         )
-        self.assertAlmostEqual(u, 0.75, places=6)
+        self.assertAlmostEqual(u, 0.9375, places=6)
         self.assertAlmostEqual(v, 0.5, places=6)
 
     def test_center_pixel_never_displaces(self):
@@ -82,13 +82,13 @@ class TestK1RadialDisplacement(unittest.TestCase):
 
 
 class TestAspectNormalization(unittest.TestCase):
-    """Y 方向归一化用 sensor width (即 r.y = 2*d.y/aspect)."""
+    """Y 方向归一化用 sensor full-width (即 r.y = d.y/aspect)."""
 
     def test_y_displacement_smaller_than_x_at_same_offset(self):
         # 16:9 aspect, 同样的 d 偏移量, x 方向 r 更大, 位移也更大
-        # UV=(0.6, 0.5): d=(0.1, 0), r=(0.2, 0), r2=0.04
-        # UV=(0.5, 0.6): d=(0, 0.1), r=(0, 0.2/aspect)=(0, 0.1125), r2=0.01266
-        # 同 K1, 同 d magnitude, 但 fac_x = K1*0.04 vs fac_y = K1*0.01266
+        # UV=(0.6, 0.5): d=(0.1, 0), r=(0.1, 0), r2=0.01
+        # UV=(0.5, 0.6): d=(0, 0.1), r=(0, 0.1/aspect)=(0, 0.05625), r2=0.003164
+        # 同 K1, 同 d magnitude, 但 fac_x = K1*0.01 vs fac_y = K1*0.003164
         u_horiz, _ = official_sensor_inverse_uv(
             0.6, 0.5, k1=1.0, k2=0.0, k3=0.0, aspect=ASPECT_16_9
         )
@@ -128,13 +128,13 @@ class TestCenterShift(unittest.TestCase):
 
     def test_center_shift_displaces_old_center(self):
         # center_uv = (0.6, 0.5) 时, UV = (0.5, 0.5) 不再是零点
-        # d = (-0.1, 0), r = (-0.2, 0), r2 = 0.04, fac_K1 = 0.5*0.04 = 0.02
-        # sourceUV = (0.5 + 0.02*(-0.1), 0.5) = (0.498, 0.5)
+        # d = (-0.1, 0), r = (-0.1, 0), r2 = 0.01, fac_K1 = 0.5*0.01 = 0.005
+        # sourceUV = (0.5 + 0.005*(-0.1), 0.5) = (0.4995, 0.5)
         u, v = official_sensor_inverse_uv(
             0.5, 0.5, k1=0.5, k2=0.0, k3=0.0,
             center_uv=(0.6, 0.5), aspect=ASPECT_16_9,
         )
-        self.assertAlmostEqual(u, 0.498, places=6)
+        self.assertAlmostEqual(u, 0.4995, places=6)
         self.assertAlmostEqual(v, 0.5, places=6)
 
 
@@ -143,35 +143,34 @@ class TestK2K3Powers(unittest.TestCase):
 
     def test_K2_only_at_unit_radius(self):
         # UV = (1.0, 0.5), aspect = 16:9, K1=K3=0, K2=+0.5
-        # r2 = 1.0, fac = 0 + 0.5*1.0² + 0 = 0.5
-        # sourceUV = (1.0 + 0.5*0.5, 0.5) = (1.25, 0.5)
+        # d.x=0.5, r.x=0.5, r2=0.25, fac = 0 + 0.5*0.25² + 0 = 0.03125
+        # sourceUV = (1.0 + 0.03125*0.5, 0.5) = (1.015625, 0.5)
         u, _ = official_sensor_inverse_uv(
             1.0, 0.5, k1=0.0, k2=0.5, k3=0.0, aspect=ASPECT_16_9
         )
-        self.assertAlmostEqual(u, 1.25, places=6)
+        self.assertAlmostEqual(u, 1.015625, places=6)
 
     def test_K3_only_at_unit_radius(self):
-        # 同上 r2=1.0, K1=K2=0, K3=+0.5
-        # fac = 0 + 0 + 0.5*1.0³ = 0.5
-        # sourceUV = (1.25, 0.5)
+        # 同上 r2=0.25, K1=K2=0, K3=+0.5
+        # fac = 0 + 0 + 0.5*0.25³ = 0.0078125
+        # sourceUV = (1.0 + 0.0078125*0.5, 0.5) = (1.00390625, 0.5)
         u, _ = official_sensor_inverse_uv(
             1.0, 0.5, k1=0.0, k2=0.0, k3=0.5, aspect=ASPECT_16_9
         )
-        self.assertAlmostEqual(u, 1.25, places=6)
+        self.assertAlmostEqual(u, 1.00390625, places=6)
 
     def test_K2_K3_orders_diverge_at_half_radius(self):
-        # r2=0.25 时, K2*r2² = K2*0.0625, K3*r2³ = K3*0.015625, 阶数不同
+        # UV=(0.75, 0.5), d.x=0.25, r.x=0.25 (full-width), r2=0.0625
         u_K2, _ = official_sensor_inverse_uv(
             0.75, 0.5, k1=0.0, k2=1.0, k3=0.0, aspect=ASPECT_16_9
         )
         u_K3, _ = official_sensor_inverse_uv(
             0.75, 0.5, k1=0.0, k2=0.0, k3=1.0, aspect=ASPECT_16_9
         )
-        # d.x = 0.25, r.x = 0.5, r2 = 0.25
-        # K2: fac = 1.0 * 0.25² = 0.0625, sourceU = 0.75 + 0.0625*0.25 = 0.765625
-        # K3: fac = 1.0 * 0.25³ = 0.015625, sourceU = 0.75 + 0.015625*0.25 = 0.75390625
-        self.assertAlmostEqual(u_K2, 0.765625, places=6)
-        self.assertAlmostEqual(u_K3, 0.75390625, places=6)
+        # K2: fac = 1.0 * 0.0625² = 0.00390625, sourceU = 0.75 + 0.00390625*0.25 = 0.7509765625
+        # K3: fac = 1.0 * 0.0625³ = 0.000244140625, sourceU = 0.75 + 0.000244140625*0.25 = 0.75006103515625
+        self.assertAlmostEqual(u_K2, 0.7509765625, places=6)
+        self.assertAlmostEqual(u_K3, 0.75006103515625, places=6)
 
 
 if __name__ == "__main__":

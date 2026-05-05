@@ -231,22 +231,26 @@ formula 默认值。
 
 ### 2.3 Pixel-space 公式
 
+> **2026-05-06 归一化 Gate 结论**：full-width（除以 W）比 half-width（除以 W/2）在
+> K1+K2+K3 联合 sweep 上低 466–567× 残差。下方公式已更新为 full-width。
+> 证据见 `docs/distortion-investigation.md` § "2026-05-06 — Normalization Gate"。
+
 设：
 
 ```text
 W, H       = render resolution
 aspect     = W / H
 cx, cy     = distortion center in pixel index space
-half_width = W / 2
+norm       = W                              # sensor full-width, x/y 同尺度
 x, y       = output pixel index center
 K1/K2/K3   = CSV distortion coefficients for current frame
 ```
 
-使用 sensor-width normalization：
+使用 sensor full-width normalization（横纵同除以 W）：
 
 ```text
-dx_norm = (x - cx) / half_width
-dy_norm = (y - cy) / half_width
+dx_norm = (x - cx) / norm
+dy_norm = (y - cy) / norm
 r2 = dx_norm^2 + dy_norm^2
 factor = K1*r2 + K2*r2^2 + K3*r2^3
 
@@ -258,11 +262,11 @@ source_y = y + factor * (y - cy)
 
 ### 2.4 UV-space shader 公式
 
-在 UE material 里更自然的写法是 UV：
+在 UE material 里更自然的写法是 UV（UV 原点已是归一化空间，d.x ∈ [-0.5, 0.5]，即天然除以 W）：
 
 ```hlsl
 float2 d = UV - CenterUV;
-float2 r = float2(2.0 * d.x, 2.0 * d.y / Aspect);
+float2 r = float2(d.x, d.y / Aspect);
 
 float r2 = dot(r, r);
 float factor = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
@@ -272,8 +276,8 @@ float2 sourceUV = UV + factor * d;
 
 说明：
 
-- `r.x = 2*d.x` 对应 `x / half_width`。
-- `r.y = 2*d.y / Aspect` 对应 `y / half_width`，因为纵向也按 sensor width 归一化。
+- `r.x = d.x` 对应 `x / W` (sensor full-width)。
+- `r.y = d.y / Aspect` 对应 `y / W`，横竖同尺度归一化。
 - `sourceUV = UV + factor*d` 对应 `source_pixel = pixel + factor*(pixel-center)`。
 - 如果 `sourceUV` 超出 `[0,1]`，输出 black，匹配离线 `constant black border`。
 

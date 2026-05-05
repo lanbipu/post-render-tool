@@ -55,13 +55,13 @@ ASSET_NAME = "M_PRT_OfficialSensorInverse"
 FULL_ASSET_PATH = f"{PACKAGE_PATH}/{ASSET_NAME}"
 
 
-# ── 主公式 HLSL (跟 official_sensor_inverse_uv 一字一致) ───────────────
+# ── 主公式 HLSL (跟 official_sensor_inverse_uv 一字一致; full-width 归一化) ───
 # Custom node 的 inputs 顺序: UV, CenterUV, K1, K2, K3, Aspect, DistortionWeight
 HLSL_CODE = """
 // Mirrors distortion_math.official_sensor_inverse_uv (Python reference).
 // Output → source UV sampling map (cv2.remap forward).
 float2 d = UV - CenterUV.rg;
-float2 r = float2(2.0 * d.x, 2.0 * d.y / Aspect);
+float2 r = float2(d.x, d.y / Aspect);
 float r2 = dot(r, r);
 float fac = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
 return UV + fac * d * DistortionWeight;

@@ -189,9 +189,11 @@ CSV (per frame)
 
 ### Shader 公式（plan §2.4）
 
+`r` 用 sensor full-width 归一化（2026-05-06 Normalization Gate 结论；详见 `docs/distortion-investigation.md`）。
+
 ```hlsl
 float2 d  = UV - CenterUV;
-float2 r  = float2(2.0 * d.x, 2.0 * d.y / Aspect);
+float2 r  = float2(d.x, d.y / Aspect);
 float r2  = dot(r, r);
 float fac = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
 float2 sourceUV = UV + fac * d * DistortionWeight;

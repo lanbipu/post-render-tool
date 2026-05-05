@@ -155,7 +155,7 @@ def compute_normalized_distortion(frame_data: FrameData) -> dict:
 #
 # 公式 (output → source 取样映射, 即 cv2.remap forward map):
 #     d = UV - CenterUV
-#     r = (2·d.x, 2·d.y / aspect)            # sensor-width 归一化
+#     r = (d.x, d.y / aspect)                  # sensor full-width 归一化 (2026-05-06 Gate 结论)
 #     r² = r·r
 #     factor = K1·r² + K2·r⁴ + K3·r⁶          # OpenCV 标准形态打底, Gate 6 后可能改
 #     sourceUV = UV + factor · d · DistortionWeight
@@ -189,7 +189,7 @@ def official_sensor_inverse_uv(
         畸变中心 UV (光学中心), Path C pipeline 通过
         ``CenterU = 0.5 + centerShiftMM.x / sensorWidthMM`` 计算 (plan §2.5).
     aspect
-        画面长宽比 W/H. r.y 用 ``2·d.y/aspect`` 把 y 归一化到 sensor-width
+        画面长宽比 W/H. r.y 用 ``d.y/aspect`` 把 y 归一化到 sensor full-width
         空间, 跟 r.x 同尺度.
     distortion_weight
         位移幅度乘子. 1.0 = 完整 distortion, 0.0 = identity, 中间值用于淡入.
@@ -209,8 +209,8 @@ def official_sensor_inverse_uv(
     dx = u - cu
     dy = v - cv
 
-    rx = 2.0 * dx
-    ry = 2.0 * dy / aspect
+    rx = dx
+    ry = dy / aspect
     r2 = rx * rx + ry * ry
 
     factor = k1 * r2 + k2 * r2 * r2 + k3 * r2 * r2 * r2
