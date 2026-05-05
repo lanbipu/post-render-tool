@@ -1,7 +1,19 @@
-# Disguise 端 STMap 采集指引（Path B）
+# Disguise 端 STMap 采集指引（Path B · 已搁置）
 
-> **目的**：用 Disguise 自己渲染一张已知输入图，输出直接当 distortion STMap 用。
-> 一次出真值，绕开 K 公式拟合。详见 `docs/distortion-investigation.md`。
+> **2026-05-05 状态**：⏸️ **搁置备胎，不再启用**。技术路径已转向
+> **Path C · Custom Post-Process Material**（详见
+> `docs/custom-postprocess-distortion-final-plan.md`）。
+> 当前要做的 Disguise 端渲染清单是 16 张 Custom PP Gate Inputs，详见
+> `USER_INSTRUCTIONS.md` 顶部的 **Round 3.0** 章节，或
+> `docs/d3-distortion-render-request.md`。
+>
+> 本文档保留作 Path B 的参考说明：万一 Path C 端到端验证失败需要回退到
+> STMap 字典法，再按这里的指引启动采集（同时启用
+> `USER_INSTRUCTIONS.md` 里的 Round 2.3）。
+
+> **目的（Path B 历史）**：用 Disguise 自己渲染一张已知输入图，输出直接当
+> distortion STMap 用。一次出真值，绕开 K 公式拟合。详见
+> `docs/distortion-investigation.md`。
 
 ## 准备
 

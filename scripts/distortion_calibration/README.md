@@ -1,14 +1,22 @@
 # Distortion Calibration Tooling
 
-Two parallel approaches to nail Disguise → UE distortion to pixel-perfect.
-Backstory in `docs/distortion-investigation.md`; chosen primary path in `MEMORY.md`.
+> **当前路线（2026-05-05 转向）**：**Path C · Custom Post-Process Material**。
+> Path A（LensFile + 公式拟合）已结案 NO-GO，Path B（STMap）保留为备胎。
+> 完整设计文档见 `docs/custom-postprocess-distortion-final-plan.md`，
+> Disguise 端渲染清单见 `docs/d3-distortion-render-request.md`。
 
-| Path | Strategy | Status |
+| Path | Strategy | 状态 |
 |---|---|---|
-| **A** — System ID | Reverse-engineer Disguise's K-formula by rendering 11 K-sweep UV-probe EXRs + global fit (M1-M5) | active |
-| **B** — STMap direct | Render an identity-UV probe through Disguise, output IS the distortion STMap | active |
+| **A** — System ID | 反推 Disguise K 公式（11→51 张 K-sweep 拟合 M1..M_RAT8） | **结案 NO-GO**（Round 2.1 M_RAT6 p95 2.867 px，公式形态不可达 pixel-perfect） |
+| **B** — STMap direct | 用 Disguise 自渲一张 identity-UV 当 STMap | **搁置备胎**（Round 2.2 验证三轴独立可加，Round 2.3 147 张采集未启动） |
+| **C** — Custom Post-Process Material（**当前**） | 写一张 UE post-process material，shader 里直接执行 Disguise 的 `official_sensor_inverse` 公式，绕开 LensFile 公式翻译损耗 | **进行中**（计划已 commit、harness 自测过、等 Disguise 16 张参考帧到货） |
 
-Both paths share `generate_uv_probe.py` + `uv_probe_1920x1080.exr` as the d3-side input. They diverge in how the rendered EXRs are analyzed.
+**为什么从 A/B 转到 C**：
+- **Path A 死锁**：UE LensFile 内置的 BrownConradyUD 公式跟 Disguise 公式形态不同。把 Disguise 系数翻译成 UE 槽位（M_RAT6 / M_RAT8 拟合）做不到 1:1，最低残差 2.5~2.9 像素。模型 mismatch 是物理上限，再 fit 也突破不了。
+- **Path B 复杂度过高**：每个镜头 / 每个变焦档要预计算字典，工程量大，量化抖动风险，变焦覆盖代价指数级。
+- **Path C 直接路径**：把 Disguise 的公式原样搬进 UE shader（plan §2.4），不做翻译、不做拟合、零残差结构。代价是要建一个 post-process material + 一个 C++ controller component。
+
+各路径共用 `generate_uv_probe.py` + `uv_probe_*.exr` 作为 d3 端探针图。三条路径处理已渲 EXR 的逻辑各自独立。
 
 ## Layout
 
@@ -29,12 +37,26 @@ Both paths share `generate_uv_probe.py` + `uv_probe_1920x1080.exr` as the d3-sid
 | `_self_test_analyze.py` | Synthesizes K=±0.3 distortion via `cv2.remap`, runs `analyze_renders` end-to-end, checks recovered dr matches `K·r³`. |
 | `_self_test_fit.py` | Fits M1-M5 on synthetic α=1.5 polynomial + 0.5 px noise, expects M1 to win on BIC. |
 
-### Path B · STMap direct solve
+### Path B · STMap direct solve（备胎，未启用）
 | File | Role |
 |---|---|
 | `build_stmap.py` | Reads disguise-rendered EXR, builds bidirectional STMap via scipy griddata cubic. |
-| `_self_test_stmap.py` | Synthetic-data validation for `build_stmap`. |
-| `USER_INSTRUCTIONS_PATH_B.md` | What the user does in d3 to deliver the rendered EXR + verification frame. |
+| `build_stmap_dict.py` | Round 2.3 字典法构建器（搁置中，等 147 张 sweep 数据）。 |
+| `apply_stmap_offline.py` | 离线 STMap 应用 / 验证。 |
+| `stmap_lookup.py` | K-indexed 字典查表逻辑。 |
+| `_self_test_stmap.py` | `build_stmap` synthetic-data validation. |
+| `_self_test_stmap_dict.py` | `build_stmap_dict` synthetic-data validation. |
+| `USER_INSTRUCTIONS_PATH_B.md` | Path B 的 Disguise 端采集指引（已搁置）。 |
+
+### Path C · Custom Post-Process Material（当前主路）
+| File | Role |
+|---|---|
+| `check_identity_roundtrip.py` | **Gate 1.5**：cv2.remap identity warp，验证离线 harness 在 K=0 / DistortionWeight=0 时与输入完全一致（已 PASS：max_abs_diff = 0）。 |
+| `evaluate_center_shift_sweep.py` | **Gate 3.5**：`centerShiftMM → CenterUV` 的单位 / 符号验证；处理 5 张 centerShiftX sweep EXR。 |
+| `evaluate_k2_k3_custom_formula.py` | **Gate 6**：K2 / K3 在 Disguise 公式里的阶数与符号验证；处理 K2 sweep 5 张 + K3 sweep 5 张 EXR。 |
+| `_self_test_custom_gate_eval.py` | 上述三个 gate 评估脚本的自测（K2/K3 公式、CenterUV 公式、p95 stats、文件名解析），离线 PASS。 |
+| `../../docs/custom-postprocess-distortion-final-plan.md` | Path C 完整设计文档（1048 行：material graph、C++ controller、pipeline 分流、Gate 0-6 验证体系）。 |
+| `../../docs/d3-distortion-render-request.md` | Path C 当前要的 16 张 Disguise 渲染清单。 |
 
 ### Environment
 | File | Role |
@@ -82,19 +104,37 @@ python3 -m venv .venv
 .venv/bin/python _self_test_fit.py
 ```
 
-### Process a Path A delivery (11 EXRs from d3)
+### Process a Path C delivery（16 张 EXR，当前主路）
+
+放在 `validation_results/custom_pp_gate_inputs/` 下，按 `docs/d3-distortion-render-request.md` 的目录布局。
+
 ```bash
-# 11 EXRs from d3 dropped under /tmp/disguise_renders/
-.venv/bin/python analyze_renders.py --input-dir /tmp/disguise_renders
-.venv/bin/python fit_distortion_models.py    # default trims top 5% by residual
+# 先跑 self-test（无需输入数据）
+.venv/bin/python _self_test_custom_gate_eval.py
+.venv/bin/python check_identity_roundtrip.py     # Gate 1.5（已 PASS）
+
+# 等 16 张到货后跑：
+.venv/bin/python evaluate_center_shift_sweep.py \
+    --input-dir validation_results/custom_pp_gate_inputs/center_shift_sweep
+.venv/bin/python evaluate_k2_k3_custom_formula.py \
+    --input-dir validation_results/custom_pp_gate_inputs/k2_k3_sweep
 ```
 
-`fit_distortion_models.py` ranks by **BIC** (penalizes free parameters) so overfitting candidates lose to simpler-and-still-good ones.
+输出 JSON + Markdown 写到 `/Volumes/Docs/temp/k_sweep/gate3_5_*` 与 `gate6_*`，供冻结 shader 公式形态使用。
 
-### Process a Path B delivery (1 EXR from d3)
+### Process a Path A delivery（结案，仅作历史参考）
+```bash
+# Round 1 / Round 2.1 用过；不再继续采集
+.venv/bin/python analyze_renders.py --input-dir /tmp/disguise_renders
+.venv/bin/python fit_distortion_models.py
+```
+
+`fit_distortion_models.py` ranks by **BIC**（penalizes free parameters）。M_RAT6 / M_RAT8 在 Round 2.1 已确认 **NO-GO**。
+
+### Process a Path B delivery（搁置）
 ```bash
 .venv/bin/python build_stmap.py --input /tmp/disguise_stmap/disguise_uvprobe.exr
-# Then UE remote-execute stmap_writer.py to inject into LensFile
+# 后续 UE 端走 stmap_writer.py 注入 LensFile（备胎，未启用）
 ```
 
 ## Candidate models (Path A)
@@ -131,3 +171,81 @@ If M2/M3/M4 wins, Disguise's formula doesn't match UE's polynomial form — UE L
 Anchor sanity check on the optional `disguise_K_zero.exr`:
 - Verify R ≈ identity U-grid, G ≈ identity V-grid
 - If max deviation > 1%, warn — likely LED gamma not linear / color transform applied / wrong frame export type
+
+---
+
+## Path C · Custom Post-Process Material 原理
+
+### 核心思路
+
+不再翻译公式。Disguise CSV 里 K1/K2/K3/centerShiftMM 直接喂给一个 UE 自定义 post-process material；material 内部 shader 跑 `official_sensor_inverse` 公式，逐像素采样原图扭曲一次输出。
+
+```
+CSV (per frame)
+  → CineCameraActor 渲常规图（无 LensFile distortion）
+  → post-process material 用 K1/K2/K3/CenterUV 扭曲一次
+  → MRQ EXR 输出（Disguise pixel-perfect）
+```
+
+### Shader 公式（plan §2.4）
+
+```hlsl
+float2 d  = UV - CenterUV;
+float2 r  = float2(2.0 * d.x, 2.0 * d.y / Aspect);
+float r2  = dot(r, r);
+float fac = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
+float2 sourceUV = UV + fac * d * DistortionWeight;
+// sourceUV 越界 → black，匹配离线 cv2.remap constant border
+```
+
+跟 Path A 的本质区别：**这是直接执行公式，不是去拟合 UE 槽位**。Path A 在 LensFile 里只能写 K1..K6 / P1 / P2 八个固定槽，shader 形态由 UE 决定；Path C shader 由我们决定，参数随便加，公式随便改。
+
+### CenterShift 单位映射
+
+```
+CenterU = 0.5 + centerShiftMM.x / sensorWidthMM
+CenterV = 0.5 + centerShiftMM.y / (sensorWidthMM / aspect)
+```
+
+Gate 3.5（`evaluate_center_shift_sweep.py`）就是验证这个公式的方向 / 单位 / 符号。
+
+### Gate 体系（plan §5 节选）
+
+| Gate | 验什么 | 状态 |
+|---|---|---|
+| Gate 0 | 公式候选可用性（per-bucket p95 < 1.5 px） | NO-GO（Path A LensFile 形态限制） |
+| Gate 1 | Pure-Python 公式单元测试（K=0 identity，K1=+0.5 边缘方向，aspect normalization） | 待写（`tests/test_custom_postprocess_distortion_math.py`） |
+| Gate 1.5 | 离线 cv2.remap identity round-trip | **PASS**（max_abs_diff = 0） |
+| Gate 2 | offline shader-equivalent CPU reference（跟 plan §2.4 公式严格等价的 numpy 版） | 待写 |
+| Gate 3 | UE viewport / MRQ K1=+0.5 单帧 | 待跑（依赖 material 资产 + C++ controller） |
+| Gate 3.5 | centerShiftMM → CenterUV 单位 / 符号 | 等 5 张 centerShiftX sweep EXR |
+| Gate 4 | 真实 take_16 CSV vs Disguise reference | 待跑 |
+| Gate 5 | zoom-changing K sequence | 待跑 |
+| Gate 6 | K2 / K3 公式形态确认 | 等 K2 sweep 5 张 + K3 sweep 5 张 EXR |
+
+### 当前 Disguise 端要渲的 16 张参考帧
+
+详见 `docs/d3-distortion-render-request.md`。摘要：
+
+| Set | 张数 | 用途 |
+|---|---|---|
+| A · K2 sweep | 5 | K1=K3=0，K2 ∈ {±0.5, ±0.3, 0} |
+| A · K3 sweep | 5 | K1=K2=0，K3 ∈ {±0.5, ±0.3, 0} |
+| B · centerShiftX sweep | 5 | K1=K2=K3=0，shiftX ∈ {±0.10, ±0.05, 0} |
+| C · identity baseline | 1 | 全零，干净基线 |
+
+格式：3840×2160 32-bit float OpenEXR，linear，no LUT，1.5× lens over-scan，命名约定见 d3-distortion-render-request.md。
+
+### 进度（2026-05-05）
+
+| 阶段 | 状态 |
+|---|---|
+| 计划文档 | ✅ commit `803dfa8` |
+| Gate harness 自测 | ✅ self-test PASS |
+| Gate 1.5 离线验证 | ✅ PASS |
+| Disguise 16 帧 | 🚧 渲染中 |
+| `DistortionMode` 开关 + Gate 1 unit test | ⏳ 即将开工 |
+| C++ Controller component | ⏳ 即将开工（需 UE Editor 重启 + UBT rebuild） |
+| Material 资产（lanPC 手工建） | ⏳ 待开工 |
+| Pipeline 分流脚手架（默认仍走 LEGACY） | ⏳ 待开工 |
+| Gate 3 / 3.5 / 6 实测验证 | 等帧到货 |
