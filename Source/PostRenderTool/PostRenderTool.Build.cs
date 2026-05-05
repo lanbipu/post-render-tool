@@ -16,6 +16,7 @@ public class PostRenderTool : ModuleRules
                 "Engine",
                 "UMG",
                 "Blutility",
+                "CinematicCamera",
             }
         );
 
