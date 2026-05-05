@@ -171,8 +171,8 @@ cd /Users/bip.lan/AIWorkspace/vp/post_render_tool/scripts/distortion_calibration
 # 等 16 张到货后跑这两个
 .venv/bin/python evaluate_center_shift_sweep.py \
     --input-dir validation_results/custom_pp_gate_inputs/center_shift_sweep
-.venv/bin/python evaluate_k2_k3_custom_formula.py \
-    --input-dir validation_results/custom_pp_gate_inputs/k2_k3_sweep
+.venv/bin/python evaluate_k_sweep_custom_formula.py \
+    --validation-root validation_results
 ```
 
 跑完会在 `/Volumes/Docs/temp/k_sweep/gate3_5_*` 和 `gate6_*` 生成 JSON + Markdown 报告。报告会告诉我三件事：

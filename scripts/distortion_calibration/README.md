@@ -53,7 +53,7 @@
 |---|---|
 | `check_identity_roundtrip.py` | **Gate 1.5**：cv2.remap identity warp，验证离线 harness 在 K=0 / DistortionWeight=0 时与输入完全一致（已 PASS：max_abs_diff = 0）。 |
 | `evaluate_center_shift_sweep.py` | **Gate 3.5**：`centerShiftMM → CenterUV` 的单位 / 符号验证；处理 5 张 centerShiftX sweep EXR。 |
-| `evaluate_k2_k3_custom_formula.py` | **Gate 6**：K2 / K3 在 Disguise 公式里的阶数与符号验证；处理 K2 sweep 5 张 + K3 sweep 5 张 EXR。 |
+| `evaluate_k_sweep_custom_formula.py` | **Gate 6**：K2 / K3 在 Disguise 公式里的阶数与符号验证；处理 K2 sweep 5 张 + K3 sweep 5 张 EXR。 |
 | `_self_test_custom_gate_eval.py` | 上述三个 gate 评估脚本的自测（K2/K3 公式、CenterUV 公式、p95 stats、文件名解析），离线 PASS。 |
 | `../../docs/custom-postprocess-distortion-final-plan.md` | Path C 完整设计文档（1048 行：material graph、C++ controller、pipeline 分流、Gate 0-6 验证体系）。 |
 | `../../docs/d3-distortion-render-request.md` | Path C 当前要的 16 张 Disguise 渲染清单。 |
@@ -116,8 +116,8 @@ python3 -m venv .venv
 # 等 16 张到货后跑：
 .venv/bin/python evaluate_center_shift_sweep.py \
     --input-dir validation_results/custom_pp_gate_inputs/center_shift_sweep
-.venv/bin/python evaluate_k2_k3_custom_formula.py \
-    --input-dir validation_results/custom_pp_gate_inputs/k2_k3_sweep
+.venv/bin/python evaluate_k_sweep_custom_formula.py \
+    --validation-root validation_results
 ```
 
 输出 JSON + Markdown 写到 `/Volumes/Docs/temp/k_sweep/gate3_5_*` 与 `gate6_*`，供冻结 shader 公式形态使用。

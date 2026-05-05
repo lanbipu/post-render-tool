@@ -434,4 +434,34 @@ interpolation（输入空间在 undistorted UV 上不是均匀分布），结果
 - Over-scan margin 精度 0.1677 vs 理论 0.1667 → 引入 ~5 px 系统性 scale 误差（K=0 帧）
 - 这个 scale 误差对 production（K1≈3e-4）无影响（M_RAT6 项贡献 sub-1e-7）
 
+## 2026-05-06 — Normalization Gate
+
+Ran K1+K2+K3 sweep against `(forward, full-width) / (forward, half-width) / (division, full-width)` candidates with delta-residual scoring. Report: `/Volumes/Docs/temp/k_sweep/gate6_compare.md`.
+
+**Per-axis p95 (delta_residual) across all sweep frames:**
+
+| axis | full-width / forward | half-width / forward | full-width / division |
+|---|---:|---:|---:|
+| K1 | 1.522 | 708.874 | 26.800 |
+| K2 | 1.975 | 926.000 | 2.611 |
+| K3 | 1.739 | 986.715 | 1.744 |
+
+**Verdict:**
+
+1. Normalization: **full-width wins — confident.** Ratio over half-width: K1 ×466, K2 ×469, K3 ×567. The half-width candidate (r = (px−cx) / (W/2)) blows up because d3 uses full-image-width normalization; the half-width factor double-counts the radius and the error scales linearly with |K|. No ambiguity.
+
+2. Formula (within full-width normalization): **forward wins — confident on K1, borderline on K2/K3.** K1 ratio forward/division = 1.522 / 26.800 = ×17.6 (confident). K2 ratio = 1.975 / 2.611 = ×1.32 (borderline). K3 ratio = 1.739 / 1.744 = ×1.003 (effectively tied — within quantization noise). Division formula degrades badly at high K1 because the denominator `1 + K·r²` moves far from 1, but K2/K3's narrower sweep range keeps both candidates in similar territory. Forward is the safer lock across all axes.
+
+**Implications for shader landing (`Content/Python/post_render_tool/distortion_math.py`):**
+
+- Current `distortion_math.py` uses **half-width** normalization (`r = (px - cx) / (W / 2)`). This is the losing candidate by ×466–567×. Switch to **full-width** with **isotropic** divisor — both axes divided by image full width `W`, not by their own dimension: `r_x = (px - cx) / W`, `r_y = (py - cy) / W`. In UV form (UV ∈ [0, 1]): `r = (d.x, d.y / aspect)` where `d = UV - (CenterU, CenterV)`. This is the split-brain Codex flagged earlier — the shader and d3 are computing different radii, which is the dominant source of residual error.
+- The existing forward dispatch (`displacement = K · r² · r_vec`) can be retained. Division formula does not show an advantage and degrades at moderate-to-high K1.
+- Priority order: fix normalization first (highest-impact), then re-evaluate formula if residual is still above floor.
+
+**Caveats still in play:**
+
+- focal-length normalization confound (Codex P2 #6) — not addressed by this gate; would require new d3 renders at different focal lengths to disambiguate `r=(px-cx)/W` vs `r=(px-cx)/fx` when `fx ≈ W`.
+- Half-float quantization floor (~3 px residual) — limits absolute accuracy. This gate compares candidates relative to the floor, not as absolute measurements. Sub-pixel residuals require either 32-bit float EXR (unavailable per KB search) or structured-light probes.
+- Plan's acceptance threshold `p95 < 1.5 px` is **not** met by any axis: K1 narrowly misses by 0.022 px (1.522 vs 1.5) — plausibly quantization-floor limited; K2 (1.975) and K3 (1.739) sit above. Expected — driven by half-float quantization floor, not by candidate choice. Releasing this threshold or moving to 32-bit/structured-light data is what would change verdict.
+
 接下来阻塞在 B2（等用户在 d3 端渲帧）。Mac 与 UE 两端工具链已经准备就绪。

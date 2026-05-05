@@ -788,8 +788,8 @@ docs/d3-distortion-render-request.md
 
 ```bash
 cd /Users/bip.lan/AIWorkspace/vp/post_render_tool
-scripts/distortion_calibration/.venv/bin/python scripts/distortion_calibration/evaluate_k2_k3_custom_formula.py \
-  --input-dir validation_results/custom_pp_gate_inputs/k2_k3_sweep
+scripts/distortion_calibration/.venv/bin/python scripts/distortion_calibration/evaluate_k_sweep_custom_formula.py \
+  --validation-root validation_results
 ```
 
 输出：
@@ -936,7 +936,7 @@ scripts/distortion_calibration/.venv/bin/python scripts/distortion_calibration/e
 
 - Modify: `scripts/distortion_calibration/USER_INSTRUCTIONS.md`
 - Create: `docs/d3-distortion-render-request.md`
-- Create: `scripts/distortion_calibration/evaluate_k2_k3_custom_formula.py`
+- Create: `scripts/distortion_calibration/evaluate_k_sweep_custom_formula.py`
 - Create: `scripts/distortion_calibration/evaluate_center_shift_sweep.py`
 
 - [ ] Add clear Disguise render instructions for K2/K3 sweeps, centerShift sweep, and identity frame.
@@ -1013,7 +1013,7 @@ Project docs/code:
 - `Content/Python/post_render_tool/stmap_writer.py`
 - `Content/Python/post_render_tool/csv_parser.py`
 - `scripts/distortion_calibration/check_identity_roundtrip.py`
-- `scripts/distortion_calibration/evaluate_k2_k3_custom_formula.py`
+- `scripts/distortion_calibration/evaluate_k_sweep_custom_formula.py`
 - `scripts/distortion_calibration/evaluate_center_shift_sweep.py`
 
 UE 5.7 source evidence:
