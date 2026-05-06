@@ -52,7 +52,7 @@
 | File | Role |
 |---|---|
 | `check_identity_roundtrip.py` | **Gate 1.5**：cv2.remap identity warp，验证离线 harness 在 K=0 / DistortionWeight=0 时与输入完全一致（已 PASS：max_abs_diff = 0）。 |
-| `evaluate_center_shift_sweep.py` | **Gate 3.5**：`centerShiftMM → CenterUV` 的单位 / 符号验证；处理 5 张 centerShiftX sweep EXR。 |
+| `evaluate_center_shift_sweep.py` | **Legacy Gate 3.5**：旧 `centerShiftMM → CenterUV only` 假设验证；当前已被 D3/UE centerShift 实渲判为语义不足。 |
 | `evaluate_k_sweep_custom_formula.py` | **Gate 6**：K2 / K3 在 Disguise 公式里的阶数与符号验证；处理 K2 sweep 5 张 + K3 sweep 5 张 EXR。 |
 | `_self_test_custom_gate_eval.py` | 上述三个 gate 评估脚本的自测（K2/K3 公式、CenterUV 公式、p95 stats、文件名解析），离线 PASS。 |
 | `../../docs/custom-postprocess-distortion-final-plan.md` | Path C 完整设计文档（1048 行：material graph、C++ controller、pipeline 分流、Gate 0-6 验证体系）。 |
@@ -182,11 +182,12 @@ Anchor sanity check on the optional `disguise_K_zero.exr`:
 
 ### 核心思路
 
-不再翻译公式。Disguise CSV 里 K1/K2/K3/centerShiftMM 直接喂给一个 UE 自定义 post-process material；material 内部 shader 跑 `official_sensor_inverse` 公式，逐像素采样原图扭曲一次输出。
+不再翻译 K 公式。Disguise CSV 里 K1/K2/K3 直接喂给一个 UE 自定义 post-process material；`centerShiftMM` 同时喂给 UE CineCamera Filmback projection offset 和 material `CenterUV`。material 内部 shader 跑 `official_sensor_inverse` 公式，逐像素采样原图扭曲一次输出。
 
 ```
 CSV (per frame)
   → CineCameraActor 渲常规图（无 LensFile distortion）
+  → CineCamera Filmback.SensorHorizontalOffset/SensorVerticalOffset 应用 principal-point shift
   → post-process material 用 K1/K2/K3/CenterUV 扭曲一次
   → MRQ EXR 输出（Disguise pixel-perfect）
 ```
@@ -209,11 +210,27 @@ float2 sourceUV = UV + fac * d * DistortionWeight;
 ### CenterShift 单位映射
 
 ```
+Filmback.SensorHorizontalOffset = -centerShiftMM.x        # X 反号
+Filmback.SensorVerticalOffset   = -centerShiftMM.y        # Y 反号
 CenterU = 0.5 + centerShiftMM.x / sensorWidthMM
 CenterV = 0.5 + centerShiftMM.y / (sensorWidthMM / aspect)
 ```
 
-Gate 3.5（`evaluate_center_shift_sweep.py`）就是验证这个公式的方向 / 单位 / 符号。
+公式由 2026-05-07 K=0 控制帧 phase-correlate (D3 端) + UE pipeline + MRQ 闭环渲染
+(UE 端) 双向定型: D3 cs=±0.5mm + K1=K2=K3=0 → 画面平移 ±27.5px (sensor 35mm ×
+1920×1080), UE Filmback 内部按 `image_dim/sensor_dim` 转 px 等价于 `0.5/35×1920
+= 27.43px`. UE 闭环 max |Δshift| = 0.16 px, cross-render UE vs D3 phase-correlate
+≈ (0, 0). 跟 focal length 完全无关。两轴反号是因为 UE Filmback `Sensor*Offset`
+跟 D3 `centerShiftMM` 对"光心偏方向"的定义在 X 和 Y 上都相反.
+production import **始终启用** Filmback projection tracks（无开关）。
+
+旧路径回顾（仅供 git log 解读）：
+- 早期 `centerShiftMM → CenterUV-only` 假设破产（D3 实测产生 27px 级位移，CenterUV-only 只
+  产生 0.5–1.3 px）。详见 `docs/distortion-investigation.md` "2026-05-06 — centerShift Projection Re-derivation"。
+- 中期 RenderStream NDC 公式（除以 focal）破产（预测 ±9/16 px，实测 ±27.5 px）。详见
+  `docs/distortion-investigation.md` "2026-05-06 — RenderStream NDC mapping discovery"。
+- 当前公式见 `docs/distortion-investigation.md` "2026-05-07 — K=0 直接测量"。
+- `ue_center_shift_projection_sweep.py` / `center_shift_offline_simulation.py` 已废弃, runtime raise.
 
 ### Gate 体系（plan §5 节选）
 
@@ -224,7 +241,7 @@ Gate 3.5（`evaluate_center_shift_sweep.py`）就是验证这个公式的方向 
 | Gate 1.5 | 离线 cv2.remap identity round-trip | **PASS**（max_abs_diff = 0） |
 | Gate 2 | offline shader-equivalent CPU reference（跟 plan §2.4 公式严格等价的 numpy 版） | 待写 |
 | Gate 3 | UE viewport / MRQ K1=+0.5 单帧 | 待跑（依赖 material 资产 + C++ controller） |
-| Gate 3.5 | centerShiftMM → CenterUV 单位 / 符号 | 等 5 张 centerShiftX sweep EXR |
+| Gate 3.5 | centerShiftMM → Filmback projection offset + CenterUV 单位 / 符号 | 用 `ue_center_shift_projection_sweep.py` 跑 sign sweep |
 | Gate 4 | 真实 take_16 CSV vs Disguise reference | 待跑 |
 | Gate 5 | zoom-changing K sequence | 待跑 |
 | Gate 6 | K2 / K3 公式形态确认 | 等 K2 sweep 5 张 + K3 sweep 5 张 EXR |

@@ -17,6 +17,7 @@ from .coordinate_transform import (
     transform_rotation,
 )
 from .csv_parser import CsvDenseResult
+from .distortion_math import map_center_shift_projection
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +227,16 @@ def build_sequence(
         "ManualFocusDistance",
         "FocusSettings.ManualFocusDistance",
     )
+    sensor_h_offset_section = _add_float_track(
+        comp_binding,
+        "SensorHorizontalOffset",
+        "Filmback.SensorHorizontalOffset",
+    )
+    sensor_v_offset_section = _add_float_track(
+        comp_binding,
+        "SensorVerticalOffset",
+        "Filmback.SensorVerticalOffset",
+    )
 
     # Path C controller float tracks: 7 个 Interp UPROPERTY → Sequencer keyframes.
     # 名字必须是 C++ UPROPERTY 的 PascalCase (Python 反射的 snake_case 是 getter 入口,
@@ -262,6 +273,8 @@ def build_sequence(
     ch_focal    = focal_channels[0]
     ch_aperture = aperture_channels[0]
     ch_focus    = focus_channels[0]
+    ch_sensor_h_offset = sensor_h_offset_section.get_all_channels()[0]
+    ch_sensor_v_offset = sensor_v_offset_section.get_all_channels()[0]
 
     # Path C controller channels
     ch_k1       = k1_section.get_all_channels()[0]
@@ -312,17 +325,31 @@ def build_sequence(
         focus_cm = transform_focus_distance(frame.focus_distance)
         ch_focus.add_key(frame_number, focus_cm, interpolation=interp)
 
-        # Path C distortion: K1/K2/K3 透传 CSV, CenterU/V 按 plan §2.5 公式算,
-        # Aspect 取 CSV per-frame (变焦 take 可能变), DistortionWeight 始终 1.0.
+        # Path C distortion: K1/K2/K3 pass through CSV. CenterUV tracks the radial
+        # distortion centre; Filmback.Sensor*Offset tracks the projection principal
+        # point (公式见 distortion_math.map_center_shift_projection).
         ch_k1.add_key(frame_number, frame.k1, interpolation=interp)
         ch_k2.add_key(frame_number, frame.k2, interpolation=interp)
         ch_k3.add_key(frame_number, frame.k3, interpolation=interp)
 
-        sensor_height_mm = frame.sensor_width_mm / frame.aspect_ratio
-        center_u = 0.5 + frame.center_shift_x_mm / frame.sensor_width_mm
-        center_v = 0.5 + frame.center_shift_y_mm / sensor_height_mm
-        ch_center_u.add_key(frame_number, center_u, interpolation=interp)
-        ch_center_v.add_key(frame_number, center_v, interpolation=interp)
+        center_shift = map_center_shift_projection(
+            center_shift_x_mm=frame.center_shift_x_mm,
+            center_shift_y_mm=frame.center_shift_y_mm,
+            sensor_width_mm=frame.sensor_width_mm,
+            aspect=frame.aspect_ratio,
+        )
+        ch_sensor_h_offset.add_key(
+            frame_number,
+            center_shift.sensor_horizontal_offset_mm,
+            interpolation=interp,
+        )
+        ch_sensor_v_offset.add_key(
+            frame_number,
+            center_shift.sensor_vertical_offset_mm,
+            interpolation=interp,
+        )
+        ch_center_u.add_key(frame_number, center_shift.center_u, interpolation=interp)
+        ch_center_v.add_key(frame_number, center_shift.center_v, interpolation=interp)
 
         ch_aspect.add_key(frame_number, frame.aspect_ratio, interpolation=interp)
 

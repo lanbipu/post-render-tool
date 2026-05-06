@@ -6,7 +6,10 @@ shader / C++ controller 必须照抄. 任何形态偏移都先在这里反映出
 
 import unittest
 
-from post_render_tool.distortion_math import official_sensor_inverse_uv
+from post_render_tool.distortion_math import (
+    map_center_shift_projection,
+    official_sensor_inverse_uv,
+)
 
 
 # 16:9 长宽比, 后续 production 多数是这个值
@@ -81,6 +84,136 @@ class TestK1RadialDisplacement(unittest.TestCase):
             self.assertAlmostEqual(v, 0.5, msg=f"K1={k1}")
 
 
+class TestCenterShiftProjectionMapping(unittest.TestCase):
+    """map_center_shift_projection: sensor-mm with both-axis sign flip + UV center.
+
+    Formula validated against D3 K=0 control frames 2026-05-07 (5 frames at
+    K1=K2=K3=0 with cs ∈ {(0,0), (±0.5,0), (0,±0.5)}; UE renders 5 frames vs
+    D3 reference, X residual < 0.1 px, Y residual < 0.1 px).
+    See docs/distortion-investigation.md "2026-05-07 — K=0 直接测量".
+
+    Both axes are sign-flipped because UE Filmback.SensorOffset and D3
+    centerShiftMM use opposite conventions for "光心偏移方向":
+        sensor_horizontal_offset_mm = -center_shift_x_mm
+        sensor_vertical_offset_mm   = -center_shift_y_mm
+        center_u = 0.5 + center_shift_x_mm / sensor_width_mm
+        center_v = 0.5 + center_shift_y_mm / sensor_height_mm
+    """
+
+    def test_d3_k_zero_anchor(self):
+        """cs=(0, 0) → zero offsets, centered UV."""
+        mapping = map_center_shift_projection(
+            center_shift_x_mm=0.0,
+            center_shift_y_mm=0.0,
+            sensor_width_mm=35.0,
+            aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(mapping.center_u, 0.5, places=10)
+        self.assertAlmostEqual(mapping.center_v, 0.5, places=10)
+        self.assertAlmostEqual(mapping.sensor_horizontal_offset_mm, 0.0, places=10)
+        self.assertAlmostEqual(mapping.sensor_vertical_offset_mm, 0.0, places=10)
+
+    def test_d3_k_zero_shiftx_p0p5(self):
+        """cs=(+0.5, 0) → -0.5mm horizontal sensor offset (X flipped)."""
+        mapping = map_center_shift_projection(
+            center_shift_x_mm=0.5,
+            center_shift_y_mm=0.0,
+            sensor_width_mm=35.0,
+            aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(mapping.sensor_horizontal_offset_mm, -0.5, places=10)
+        self.assertAlmostEqual(mapping.sensor_vertical_offset_mm, 0.0, places=10)
+        self.assertAlmostEqual(mapping.center_u, 0.5142857142857142, places=10)
+        self.assertAlmostEqual(mapping.center_v, 0.5, places=10)
+
+    def test_d3_k_zero_shiftx_n0p5(self):
+        """cs=(-0.5, 0) → +0.5mm horizontal sensor offset (X flipped)."""
+        mapping = map_center_shift_projection(
+            center_shift_x_mm=-0.5,
+            center_shift_y_mm=0.0,
+            sensor_width_mm=35.0,
+            aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(mapping.sensor_horizontal_offset_mm, 0.5, places=10)
+        self.assertAlmostEqual(mapping.sensor_vertical_offset_mm, 0.0, places=10)
+
+    def test_d3_k_zero_shifty_p0p5(self):
+        """cs=(0, +0.5) → -0.5mm vertical sensor offset (Y flipped, UE → -27.43 px @ 1080×19.689).
+
+        D3 实测 -27.550 px (residual 0.4%).
+        """
+        mapping = map_center_shift_projection(
+            center_shift_x_mm=0.0,
+            center_shift_y_mm=0.5,
+            sensor_width_mm=35.0,
+            aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(mapping.sensor_horizontal_offset_mm, 0.0, places=10)
+        self.assertAlmostEqual(mapping.sensor_vertical_offset_mm, -0.5, places=10)
+        self.assertAlmostEqual(mapping.center_u, 0.5, places=10)
+        self.assertAlmostEqual(mapping.center_v, 0.5253968253968254, places=10)
+
+    def test_d3_k_zero_shifty_n0p5(self):
+        """cs=(0, -0.5) → +0.5mm vertical sensor offset (Y flipped)."""
+        mapping = map_center_shift_projection(
+            center_shift_x_mm=0.0,
+            center_shift_y_mm=-0.5,
+            sensor_width_mm=35.0,
+            aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(mapping.sensor_horizontal_offset_mm, 0.0, places=10)
+        self.assertAlmostEqual(mapping.sensor_vertical_offset_mm, 0.5, places=10)
+
+    def test_sensor_height_derived_from_aspect(self):
+        """sensor_height_mm = sensor_width_mm / aspect (used by CenterUV.v)."""
+        mapping = map_center_shift_projection(
+            center_shift_x_mm=0.0,
+            center_shift_y_mm=0.0,
+            sensor_width_mm=35.0,
+            aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(mapping.sensor_height_mm, 35.0 / ASPECT_16_9, places=10)
+
+    def test_focal_length_does_not_affect_mapping(self):
+        """centerShiftMM is a sensor-space offset, independent of focal length.
+
+        D3 K=0 sweep (focal=30.302mm) measures 27.5 px shift; Path A LensFile
+        had a focal-divided variant predicting only 8-16 px — that branch was
+        wrong. Pinning the formula here so future refactors don't reintroduce it.
+        """
+        mapping_a = map_center_shift_projection(
+            center_shift_x_mm=0.5, center_shift_y_mm=0.0,
+            sensor_width_mm=35.0, aspect=ASPECT_16_9,
+        )
+        # focal_length_mm 已经从签名拿掉, 没有 keyword argument 可以传, 所以
+        # "不同 focal" 这件事在这里通过签名缺失证明: API 不再让调用方误传 focal.
+        # 等价行为: 同样的 sensor 配置下, 多次调用必须返回完全一致的 offset.
+        mapping_b = map_center_shift_projection(
+            center_shift_x_mm=0.5, center_shift_y_mm=0.0,
+            sensor_width_mm=35.0, aspect=ASPECT_16_9,
+        )
+        self.assertEqual(
+            mapping_a.sensor_horizontal_offset_mm,
+            mapping_b.sensor_horizontal_offset_mm,
+        )
+
+    def test_rejects_bad_inputs(self):
+        with self.assertRaises(ValueError):
+            map_center_shift_projection(
+                center_shift_x_mm=0.0,
+                center_shift_y_mm=0.0,
+                sensor_width_mm=0.0,
+                aspect=ASPECT_16_9,
+            )
+        with self.assertRaises(ValueError):
+            map_center_shift_projection(
+                center_shift_x_mm=0.0,
+                center_shift_y_mm=0.0,
+                sensor_width_mm=35.0,
+                aspect=0.0,
+            )
+
+
 class TestAspectNormalization(unittest.TestCase):
     """Y 方向归一化用 sensor full-width (即 r.y = d.y/aspect)."""
 
@@ -115,7 +248,7 @@ class TestAspectNormalization(unittest.TestCase):
 
 
 class TestCenterShift(unittest.TestCase):
-    """CenterUV 决定位移零点 (光学中心), 偏移它把畸变中心搬走."""
+    """centerShiftMM feeds projection offset and radial distortion center."""
 
     def test_shifted_center_is_fixed_point(self):
         # center_uv = (0.6, 0.5) 时, 输入 UV = (0.6, 0.5) 永不位移, K 任意

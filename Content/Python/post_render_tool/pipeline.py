@@ -2,14 +2,20 @@
 
 主入口：将 Disguise Designer CSV Dense 文件导入为 UE 资产。
 流程：CSV 解析 → LensFile (dormant) → CineCameraActor + DistortionController
-     → LevelSequence (含 7 条 distortion 关键帧轨) → 验证报告。
+     → LevelSequence (含 7 条 material distortion 轨 + 2 条 Filmback
+     SensorOffset 投影轨, 共 9 条) → 验证报告。
 
-Path C 接入说明 (2026-05-05):
+Path C 接入说明 (2026-05-05, centerShift 公式 2026-05-07 K=0 闭环定型):
 - LensFile 仍然构建 (build_lens_file), 但 LensComponent.apply_distortion 已设 False,
   纯作 dormant 资产保留, 方便对比. Path C 端到端验证过后整段删除.
 - distortion 实际由 PostRenderDistortionControllerComponent + M_PRT_OfficialSensorInverse
   post-process material 完成, 每帧 K1/K2/K3/CenterU/CenterV/Aspect/DistortionWeight
   通过 Sequencer Interp float track 驱动.
+- centerShiftMM 的 projection 部分通过 CineCamera Filmback.SensorHorizontalOffset
+  / SensorVerticalOffset 双轴反号 (`-cs.x` / `-cs.y`) 实现; CenterUV 只负责
+  radial distortion center. K=0 UE 闭环 max |Δshift| = 0.16 px. 公式定型, 无开关.
+  详见 distortion_math.map_center_shift_projection 与
+  docs/distortion-investigation.md "2026-05-07 — K=0 直接测量".
 
 仅能在 UE Editor Python 环境中运行。
 """
@@ -168,9 +174,9 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
         unreal.log("[pipeline] CineCameraActor 创建完成 (含 DistortionController).")
 
         # ------------------------------------------------------------------
-        # 步骤 4/5: 构建 LevelSequence (含 7 条 Path C distortion 关键帧轨)
+        # 步骤 4/5: 构建 LevelSequence (含 Path C material 关键帧轨)
         # ------------------------------------------------------------------
-        unreal.log("[pipeline] 步骤 4/5 — 构建 LevelSequence 资产 (含 distortion tracks)...")
+        unreal.log("[pipeline] 步骤 4/5 — 构建 LevelSequence 资产 (含 Path C tracks)...")
         level_sequence = build_sequence(
             csv_result=csv_result,
             camera_actor=camera_actor,
@@ -178,7 +184,7 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
             asset_name=f"LS_{stem}",
             package_path=package_path,
         )
-        unreal.log("[pipeline] LevelSequence 构建完成 (7 条 distortion 关键帧轨已写).")
+        unreal.log("[pipeline] LevelSequence 构建完成 (Path C material 轨已写).")
 
         # ------------------------------------------------------------------
         # 步骤 5/5: 生成验证报告

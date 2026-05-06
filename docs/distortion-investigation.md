@@ -522,3 +522,247 @@ sub-pixel production-frame calibration claim.
 - Next d3 data request is no longer the old centerShift blocker set. Use
   `docs/d3-distortion-render-request.md` for focal-length sweep data to resolve
   the remaining sensor-full-width vs focal-length normalization confound.
+
+## 2026-05-06 — centerShift Projection Re-derivation
+
+> **2026-05-07 更正**：本节的 Y 轴位移测量（`±21px`）来源于 K1=0.5 帧，K1 残余畸变污染了
+> phase-correlate 结果。结论方向正确（`CenterUV-only` 假设破产、必须走 projection），但
+> 数字不可作为 Y 公式标定依据。真值见文档末尾「2026-05-07 — K=0 直接测量」。
+
+The D3 controlled centerShift renders invalidate the old Path C assumption that
+`centerShiftMM` only maps to post-process material `CenterUV`.
+
+**Evidence:**
+
+- Relative compare: `validation_results/path_c_d3_exports/canonical/d3_vs_ue_relative_compare.json`
+- Python/HLSL reference compare: `validation_results/path_c_d3_exports/canonical/center_shift_python_reference_compare.json`
+- Human-review image: `validation_results/path_c_d3_exports/visual_review/path_c_d3_vs_ue_center_shift.png`
+
+**Observed mismatch:**
+
+- D3 `centerShiftX=±0.5mm` moves the image by approximately `±16px`.
+- D3 `centerShiftY=±0.5mm` moves the image by approximately `∓21px`.
+- Current UE/Python/HLSL `CenterUV`-only behavior moves only about `0.5-1.3px`.
+
+**Conclusion:**
+
+- `centerShiftMM -> CenterUV only` is `FAIL_MODEL_SEMANTICS`.
+- 隐含的「K=0 时 centerShift 不影响画面」推论同时被推翻：`CenterUV-only` 路径下 K=0
+  确实让画面纹丝不动，但 D3 实测 K=0 + cs=±0.5mm 仍产生 ~27 px 整体平移
+  （见文档末尾「2026-05-07 — K=0 直接测量」），证明 `centerShiftMM` 是 projection 端
+  的 principal-point shift，跟 K 系数解耦。
+- `centerShiftMM` must drive UE CineCamera principal-point projection through
+  `Filmback.SensorHorizontalOffset` / `Filmback.SensorVerticalOffset`.
+- `CenterUV` remains the radial distortion center and should continue to follow
+  `0.5 + centerShiftMM / sensorDimension`.
+- K1/K2/K3 shader math is not changed by this finding.
+
+**Implementation hook:**
+
+- Shared Python mapping: `post_render_tool.distortion_math.map_center_shift_projection`
+- Validation-only projection tracks: `sequence_builder.py` can write
+  `Filmback.SensorHorizontalOffset` and `Filmback.SensorVerticalOffset` when
+  `CENTER_SHIFT_ENABLE_PROJECTION_TRACKS=True`; production defaults keep this
+  disabled until sign/scale validation passes.
+- Validation: `scripts/distortion_calibration/ue_path_c_validation/ue_center_shift_projection_sweep.py`
+  plus `compare_center_shift_projection_sweep.py`.
+
+**Sign-sweep result:**
+
+- Report: `validation_results/path_c_d3_exports/canonical/center_shift_projection_sweep_compare.md`
+- Status: `RAW_MM_FILMBACK_SWEEP_INVALID` (renamed from `BLOCKED_FORMULA`; see 2026-05-06 discovery section below)
+- Best candidate: `xp_yn` (`x_sign=+1`, `y_sign=-1`)
+- Best primary residual: `rms=25.44px`, `max_abs=48.10px`
+- Interpretation: UE Filmback projection tracks are active, but the simple
+  `Sensor*Offset = ±centerShiftMM` model over-shifts X to about `27px` and does
+  not produce a stable Y-axis match. Do not enable the projection path in
+  production until a scale/sign model passes or D3 exports K=0 centerShift-only
+  frames.
+
+> **2026-05-07 更正**：「over-shifts X to about 27px」的判定基于「真值是 ±16 px」这个错误
+> 前提（来自 K1=0.5 帧 phase-correlate，被 distortion 污染）。K=0 直接测量后，D3 真值
+> 就是 ±27.5 px —— 也就是说当时这条 sweep 的 X 轴**根本没 over-shift**。Y 轴不稳的
+> 真因是 sweep 把 `Sensor*Offset` 直接写 `±mm`，而 UE Filmback 内部还会再做一次
+> `image_dim/sensor_dim` 的 px 换算，等效公式跟 D3 实际行为之间差了一个 sensor 比例
+> 因子；具体见末尾「K=0 直接测量」节。`RAW_MM_FILMBACK_SWEEP_INVALID` 标签保留作
+> 为历史归档，但不再作为「raw mm 模型本身错误」的证据。
+
+## 2026-05-06 — RenderStream NDC mapping discovery
+
+> **2026-05-07 更正**：本节 NDC 公式（`cx_ndc = centerShiftMM / focalLengthMM`）以及
+> 后续 Stage 2 离线模拟的 ±9/±16 px 预测，均被 K=0 直接测量打脸——D3 实际行为
+> 跟 focal length 完全无关，是纯 sensor-size 换算（cs/sensor_dim × image_dim）。
+> 真公式见末尾「2026-05-07 — K=0 直接测量」。本节保留作为推理记录，但其结论
+> 不再有效。
+
+Tier 0' web research on `disguise-one/RenderStream` and `disguise-one/RenderStream-UE`
+public repositories yielded the official `centerShiftMM` semantics. The CSV column is
+labelled "MM" but D3's RenderStream layer transmits it pre-divided by focal length:
+
+- SDK header (`d3renderstream.h:78-87`): `CameraData` declares `float cx, cy;` with no unit doc.
+- Reference projection sample (`Textures.cpp:455-489`): the projection matrix is built with
+  `XMMatrixPerspectiveOffCenterLH(...)`, then post-multiplied by
+  `XMMatrixTranslation(cx, cy, 0.f)`. `cx` and `cy` are NDC clip-space translations —
+  one NDC half-width equals one unit, mapping to `image_dim / 2` pixels.
+- UE consumer (`RenderStreamProjectionPolicy.cpp:122-155`): same NDC translation, with
+  `clippingScale.Y = -1.f / (T - B)` flipping Y to match UE screen-down convention.
+
+Resulting mapping (verified against existing D3 X-axis data: `cx = 0.5/30.302 = 0.0165`,
+predicted shift `0.0165 × 1920/2 = 15.84 px`, measured `16.05 px`, < 1% residual):
+
+```
+cx_ndc = centerShiftMM.x / focalLengthMM
+cy_ndc = centerShiftMM.y / focalLengthMM
+pixel_shift_x = cx_ndc * image_width  / 2
+pixel_shift_y = cy_ndc * image_height / 2 * (-1)   # NDC +Y up vs UE screen +Y down
+```
+
+UE Filmback equivalent (since UE's `Filmback.SensorOffset` is internally scaled by
+`image_dim / sensor_dim`):
+
+```
+sensor_horizontal_offset_mm = cx_ndc * sensor_width_mm  / 2
+sensor_vertical_offset_mm   = cy_ndc * sensor_height_mm / 2 * (-1)
+```
+
+Y-axis 2.36× residual (D3 measures 21.21 px vs prediction 8.91 px) is unresolved.
+Two candidate explanations:
+
+1. K1=0.5 distortion coupling: the radial distortion field is anisotropic
+   (`r = (d.x, d.y/aspect)`), and shifting the radial centre amplifies Y phase shift
+   beyond the pure NDC-projection translation. Stage 2 offline numpy simulation tests this.
+2. D3 uses `sensor_width_mm/2` as the Y normalizer instead of `sensor_height_mm/2`.
+   This gives 15.84 px (closer but still off). Stage 3 sweep tests both candidates.
+
+If neither explains 21 px, Stage 4 fallback requests fresh K=0 control frames from D3.
+
+Implementation plan: `docs/superpowers/plans/2026-05-06-centershift-ndc-mapping.md`.
+
+### 2026-05-06 Stage 2 simulation result
+
+Ran `scripts/distortion_calibration/ue_path_c_validation/center_shift_offline_simulation.py`
+twice (default `sensor_height` + `--y-normalizer sensor_width`) against the existing D3
+zero-anchor frame `path_c_center_k1_p0p5_shift_zero.png`. Reports at
+`validation_results/path_c_d3_exports/canonical/center_shift_offline_simulation{,_isotropic}.md`.
+
+| candidate | K=0 X px | K=0 Y px | K=0.5 X px | K=0.5 Y px | K1 coupling on Y |
+|---|---:|---:|---:|---:|---:|
+| `sensor_height` (anisotropic) | ±15.83 | ±8.89 | ±16.16 | ±8.84 | ≈ 0.05 px |
+| `sensor_width` (isotropic) | ±15.83 | ±15.83 | ±16.16 | ±15.82 | ≈ 0.10 px |
+
+D3 measured Y phase shift at K1=0.5: ±21.21 px.
+
+**Decision: Stage 4 (skip Stage 3 UE sweep).** Both candidate normalizers are
+K-independent on Y (K1 coupling contributes < 0.2 px), so neither can produce the
+±21 px Y shift D3 measured. UE sweep would also cap at ±16 px (best case)
+regardless of which 4-sign × 2-normalizer combo we pick, so the 8-config sweep
+cannot pass the 3 px gate. The formula has a real Y-axis gap that requires fresh
+D3 K=0 control frames to identify.
+
+X axis is fully resolved: both candidates predict ±15.83 px, matching D3 ±16.05 to
+< 2%. K1 coupling adds < 0.4 px on top, still well within the 1 px X gate. So Stage
+3 X-only verification could still be useful, but is gated on Stage 4 resolving Y
+first to avoid a wasted UE render batch.
+
+Reason for K1 coupling being so small: at the image edges where r² is largest, the
+displacement field's Y-component is multiplied by `dy = pre_shift_v - cv` which
+itself depends on the small uv_dy shift (~0.008). Spatial average of that
+amplification stays in the sub-pixel range. The 21 px Y measurement in D3 is NOT
+explainable by any combination of the current Path C formula's NDC translation +
+radial distortion model — D3 must be doing something else on the Y axis.
+
+Next: draft `docs/d3-centershift-control-request.md` (Stage 4 Task 4.1) and request
+4 fresh D3 frames at K1=K2=K3=0 with centerShiftMM ∈ {(±0.5, 0), (0, ±0.5)}.
+
+## 2026-05-07 — K=0 直接测量（推翻所有候选公式）
+
+D3 端按 `docs/d3-centershift-control-request.md` 渲了 5 张 K1=K2=K3=0 的控制帧
+（live_cam_2 transmission，focal=30.302 mm，paWidthMM=35，aspect=1.77779，
+1920×1080 transmission frame），归档于
+`validation_results/path_c_d3_exports/canonical/center_shift_k_zero/`。
+
+phase-correlate vs `path_c_center_k_zero_shift_zero` anchor：
+
+| case | 输入 cs (mm) | 实测 X (px) | 实测 Y (px) | response |
+|---|---:|---:|---:|---:|
+| shiftx_n0p5 | (−0.5, 0) | **−27.594** | −0.004 | 0.929 |
+| shiftx_p0p5 | (+0.5, 0) | **+27.599** | +0.017 | 0.921 |
+| shifty_n0p5 | (0, −0.5) | +0.018 | **+27.484** | 0.836 |
+| shifty_p0p5 | (0, +0.5) | −0.005 | **−27.550** | 0.848 |
+
+### 推翻的几个早期假设
+
+1. **「K=0 时 centerShift 不影响画面」**（来自 `centerShiftMM → CenterUV only` 路径）：
+   错。K=K2=K3=0 + cs=±0.5mm 直接产生 ~27 px 整体平移。证明 `centerShift` 不是
+   distortion 公式的中心，而是相机投影矩阵里的 principal point —— 跟 K 系数走两条
+   独立路径。
+2. **「Sensor*Offset = ±centerShiftMM 直接写会 over-shift X 到 27 px」**（2026-05-06
+   sign sweep 的判定）：错。27 px 就是 D3 真值。当时把它判成「过头」是因为参考用的
+   是 K1=0.5 帧 phase-correlate 出来的 ±16 px，被 K1 残差污染。
+3. **「cx_ndc = centerShiftMM / focalLengthMM」NDC 公式**（来自 RenderStream-UE 源码）：
+   不适用于这个 D3 build。预测 X=±15.83 / Y=±8.89 或 ±15.83，跟实测 ±27.5 px 全错。
+   D3 这一版的 `centerShiftMM` 跟 focal 完全无关。
+
+### 真公式
+
+```
+pixel_shift_x = centerShiftMM.x × image_width  / paWidthMM
+pixel_shift_y = centerShiftMM.y × image_height / paHeightMM × (-1)
+
+paHeightMM = paWidthMM / aspectRatio = 35 / 1.77779 ≈ 19.689 mm
+```
+
+代入校验：
+
+- X：`0.5 × 1920 / 35 = 27.43 px`，实测 ±27.59 → 残差 0.6%
+- Y：`0.5 × 1080 / 19.689 = 27.43 px`，实测 ±27.55 → 残差 0.4%
+- Y 反号一致：D3 cs.y=+0.5 → image −27.55（NDC +Y up vs UE screen +Y down）
+
+物理含义：D3 的 `centerShiftMM` 就是「光心在传感器上偏离中央多少 mm」。把它换成
+图像像素位移就是简单的 `mm_offset / sensor_size_mm × image_size_px`，跟 focal、
+跟 NDC、跟投影矩阵 left/right/top/bottom 都没关系。这跟 UE `Filmback.SensorOffset`
+的语义本质相同——所以最早 `Sensor*Offset = ±centerShiftMM` 那条线**数学上是对的**，
+当时的失败是 sign 没对齐 + Y 用 K1=0.5 帧测真值导致的误判，不是公式错。
+
+### 2026-05-07 UE 闭环验证（X 也反号）
+
+落地公式 + 5 张 K=0 控制帧跑 UE pipeline + MRQ 渲染, 跟 D3 原始 PNG 做相对位移
+对比 (driver: `scripts/distortion_calibration/ue_path_c_validation/ue_path_c_k_zero_validation.py`).
+
+**第一轮**: X 直接透传 `sensor_horizontal_offset_mm = +cs.x`, Y 反号
+`sensor_vertical_offset_mm = -cs.y`. 实测 Y 残差 < 0.1 px ✓, X 残差 ±55 px ❌
+(方向反了, UE 渲出的画面跟 D3 相反方向偏 27.5 px).
+
+**关键修正**: UE Filmback `SensorHorizontalOffset` 写 `+0.5 mm` → 画面向 −X 方向
+偏移 27 px; D3 `centerShiftMM.x = +0.5 mm` → 画面向 +X 方向偏移 27 px. 两者
+**X 轴方向相反**. Y 轴在原推理里已反号 (NDC +Y up vs UE screen +Y down), 现在
+看是双轴一致的, X 也得反号:
+
+```python
+sensor_horizontal_offset_mm = -center_shift_x_mm
+sensor_vertical_offset_mm   = -center_shift_y_mm
+```
+
+**第二轮 UE 闭环**: 改完后重新跑同 5 case:
+
+| case | D3 实测 | UE 渲染 | Δshift |
+|---|---:|---:|---:|
+| shiftx_n0p5 | −27.594 | −27.433 | +0.160 px |
+| shiftx_p0p5 | +27.599 | +27.440 | −0.159 px |
+| shifty_n0p5 |  +0.018 / +27.484 |  +0.012 / +27.399 | −0.005 / −0.085 px |
+| shifty_p0p5 |  −0.005 / −27.550 |  −0.005 / −27.453 | +0.000 / +0.097 px |
+
+max |Δshift| = **0.160 px**. Cross-render UE vs D3 同 case phase-correlate
+(0.01 ~ 0.03 px) (response > 0.9). 远低于 1 px gate, **PASS**.
+
+公式定型 + 落地 + UE 闭环验证三步全部跑通. 早期"X 直接透传"是 Mac 端 phase-correlate
+推论的 artefact, UE Filmback 这边的方向定义跟 D3 在 X 轴上也是反的; 只看 D3 端
+phase-correlate 的位移方向无法预测 UE 那一侧的 sign, 必须 UE 端实渲才能定.
+
+### 下一步
+
+- ✅ 改 `distortion_math.py::map_center_shift_projection`: sensor-mm + 双轴反号
+- ✅ 删 `config.py` 4 个临时开关
+- ✅ UE K=0 5 case 闭环 < 0.16 px
+- ⏸ 生产 CSV (spatialmap production_match) 端到端 — 需 D3 端提供同帧 reference
+- ⏸ Path C PR 合 main

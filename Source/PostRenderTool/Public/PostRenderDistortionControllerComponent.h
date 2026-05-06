@@ -18,8 +18,13 @@ class UMaterialInstanceDynamic;
  *
  * Pipeline (sequence_builder.py) attaches this component to the
  * CineCameraActor it spawns and writes float tracks for K1/K2/K3/CenterU/
- * CenterV/Aspect/DistortionWeight. Material parameter names must match
- * exactly:
+ * CenterV/Aspect/DistortionWeight. The centerShiftMM principal-point
+ * projection path runs in parallel through UCineCameraComponent
+ * Filmback.SensorHorizontalOffset and Filmback.SensorVerticalOffset tracks
+ * (sign-flipped on both axes; formula in distortion_math.map_center_shift_projection,
+ * 2026-05-07 K=0 closed-loop validated to < 0.2 px residual). CenterUV only
+ * drives the radial distortion center.
+ * Material parameter names must match exactly:
  *   - K1, K2, K3, Aspect, DistortionWeight  → Scalar parameters
  *   - CenterUV                                → Vector parameter (R=U, G=V)
  *
@@ -75,13 +80,15 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Interp, Category="Distortion")
     float K3;
 
-    /** Distortion-center U coordinate (UV space, [0, 1]). Computed by
-     *  pipeline as `0.5 + centerShiftMM.x / sensorWidthMM`. */
+    /** Radial distortion-center U coordinate (UV space, [0, 1]). Computed by
+     *  pipeline as `0.5 + centerShiftMM.x / sensorWidthMM`. The projection
+     *  part of centerShiftMM is handled on the CineCamera Filmback track. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Interp, Category="Distortion")
     float CenterU;
 
-    /** Distortion-center V coordinate. Computed by pipeline as
-     *  `0.5 + centerShiftMM.y / (sensorWidthMM / aspect)`. */
+    /** Radial distortion-center V coordinate. Computed by pipeline as
+     *  `0.5 + centerShiftMM.y / (sensorWidthMM / aspect)`. The projection
+     *  part of centerShiftMM is handled on the CineCamera Filmback track. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Interp, Category="Distortion")
     float CenterV;
 

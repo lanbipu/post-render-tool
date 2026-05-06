@@ -36,6 +36,18 @@ assets as correctness baselines because those assets do not prove the
     `C:/temp/ue-remote/path_c_validation_render/<case>/`.
   - Writes `C:/temp/ue-remote/path_c_mrq_render.json`.
 
+- `ue_center_shift_projection_sweep.py` ⚠️ **DEPRECATED 2026-05-07**
+  - 公式定型于 2026-05-07 K=0 控制帧 (cs=mm 直接进 Filmback, Y 反号), runtime raise.
+  - 历史归档保留供 git log 追踪 sweep 8-config 的 sign × Y-normalizer 矩阵.
+  - 详见 `docs/distortion-investigation.md` "2026-05-07 — K=0 直接测量".
+
+- `compare_center_shift_projection_sweep.py`
+  - Runs on Mac after pulling the UE sweep renders.
+  - Phase-correlates each centerShift case against its zero anchor for both D3
+    and UE.
+  - Selects the sign pair with the lowest primary-axis residual and emits
+    `PASS` only when the selected max residual is within `3px`.
+
 ## Smoke Command
 
 ```bash
@@ -83,3 +95,39 @@ python3 scripts/distortion_calibration/ue_path_c_validation/compare_path_c_rende
 
 Repeat with `--case k1`, `--case k2`, and `--case k3` while keeping
 `--reference-base validation_results/path_c_validation/renders/path_c_identity.png`.
+
+## centerShift K=0 Closed-Loop Validation Commands
+
+公式定型于 2026-05-07 K=0 控制帧, single-config validation 取代多维 sign sweep.
+完整 walkthrough: 见仓库根 `docs/distortion-investigation.md` "2026-05-07 — K=0 直接测量",
+driver 是 `ue_path_c_k_zero_validation.py`.
+
+```bash
+# 1. 同步公式到 lanPC plugin
+scp \
+  Content/Python/post_render_tool/{config,distortion_math,sequence_builder,pipeline}.py \
+  lanpc:'E:/RenderStream Projects/test_0311/Plugins/post-render-tool/Content/Python/post_render_tool/'
+
+# 2. 推 5 张 K=0 控制 CSV/PNG 到 lanPC canonical 路径
+ssh lanpc 'powershell -Command "New-Item -ItemType Directory -Force -Path C:/temp/ue-remote/path_c_d3_exports/canonical/center_shift_k_zero | Out-Null"'
+scp validation_results/path_c_d3_exports/canonical/center_shift_k_zero/*.{csv,png} \
+  lanpc:C:/temp/ue-remote/path_c_d3_exports/canonical/center_shift_k_zero/
+
+# 3. 推 driver + UTF-8 wrapper, 触发 import + MRQ
+scp scripts/distortion_calibration/ue_path_c_validation/ue_path_c_k_zero_validation.py \
+    lanpc:C:/temp/ue-remote/
+ssh lanpc 'powershell -ExecutionPolicy Bypass -File C:/temp/ue-remote/run_driver_utf8.ps1'
+
+# 4. 拉 5 张 UE 渲染回 Mac, phase-correlate 比对
+mkdir -p validation_results/path_c_d3_exports/ue_renders_k_zero
+for c in path_c_center_k_zero_shift{_zero,x_n0p5,x_p0p5,y_n0p5,y_p0p5}; do
+  scp "lanpc:C:/temp/ue-remote/path_c_k_zero_validation/$c/$c.0000.png" \
+      "validation_results/path_c_d3_exports/ue_renders_k_zero/$c.png"
+done
+```
+
+期望: 4 个 shifted case 的 D3-relative 与 UE-relative 位移差 < 1 px, cross-render
+(D3 vs UE 同 case) phase-correlate 接近 (0, 0). 2026-05-07 实测 max |Δ| = 0.16 px.
+
+历史归档: 早期 8-config sign × Y-normalizer sweep (`ue_center_shift_projection_sweep.py`)
+和 NDC offline simulation (`center_shift_offline_simulation.py`) 已 deprecated, runtime raise.
