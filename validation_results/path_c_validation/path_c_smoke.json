@@ -1,0 +1,30 @@
+{
+  "actor_label": "PathCValidation_Camera",
+  "actor_reused": null,
+  "base_material_path": "/PostRenderTool/Materials/M_PRT_OfficialSensorInverse.M_PRT_OfficialSensorInverse",
+  "blendables": {
+    "count": null,
+    "reason": "Use --spawn-actor=1 in a non-null editor session to inspect WeightedBlendables.",
+    "status": "DEFERRED_NO_ACTOR_SPAWN"
+  },
+  "controller_class": "PostRenderDistortionControllerComponent",
+  "controller_exists": true,
+  "controller_reused": null,
+  "generated_asset_prefix": "PathCValidation_",
+  "material_asset_path": "/PostRenderTool/Materials/M_PRT_OfficialSensorInverse",
+  "mode": "transient_controller",
+  "notes": [],
+  "parameter_values": {
+    "aspect": 1.7777777910232544,
+    "center_u": 0.5,
+    "center_v": 0.5,
+    "distortion_weight": 1.0,
+    "k1": 0.5,
+    "k2": 0.0,
+    "k3": 0.0
+  },
+  "parameter_values_match_expected": true,
+  "saves_assets": false,
+  "script": "ue_path_c_smoke.py",
+  "status": "PASS"
+}

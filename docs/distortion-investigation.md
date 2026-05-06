@@ -465,3 +465,60 @@ Ran K1+K2+K3 sweep against `(forward, full-width) / (forward, half-width) / (div
 - Plan's acceptance threshold `p95 < 1.5 px` is **not** met by any axis: K1 narrowly misses by 0.022 px (1.522 vs 1.5) — plausibly quantization-floor limited; K2 (1.975) and K3 (1.739) sit above. Expected — driven by half-float quantization floor, not by candidate choice. Releasing this threshold or moving to 32-bit/structured-light data is what would change verdict.
 
 接下来阻塞在 B2（等用户在 d3 端渲帧）。Mac 与 UE 两端工具链已经准备就绪。
+
+## 2026-05-06 — Path C UE MRQ Validation
+
+This section supersedes the earlier "UE render still blocked" state for Path C.
+The headless non-null `UnrealEditor-Cmd.exe` path still fails at D3D12 swapchain
+creation on lanPC, but the already-open UE Editor remote execution path completed
+the validation render.
+
+**Evidence:**
+
+- Material asset readback: `validation_results/path_c_material_readback/material_custom_nodes.csv`
+- Summary matrix: `validation_results/path_c_validation/path_c_validation_summary.md`
+- MRQ dispatch report: `validation_results/path_c_validation/path_c_mrq_render.json`
+- Render outputs:
+  - `validation_results/path_c_validation/renders/path_c_identity.png`
+  - `validation_results/path_c_validation/renders/path_c_k1.png`
+  - `validation_results/path_c_validation/renders/path_c_k2.png`
+  - `validation_results/path_c_validation/renders/path_c_k3.png`
+
+**Validated facts:**
+
+1. `.uasset` HLSL readback is direct UE asset evidence, not `set_editor_property()`
+   inference. `OfficialSensorInverse` contains:
+   `float2 r = float2(d.x, d.y / Aspect);`
+2. `PostRenderDistortionControllerComponent` binding passed in both `-nullrhi`
+   transient smoke and open-Editor actor-spawn smoke.
+3. MRQ rendered the dedicated `PathCValidation_*` test assets in the open UE Editor.
+4. `DistortionWeight=0` identity self-reference compare is exactly zero:
+   `valid_p95=0`, `rms=0`, `valid_mask_mismatch_ratio=0`.
+5. K-axis geometry checks use `official_sensor_inverse_uv` against the UE identity
+   render as `reference_base`, which cancels UE texture import / PNG / tonemapping
+   color transforms. Valid-region `p95` channel diffs:
+
+| case | valid_p95 | valid_rms | valid_mask_mismatch_ratio |
+|---|---:|---:|---:|
+| K1=+0.5 | 0.003921568 | 0.005035542 | 0.000497565 |
+| K2=+0.5 | 0.003837347 | 0.005302472 | 0.000602334 |
+| K3=+0.5 | 0.003404558 | 0.005680670 | 0.000576895 |
+
+**Caveat:**
+
+These MRQ compare metrics are normalized channel absolute differences in `[0,1]`,
+not pixel displacement in px. Because the current MRQ evidence is 8-bit PNG and
+the direct EXR source-vs-UE compare exposes render-pipeline color transforms, this
+is a Path C shader geometry validation against the UE identity floor, not a final
+sub-pixel production-frame calibration claim.
+
+**Status:**
+
+- Path C UE material/controller/render harness: **PASS** for geometry validation.
+- Headless non-null RHI commandlet: **environment blocker only**, superseded by
+  open UE Editor MRQ for this validation.
+- Path A residuals remain legacy half-width evidence and must not be used as
+  Path C shader correctness evidence.
+- Next d3 data request is no longer the old centerShift blocker set. Use
+  `docs/d3-distortion-render-request.md` for focal-length sweep data to resolve
+  the remaining sensor-full-width vs focal-length normalization confound.

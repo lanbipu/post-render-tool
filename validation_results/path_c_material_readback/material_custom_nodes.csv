@@ -1,0 +1,11 @@
+"Asset","ExpressionType","Code","Description","Inputs"
+"/PostRenderTool/Materials/M_PRT_OfficialSensorInverse.M_PRT_OfficialSensorInverse","MaterialExpressionCustom","// Mirrors distortion_math.official_sensor_inverse_uv (Python reference).
+// Output ? source UV sampling map (cv2.remap forward).
+float2 d = UV - CenterUV.rg;
+float2 r = float2(d.x, d.y / Aspect);
+float r2 = dot(r, r);
+float fac = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
+return UV + fac * d * DistortionWeight;","OfficialSensorInverse","{'InputName': 'UV', 'Input': 'None'}, {'InputName': 'CenterUV', 'Input': 'None'}, {'InputName': 'K1', 'Input': 'None'}, {'InputName': 'K2', 'Input': 'None'}, {'InputName': 'K3', 'Input': 'None'}, {'InputName': 'Aspect', 'Input': 'None'}, {'InputName': 'DistortionWeight', 'Input': 'None'}"
+"/PostRenderTool/Materials/M_PRT_OfficialSensorInverse.M_PRT_OfficialSensorInverse","MaterialExpressionCustom","// In-bounds test: 1.0 if sourceUV is fully inside [0,1]?, else 0.0.
+float2 inBounds = step(0.0, sourceUV) * step(sourceUV, 1.0);
+return inBounds.x * inBounds.y;","InBoundsMask","{'InputName': 'sourceUV', 'Input': 'None'}"

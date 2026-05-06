@@ -1,0 +1,74 @@
+{
+  "jobs": [
+    {
+      "camera_forward": [
+        2.220446049250313e-16,
+        1.0000000000000002,
+        0.0
+      ],
+      "case": "identity",
+      "level": "/Game/PathCValidation/PathCValidation_identity_20260506_030022_Level",
+      "output_dir": "C:/temp/ue-remote/path_c_validation_render/identity",
+      "params": {
+        "distortion_weight": 0.0,
+        "k1": 0.5,
+        "k2": 0.0,
+        "k3": 0.0
+      },
+      "sequence": "/Game/PathCValidation/PathCValidation_identity_20260506_030022_Seq"
+    },
+    {
+      "camera_forward": [
+        2.220446049250313e-16,
+        1.0000000000000002,
+        0.0
+      ],
+      "case": "k1",
+      "level": "/Game/PathCValidation/PathCValidation_k1_20260506_030022_Level",
+      "output_dir": "C:/temp/ue-remote/path_c_validation_render/k1",
+      "params": {
+        "distortion_weight": 1.0,
+        "k1": 0.5,
+        "k2": 0.0,
+        "k3": 0.0
+      },
+      "sequence": "/Game/PathCValidation/PathCValidation_k1_20260506_030022_Seq"
+    },
+    {
+      "camera_forward": [
+        2.220446049250313e-16,
+        1.0000000000000002,
+        0.0
+      ],
+      "case": "k2",
+      "level": "/Game/PathCValidation/PathCValidation_k2_20260506_030022_Level",
+      "output_dir": "C:/temp/ue-remote/path_c_validation_render/k2",
+      "params": {
+        "distortion_weight": 1.0,
+        "k1": 0.0,
+        "k2": 0.5,
+        "k3": 0.0
+      },
+      "sequence": "/Game/PathCValidation/PathCValidation_k2_20260506_030022_Seq"
+    },
+    {
+      "camera_forward": [
+        2.220446049250313e-16,
+        1.0000000000000002,
+        0.0
+      ],
+      "case": "k3",
+      "level": "/Game/PathCValidation/PathCValidation_k3_20260506_030022_Level",
+      "output_dir": "C:/temp/ue-remote/path_c_validation_render/k3",
+      "params": {
+        "distortion_weight": 1.0,
+        "k1": 0.0,
+        "k2": 0.0,
+        "k3": 0.5
+      },
+      "sequence": "/Game/PathCValidation/PathCValidation_k3_20260506_030022_Seq"
+    }
+  ],
+  "output_root": "C:/temp/ue-remote/path_c_validation_render",
+  "status": "DISPATCHED"
+}
