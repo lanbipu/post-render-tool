@@ -1,0 +1,35 @@
+{
+  "case": "k1",
+  "input_probe": {
+    "exists": true,
+    "path": "scripts/distortion_calibration/uv_probe_3840x2160.exr"
+  },
+  "metric_unit": "normalized channel absolute difference [0,1]",
+  "metrics": {
+    "changed_value_ratio": 0.0053371752829218105,
+    "changed_values": 132806,
+    "max": 0.734375,
+    "median": 5.960464477539063e-08,
+    "p95": 0.0039215087890625,
+    "reference_valid_ratio": 0.8426822916666666,
+    "rms": 0.006190492771565914,
+    "valid_changed_value_ratio": 0.0058717707478485,
+    "valid_changed_values": 123123,
+    "valid_mask_mismatch_ratio": 0.0004975646219135802,
+    "valid_max": 0.734375,
+    "valid_median": 0.0003676414489746094,
+    "valid_p95": 0.003921568393707275,
+    "valid_rms": 0.005035542417317629
+  },
+  "reason": "",
+  "reference_base": {
+    "exists": true,
+    "path": "validation_results/path_c_validation/renders/path_c_identity.png"
+  },
+  "reference_mode": "official_sensor_inverse_uv vectorized formula from UE identity render",
+  "status": "PASS",
+  "ue_render": {
+    "exists": true,
+    "path": "validation_results/path_c_validation/renders/path_c_k1.png"
+  }
+}

@@ -1,101 +1,96 @@
-# Disguise Render Request - Custom PostProcess Gates
+# Disguise Render Request - Next Data Suggestions
 
-目标: 补齐 `Custom Post-Process Material` 公式冻结前必须的数据。当前 Gate 0 已证明简单
-`official_sensor_inverse` polynomial 不能直接冻结; 下面这些帧用于判断 K2/K3 公式形态、
-`centerShiftMM` 单位/符号、以及 identity baseline。
+## Purpose
+
+This request is not a blocker for the current Path C UE validation.
+
+The current Path C gate already selected sensor full-width normalization for
+`M_PRT_OfficialSensorInverse`. The next Disguise render batch should target the
+remaining normalization confound: whether Disguise is truly normalized by sensor
+full width or by focal length in a setup where `fx` is close enough to image
+width to hide the difference.
 
 ## Global Settings
 
 - Plate: `scripts/distortion_calibration/uv_probe_3840x2160.exr`
 - Output: `transmission frame`
-- Format: `OpenEXR`, 32-bit float, RGB/RGBA accepted
+- Format: `OpenEXR`, 32-bit float preferred; half-float accepted only if 32-bit is unavailable
 - Resolution: `3840 x 2160`
 - Lens over-scan: `1.5x`
 - Color: linear, no tone mapping, no LUT, no gamma transform, no color management
-- Scaling: 1:1 pixel mapping, no resize, no crop beyond the existing Round 2.1 camera setup
-- Camera: same camera, focal length, sensor size, aspect, and framing as Round 2.1 K1 sweep
-- Naming: use lowercase `.exr`; use `p` for positive and decimal point, `n` for negative
+- Scaling: 1:1 pixel mapping, no resize, no extra crop beyond the stated camera setup
+- Sensor size: keep sensor width and height fixed across the sweep
+- Center shift: `centerShiftMM=(0,0)` for every required frame
+- Naming: lowercase `.exr`; use `p` for positive and decimal point, `n` for negative
 
-## Set A - K2/K3 Sweep (10 Frames)
+## Required Set A - Focal-Length Sweep
 
-Purpose: check whether K2/K3 share the same simple radial polynomial semantics as K1.
+Purpose: separate `sensor full-width` normalization from `focal-length`
+normalization.
 
-For all K2 frames: `K1=0`, `K3=0`, `centerShiftMM=(0,0)`.
+For all required frames:
 
-| K2 | filename |
-|---:|---|
-| -0.5 | `disguise_K2_n0p5.exr` |
-| -0.3 | `disguise_K2_n0p3.exr` |
-| 0.0 | `disguise_K2_zero.exr` |
-| +0.3 | `disguise_K2_p0p3.exr` |
-| +0.5 | `disguise_K2_p0p5.exr` |
+- `K2=0`
+- `K3=0`
+- `centerShiftMM=(0,0)`
 
-For all K3 frames: `K1=0`, `K2=0`, `centerShiftMM=(0,0)`.
+| focal_length_mm | K1 | filename |
+|---:|---:|---|
+| 24.0 | 0.0 | `disguise_focal24_K1_zero.exr` |
+| 24.0 | +0.5 | `disguise_focal24_K1_p0p5.exr` |
+| 30.302 | 0.0 | `disguise_focal30p302_K1_zero.exr` |
+| 30.302 | +0.5 | `disguise_focal30p302_K1_p0p5.exr` |
+| 50.0 | 0.0 | `disguise_focal50_K1_zero.exr` |
+| 50.0 | +0.5 | `disguise_focal50_K1_p0p5.exr` |
 
-| K3 | filename |
-|---:|---|
-| -0.5 | `disguise_K3_n0p5.exr` |
-| -0.3 | `disguise_K3_n0p3.exr` |
-| 0.0 | `disguise_K3_zero.exr` |
-| +0.3 | `disguise_K3_p0p3.exr` |
-| +0.5 | `disguise_K3_p0p5.exr` |
+## Optional Set B - K2/K3 Spot Checks
 
-## Set B - CenterShift Sweep (5 Frames)
+Purpose: keep a small independent check that K2/K3 use the same normalization
+as K1 after the focal-length confound is resolved.
 
-Purpose: validate `centerShiftMM.x` sign and unit before wiring `CenterUV`.
+For all optional frames:
 
-For all frames: `K1=0`, `K2=0`, `K3=0`, `centerShiftMM.y=0`.
+- `focal_length_mm=30.302`
+- `centerShiftMM=(0,0)`
 
-| centerShiftMM.x | filename |
-|---:|---|
-| -0.10 | `disguise_centerShiftX_n0p10.exr` |
-| -0.05 | `disguise_centerShiftX_n0p05.exr` |
-| 0.00 | `disguise_centerShift_zero.exr` |
-| +0.05 | `disguise_centerShiftX_p0p05.exr` |
-| +0.10 | `disguise_centerShiftX_p0p10.exr` |
+| K1 | K2 | K3 | filename |
+|---:|---:|---:|---|
+| 0 | +0.5 | 0 | `disguise_focal30p302_K2_p0p5.exr` |
+| 0 | 0 | +0.5 | `disguise_focal30p302_K3_p0p5.exr` |
 
-Optional if time allows: repeat the same 5 values for `centerShiftMM.y` with filenames
-`disguise_centerShiftY_*.exr`. The 5 X-axis frames above are the minimum blocker.
+## Optional Set C - Higher Precision Probe
 
-## Set C - Identity Round-Trip (1 Frame)
+Purpose: reduce the current half-float / sampling floor before tightening
+acceptance below the 1-3 px range.
 
-Purpose: clean no-distortion baseline for Gate 1.5 and future image diff.
+Accept either:
 
-| K1 | K2 | K3 | centerShiftMM | filename |
-|---:|---:|---:|---|---|
-| 0 | 0 | 0 | `(0,0)` | `disguise_identity_K0_center0.exr` |
+- 32-bit float EXR UV probe output, or
+- a structured-light / multi-frame probe where decoded source coordinates can
+  exceed half-float UV precision.
 
-This may match the K2/K3 zero frame visually, but keep the separate filename so reports can
-reference it without ambiguity.
+Keep the same naming prefix and include a short note describing the export bit
+depth and color pipeline.
 
 ## Return Layout
 
 ```text
-validation_results/custom_pp_gate_inputs/
-├── k2_k3_sweep/
-│   ├── disguise_K2_n0p5.exr
-│   ├── disguise_K2_n0p3.exr
-│   ├── disguise_K2_zero.exr
-│   ├── disguise_K2_p0p3.exr
-│   ├── disguise_K2_p0p5.exr
-│   ├── disguise_K3_n0p5.exr
-│   ├── disguise_K3_n0p3.exr
-│   ├── disguise_K3_zero.exr
-│   ├── disguise_K3_p0p3.exr
-│   └── disguise_K3_p0p5.exr
-├── center_shift_sweep/
-│   ├── disguise_centerShiftX_n0p10.exr
-│   ├── disguise_centerShiftX_n0p05.exr
-│   ├── disguise_centerShift_zero.exr
-│   ├── disguise_centerShiftX_p0p05.exr
-│   └── disguise_centerShiftX_p0p10.exr
-└── identity/
-    └── disguise_identity_K0_center0.exr
+validation_results/disguise_next_data/
+├── focal_length_sweep/
+│   ├── disguise_focal24_K1_zero.exr
+│   ├── disguise_focal24_K1_p0p5.exr
+│   ├── disguise_focal30p302_K1_zero.exr
+│   ├── disguise_focal30p302_K1_p0p5.exr
+│   ├── disguise_focal50_K1_zero.exr
+│   └── disguise_focal50_K1_p0p5.exr
+├── optional_k2_k3/
+│   ├── disguise_focal30p302_K2_p0p5.exr
+│   └── disguise_focal30p302_K3_p0p5.exr
+└── optional_precision_probe/
+    └── README.md
 ```
 
 ## Quick Sanity Check
-
-Run this after exporting any 1-2 frames:
 
 ```python
 import os
@@ -103,16 +98,10 @@ os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
 import cv2
 
-img = cv2.imread("disguise_identity_K0_center0.exr", cv2.IMREAD_UNCHANGED)
+img = cv2.imread("disguise_focal30p302_K1_zero.exr", cv2.IMREAD_UNCHANGED)
 print(img.shape, img.dtype)
 print("R", float(img[..., 2].min()), float(img[..., 2].max()))
 print("G", float(img[..., 1].min()), float(img[..., 1].max()))
 ```
 
-Expected:
-
-```text
-shape: (2160, 3840, 3+) or (2160, 3840, 4)
-dtype: float32
-R/G range near [0.1667, 0.8333] for the identity frame with 1.5x lens over-scan
-```
+Expected for a 1.5x over-scan identity frame: R/G range near `[0.1667, 0.8333]`.

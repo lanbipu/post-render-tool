@@ -7,9 +7,9 @@
 
 | Path | Strategy | 状态 |
 |---|---|---|
-| **A** — System ID | 反推 Disguise K 公式（11→51 张 K-sweep 拟合 M1..M_RAT8） | **结案 NO-GO**（Round 2.1 M_RAT6 p95 2.867 px，公式形态不可达 pixel-perfect） |
+| **A** — System ID | 反推 Disguise K 公式（11→51 张 K-sweep 拟合 M1..M_RAT8） | **Legacy / 结案 NO-GO**（仍使用 half-width 归一化；不得作为 Path C shader correctness 证据） |
 | **B** — STMap direct | 用 Disguise 自渲一张 identity-UV 当 STMap | **搁置备胎**（Round 2.2 验证三轴独立可加，Round 2.3 147 张采集未启动） |
-| **C** — Custom Post-Process Material（**当前**） | 写一张 UE post-process material，shader 里直接执行 Disguise 的 `official_sensor_inverse` 公式，绕开 LensFile 公式翻译损耗 | **进行中**（计划已 commit、harness 自测过、等 Disguise 16 张参考帧到货） |
+| **C** — Custom Post-Process Material（**当前**） | 写一张 UE post-process material，shader 里直接执行 Disguise 的 `official_sensor_inverse` 公式，绕开 LensFile 公式翻译损耗 | **进行中**（Python reference + HLSL 已切到 sensor full-width；UE validation 单独看 Path C harness） |
 
 **为什么从 A/B 转到 C**：
 - **Path A 死锁**：UE LensFile 内置的 BrownConradyUD 公式跟 Disguise 公式形态不同。把 Disguise 系数翻译成 UE 槽位（M_RAT6 / M_RAT8 拟合）做不到 1:1，最低残差 2.5~2.9 像素。模型 mismatch 是物理上限，再 fit 也突破不了。
@@ -27,7 +27,7 @@
 | `uv_probe_1920x1080.exr` | The probe the user puts on the LED surface in d3. R = U, G = V, B = 0. |
 | `uv_probe_truth.npz` | Image dimensions + 4-corner expected R/G values for sanity check. |
 
-### Path A · System identification (UV gradient + curve fitting)
+### Path A · System identification (UV gradient + curve fitting, legacy half-width)
 | File | Role |
 |---|---|
 | `analyze_renders.py` | Reads each `disguise_K_*.exr`, samples ~30k random valid pixels per frame, emits per-pixel `(K, r_anchor, dr)` records to `displacements.csv`. |
@@ -158,6 +158,10 @@ If M2/M3/M4 wins, Disguise's formula doesn't match UE's polynomial form — UE L
   Sign-flip into UE LensFile happens later in `lens_file_builder.py`, not here.
 
 ## Path A — analyze_renders details
+
+Path A 是 legacy system-identification pipeline，当前仍按 camera half-width
+归一化。这个语义与 Path C 的 sensor full-width shader reference 不同；Path A
+残差不能用来证明或否定 Path C shader correctness。
 
 `analyze_renders.py` per-frame logic:
 1. Read EXR, extract R/G channels (cv2 BGR storage, `[..., 2]` = R, `[..., 1]` = G)
