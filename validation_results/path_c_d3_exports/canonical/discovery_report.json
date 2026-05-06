@@ -1,0 +1,1293 @@
+{
+  "controlled_cases": [
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal24_k_zero.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal24_k_zero.png",
+      "case_id": "path_c_focal24_k_zero",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_1/shot 1_take_1_dense.csv",
+        "frames": [
+          "28396",
+          "28449"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "24"
+          ],
+          "k1k2k3.x": [
+            "0"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_1/shot 1_take_1_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00000.png",
+      "source_take": "take_1",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal24_k1_p0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal24_k1_p0p5.png",
+      "case_id": "path_c_focal24_k1_p0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_2/shot 1_take_2_dense.csv",
+        "frames": [
+          "31720",
+          "31749"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "24"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_2/shot 1_take_2_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00001.png",
+      "source_take": "take_2",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k_zero.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k_zero.png",
+      "case_id": "path_c_focal30p302_k_zero",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_3/shot 1_take_3_dense.csv",
+        "frames": [
+          "32988",
+          "33019"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_3/shot 1_take_3_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00002.png",
+      "source_take": "take_3",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k1_p0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k1_p0p5.png",
+      "case_id": "path_c_focal30p302_k1_p0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_4/shot 1_take_4_dense.csv",
+        "frames": [
+          "33637",
+          "33667"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_4/shot 1_take_4_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00003.png",
+      "source_take": "take_4",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal50_k_zero.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal50_k_zero.png",
+      "case_id": "path_c_focal50_k_zero",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_5/shot 1_take_5_dense.csv",
+        "frames": [
+          "34514",
+          "34545"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "50"
+          ],
+          "k1k2k3.x": [
+            "0"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_5/shot 1_take_5_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00004.png",
+      "source_take": "take_5",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal50_k1_p0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal50_k1_p0p5.png",
+      "case_id": "path_c_focal50_k1_p0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_6/shot 1_take_6_dense.csv",
+        "frames": [
+          "35236",
+          "35274"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "50"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_6/shot 1_take_6_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00005.png",
+      "source_take": "take_6",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k2_p0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k2_p0p5.png",
+      "case_id": "path_c_focal30p302_k2_p0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_7/shot 1_take_7_dense.csv",
+        "frames": [
+          "36275",
+          "36308"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0"
+          ],
+          "k1k2k3.y": [
+            "0.5"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_7/shot 1_take_7_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00006.png",
+      "source_take": "take_7",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k3_p0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k3_p0p5.png",
+      "case_id": "path_c_focal30p302_k3_p0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_8/shot 1_take_8_dense.csv",
+        "frames": [
+          "36882",
+          "36917"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0.5"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "focal_k_axis",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_8/shot 1_take_8_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00007.png",
+      "source_take": "take_8",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shift_zero.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shift_zero.png",
+      "case_id": "path_c_center_k1_p0p5_shift_zero",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_9/shot 1_take_9_dense.csv",
+        "frames": [
+          "38637",
+          "38667"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "center_shift",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_9/shot 1_take_9_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00008.png",
+      "source_take": "take_9",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shiftx_n0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shiftx_n0p5.png",
+      "case_id": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_10/shot 1_take_10_dense.csv",
+        "frames": [
+          "39454",
+          "39488"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "-0.5"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "center_shift",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_10/shot 1_take_10_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00009.png",
+      "source_take": "take_10",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shiftx_p0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shiftx_p0p5.png",
+      "case_id": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_11/shot 1_take_11_dense.csv",
+        "frames": [
+          "39906",
+          "39942"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0.5"
+          ],
+          "centerShiftMM.y": [
+            "0"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "center_shift",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_11/shot 1_take_11_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00010.png",
+      "source_take": "take_11",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shifty_n0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shifty_n0p5.png",
+      "case_id": "path_c_center_k1_p0p5_shifty_n0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_12/shot 1_take_12_dense.csv",
+        "frames": [
+          "40410",
+          "40445"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "-0.5"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "center_shift",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_12/shot 1_take_12_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00011.png",
+      "source_take": "take_12",
+      "stable_parameters": true,
+      "status": "PASS"
+    },
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shifty_p0p5.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shifty_p0p5.png",
+      "case_id": "path_c_center_k1_p0p5_shifty_p0p5",
+      "csv_summary": {
+        "camera_prefix": "camera:live_cam_2",
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_13/shot 1_take_13_dense.csv",
+        "frames": [
+          "40813",
+          "40854"
+        ],
+        "row_count": 2,
+        "spatial_prefix": null,
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0"
+          ],
+          "centerShiftMM.y": [
+            "0.5"
+          ],
+          "focalLengthMM": [
+            "30.302"
+          ],
+          "k1k2k3.x": [
+            "0.5"
+          ],
+          "k1k2k3.y": [
+            "0"
+          ],
+          "k1k2k3.z": [
+            "0"
+          ],
+          "offset.x": [
+            "0"
+          ],
+          "offset.y": [
+            "2.25"
+          ],
+          "offset.z": [
+            "-11.6"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "35"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0"
+          ],
+          "rotation.y": [
+            "0"
+          ],
+          "rotation.z": [
+            "0"
+          ]
+        }
+      },
+      "expected_matches": {
+        "centerShiftMM.x": true,
+        "centerShiftMM.y": true,
+        "focalLengthMM": true,
+        "k1": true,
+        "k2": true,
+        "k3": true
+      },
+      "group": "center_shift",
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_13/shot 1_take_13_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_live cam 2 transmission_00012.png",
+      "source_take": "take_13",
+      "stable_parameters": true,
+      "status": "PASS"
+    }
+  ],
+  "generated_at": "2026-05-06T09:53:24.727599Z",
+  "issues": [],
+  "live_cam_image_count": 13,
+  "mr_set_image_count": 1,
+  "production_match": [
+    {
+      "canonical_csv": "validation_results/path_c_d3_exports/canonical/production_match/path_c_production_match_frame_48932_spatialmap.csv",
+      "canonical_image": "validation_results/path_c_d3_exports/canonical/production_match/path_c_production_match_frame_48932_spatialmap.png",
+      "case_id": "path_c_production_match_frame_48932_spatialmap",
+      "csv_summary": {
+        "camera_prefix": null,
+        "csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_14/shot 1_take_14_dense.csv",
+        "frames": [
+          "48932",
+          "48958"
+        ],
+        "row_count": 2,
+        "spatial_prefix": "spatialmap:mr_set_1_target__backplate_",
+        "timestamp_values": [
+          "00:00:30.00"
+        ],
+        "values": {
+          "aspectRatio": [
+            "1.77779"
+          ],
+          "centerShiftMM.x": [
+            "0.0048995"
+          ],
+          "centerShiftMM.y": [
+            "0.00467297"
+          ],
+          "focalLengthMM": [
+            "43.2886"
+          ],
+          "k1k2k3.x": [
+            "0.000286122"
+          ],
+          "k1k2k3.y": [
+            "-0.00395342"
+          ],
+          "k1k2k3.z": [
+            "0.011302"
+          ],
+          "offset.x": [
+            "0.00250977"
+          ],
+          "offset.y": [
+            "1.9987"
+          ],
+          "offset.z": [
+            "-11.4596"
+          ],
+          "overscan.x": [
+            "1.3"
+          ],
+          "overscan.y": [
+            "1.3"
+          ],
+          "paWidthMM": [
+            "50"
+          ],
+          "resolution.x": [
+            "1920"
+          ],
+          "resolution.y": [
+            "1080"
+          ],
+          "rotation.x": [
+            "0.000839233"
+          ],
+          "rotation.y": [
+            "0.00343323"
+          ],
+          "rotation.z": [
+            "360"
+          ]
+        }
+      },
+      "image_dimensions": {
+        "height": 1080,
+        "width": 1920
+      },
+      "source_csv": "validation_results/path_c_d3_exports/raw/output/shots/shot 1/take_14/shot 1_take_14_dense.csv",
+      "source_image": "validation_results/path_c_d3_exports/raw/screenshots/screen_mr set 1_00000.png",
+      "source_take": "take_14",
+      "status": "DEFERRED_SPATIALMAP_CSV_NOT_POSTRENDERTOOL_CAMERA_CSV"
+    }
+  ],
+  "raw_screenshots": "validation_results/path_c_d3_exports/raw/screenshots",
+  "raw_shots": "validation_results/path_c_d3_exports/raw/output/shots/shot 1",
+  "raw_zip": "validation_results/path_c_d3_exports/raw/path_c_d3_exports_0408.zip",
+  "status": "PASS",
+  "take_count": 14
+}

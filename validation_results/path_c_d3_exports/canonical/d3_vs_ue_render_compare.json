@@ -1,0 +1,477 @@
+{
+  "case_count": 13,
+  "cases": [
+    {
+      "case": "path_c_focal24_k_zero",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal24_k_zero.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.777090245627572,
+        "d3_mean_rgb": [
+          0.7295296788215637,
+          0.7619577646255493,
+          0.8078556060791016
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.8506767381267784,
+        "phase_shift_x_px": 0.016073357509412745,
+        "phase_shift_y_px": 0.015427643324983364,
+        "rgb_max": 0.7372549176216125,
+        "rgb_mean": 0.034477349370718,
+        "rgb_median": 0.0156862735748291,
+        "rgb_p95": 0.14509806036949158,
+        "rgb_p99": 0.2980392277240753,
+        "rgb_rms": 0.06541253626346588,
+        "ue_mean_rgb": [
+          0.7014542818069458,
+          0.7418572306632996,
+          0.7964612245559692
+        ],
+        "ue_nonblack_ratio": 1.0
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal24_k_zero/path_c_focal24_k_zero.0000.png"
+    },
+    {
+      "case": "path_c_focal24_k1_p0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal24_k1_p0p5.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.8631901041666666,
+        "d3_mean_rgb": [
+          0.7138276100158691,
+          0.7514283657073975,
+          0.8035987615585327
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.5946351422203912,
+        "phase_shift_x_px": 0.011264510870887534,
+        "phase_shift_y_px": -0.01635659327189387,
+        "rgb_max": 0.8588235378265381,
+        "rgb_mean": 0.14058120548725128,
+        "rgb_median": 0.023529410362243652,
+        "rgb_p95": 0.7843137383460999,
+        "rgb_p99": 0.8235294222831726,
+        "rgb_rms": 0.2916448414325714,
+        "ue_mean_rgb": [
+          0.5944330096244812,
+          0.6280904412269592,
+          0.6738989353179932
+        ],
+        "ue_nonblack_ratio": 0.8426813271604938
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal24_k1_p0p5/path_c_focal24_k1_p0p5.0000.png"
+    },
+    {
+      "case": "path_c_focal30p302_k_zero",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k_zero.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.8280200295781893,
+        "d3_mean_rgb": [
+          0.7275681495666504,
+          0.7593117952346802,
+          0.8098820447921753
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.9198836886441266,
+        "phase_shift_x_px": 0.011862549530064825,
+        "phase_shift_y_px": 0.020347006787233113,
+        "rgb_max": 0.8352941274642944,
+        "rgb_mean": 0.032257940620183945,
+        "rgb_median": 0.019607841968536377,
+        "rgb_p95": 0.12156862020492554,
+        "rgb_p99": 0.24313727021217346,
+        "rgb_rms": 0.05630533769726753,
+        "ue_mean_rgb": [
+          0.708357036113739,
+          0.7447707056999207,
+          0.7989574670791626
+        ],
+        "ue_nonblack_ratio": 1.0
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal30p302_k_zero/path_c_focal30p302_k_zero.0000.png"
+    },
+    {
+      "case": "path_c_focal30p302_k1_p0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k1_p0p5.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.80639547968107,
+        "d3_mean_rgb": [
+          0.726012110710144,
+          0.7568150758743286,
+          0.8061520457267761
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.6871798862645655,
+        "phase_shift_x_px": 0.015574172516039653,
+        "phase_shift_y_px": 0.009086762634296974,
+        "rgb_max": 0.8823529481887817,
+        "rgb_mean": 0.14278067648410797,
+        "rgb_median": 0.019607841968536377,
+        "rgb_p95": 0.7921568751335144,
+        "rgb_p99": 0.8392156958580017,
+        "rgb_rms": 0.302610844373703,
+        "ue_mean_rgb": [
+          0.5997645258903503,
+          0.6306210160255432,
+          0.6756744384765625
+        ],
+        "ue_nonblack_ratio": 0.8426813271604938
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal30p302_k1_p0p5/path_c_focal30p302_k1_p0p5.0000.png"
+    },
+    {
+      "case": "path_c_focal50_k_zero",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal50_k_zero.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.741656378600823,
+        "d3_mean_rgb": [
+          0.7197350263595581,
+          0.7417135238647461,
+          0.8022533059120178
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.8808432763888512,
+        "phase_shift_x_px": 0.03130834285059336,
+        "phase_shift_y_px": 0.004527727746676646,
+        "rgb_max": 0.8196078538894653,
+        "rgb_mean": 0.026519885286688805,
+        "rgb_median": 0.0156862735748291,
+        "rgb_p95": 0.09803920984268188,
+        "rgb_p99": 0.21176469326019287,
+        "rgb_rms": 0.0484234057366848,
+        "ue_mean_rgb": [
+          0.7002893686294556,
+          0.7262667417526245,
+          0.7936959266662598
+        ],
+        "ue_nonblack_ratio": 1.0
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal50_k_zero/path_c_focal50_k_zero.0000.png"
+    },
+    {
+      "case": "path_c_focal50_k1_p0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal50_k1_p0p5.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.7910749421296296,
+        "d3_mean_rgb": [
+          0.7303605079650879,
+          0.7540234327316284,
+          0.8096579909324646
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.6139312589904409,
+        "phase_shift_x_px": 0.018772986223439148,
+        "phase_shift_y_px": -0.026541268998357737,
+        "rgb_max": 0.8823529481887817,
+        "rgb_mean": 0.1470465362071991,
+        "rgb_median": 0.019607841968536377,
+        "rgb_p95": 0.7960784435272217,
+        "rgb_p99": 0.8470588326454163,
+        "rgb_rms": 0.3043557405471802,
+        "ue_mean_rgb": [
+          0.5912153720855713,
+          0.6151583194732666,
+          0.670865535736084
+        ],
+        "ue_nonblack_ratio": 0.8426813271604938
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal50_k1_p0p5/path_c_focal50_k1_p0p5.0000.png"
+    },
+    {
+      "case": "path_c_focal30p302_k2_p0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k2_p0p5.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.8110591885288065,
+        "d3_mean_rgb": [
+          0.7304044365882874,
+          0.7596858739852905,
+          0.8093568086624146
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.7869197611455564,
+        "phase_shift_x_px": 0.021221200155650877,
+        "phase_shift_y_px": -0.01116643144871432,
+        "rgb_max": 0.8666666746139526,
+        "rgb_mean": 0.06344577670097351,
+        "rgb_median": 0.0156862735748291,
+        "rgb_p95": 0.2862745225429535,
+        "rgb_p99": 0.8078431487083435,
+        "rgb_rms": 0.17025360465049744,
+        "ue_mean_rgb": [
+          0.6777592301368713,
+          0.7123794555664062,
+          0.7633786201477051
+        ],
+        "ue_nonblack_ratio": 0.9540451388888889
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal30p302_k2_p0p5/path_c_focal30p302_k2_p0p5.0000.png"
+    },
+    {
+      "case": "path_c_focal30p302_k3_p0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/focal_k_axis/path_c_focal30p302_k3_p0p5.png",
+      "group": "focal_k_axis",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.8117073366769547,
+        "d3_mean_rgb": [
+          0.7273795008659363,
+          0.758273184299469,
+          0.8088576197624207
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.8278640197235861,
+        "phase_shift_x_px": 0.02988064282169489,
+        "phase_shift_y_px": 0.029869189966802878,
+        "rgb_max": 0.8627451062202454,
+        "rgb_mean": 0.04216385632753372,
+        "rgb_median": 0.0156862735748291,
+        "rgb_p95": 0.15294116735458374,
+        "rgb_p99": 0.7254902124404907,
+        "rgb_rms": 0.10351947695016861,
+        "ue_mean_rgb": [
+          0.6997978687286377,
+          0.7356083989143372,
+          0.7888571619987488
+        ],
+        "ue_nonblack_ratio": 0.9867997685185185
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_focal30p302_k3_p0p5/path_c_focal30p302_k3_p0p5.0000.png"
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shift_zero.png",
+      "group": "center_shift",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.8121217528292181,
+        "d3_mean_rgb": [
+          0.7132623195648193,
+          0.7496055364608765,
+          0.802945077419281
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.6805586468143228,
+        "phase_shift_x_px": 0.03483021829401878,
+        "phase_shift_y_px": 0.013438432250950427,
+        "rgb_max": 0.8588235378265381,
+        "rgb_mean": 0.13922792673110962,
+        "rgb_median": 0.019607841968536377,
+        "rgb_p95": 0.7843137383460999,
+        "rgb_p99": 0.8274509906768799,
+        "rgb_rms": 0.2939184010028839,
+        "ue_mean_rgb": [
+          0.5997419357299805,
+          0.6305959820747375,
+          0.675672709941864
+        ],
+        "ue_nonblack_ratio": 0.8426813271604938
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_center_k1_p0p5_shift_zero/path_c_center_k1_p0p5_shift_zero.0000.png"
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shiftx_n0p5.png",
+      "group": "center_shift",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.8382423482510288,
+        "d3_mean_rgb": [
+          0.7114970088005066,
+          0.7487170100212097,
+          0.8025470972061157
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.6929136329815712,
+        "phase_shift_x_px": 15.651338514395434,
+        "phase_shift_y_px": -0.036220688981302374,
+        "rgb_max": 0.8588235378265381,
+        "rgb_mean": 0.14259466528892517,
+        "rgb_median": 0.023529410362243652,
+        "rgb_p95": 0.7843137383460999,
+        "rgb_p99": 0.8235294222831726,
+        "rgb_rms": 0.29508069157600403,
+        "ue_mean_rgb": [
+          0.5998034477233887,
+          0.6305816173553467,
+          0.6756085157394409
+        ],
+        "ue_nonblack_ratio": 0.8425617283950617
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_center_k1_p0p5_shiftx_n0p5/path_c_center_k1_p0p5_shiftx_n0p5.0000.png"
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shiftx_p0p5.png",
+      "group": "center_shift",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.8456802983539095,
+        "d3_mean_rgb": [
+          0.7129281759262085,
+          0.7494306564331055,
+          0.8034694194793701
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.6504748655984431,
+        "phase_shift_x_px": -15.829951156606967,
+        "phase_shift_y_px": 0.03183981714039419,
+        "rgb_max": 0.8745098114013672,
+        "rgb_mean": 0.14186209440231323,
+        "rgb_median": 0.023529410362243652,
+        "rgb_p95": 0.7843137383460999,
+        "rgb_p99": 0.8313725590705872,
+        "rgb_rms": 0.29484134912490845,
+        "ue_mean_rgb": [
+          0.599555492401123,
+          0.6304501891136169,
+          0.6755471229553223
+        ],
+        "ue_nonblack_ratio": 0.8425617283950617
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_center_k1_p0p5_shiftx_p0p5/path_c_center_k1_p0p5_shiftx_p0p5.0000.png"
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shifty_n0p5.png",
+      "group": "center_shift",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.9031084426440329,
+        "d3_mean_rgb": [
+          0.7094069719314575,
+          0.7479349970817566,
+          0.803943932056427
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.6772168303124698,
+        "phase_shift_x_px": 0.07149659549759235,
+        "phase_shift_y_px": -21.93793505519625,
+        "rgb_max": 0.8745098114013672,
+        "rgb_mean": 0.15320569276809692,
+        "rgb_median": 0.03529411554336548,
+        "rgb_p95": 0.7843137383460999,
+        "rgb_p99": 0.8313725590705872,
+        "rgb_rms": 0.29812103509902954,
+        "ue_mean_rgb": [
+          0.5993433594703674,
+          0.630338191986084,
+          0.6755938529968262
+        ],
+        "ue_nonblack_ratio": 0.842427662037037
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_center_k1_p0p5_shifty_n0p5/path_c_center_k1_p0p5_shifty_n0p5.0000.png"
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "d3_image": "validation_results/path_c_d3_exports/canonical/center_shift/path_c_center_k1_p0p5_shifty_p0p5.png",
+      "group": "center_shift",
+      "metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.9011133616255144,
+        "d3_mean_rgb": [
+          0.722316324710846,
+          0.7566543221473694,
+          0.805611789226532
+        ],
+        "d3_nonblack_ratio": 1.0,
+        "phase_response": 0.582736042752678,
+        "phase_shift_x_px": -0.05305427468317703,
+        "phase_shift_y_px": 21.934826726684946,
+        "rgb_max": 0.886274516582489,
+        "rgb_mean": 0.15380561351776123,
+        "rgb_median": 0.03529411554336548,
+        "rgb_p95": 0.7843137383460999,
+        "rgb_p99": 0.8274509906768799,
+        "rgb_rms": 0.2996280789375305,
+        "ue_mean_rgb": [
+          0.5999076962471008,
+          0.6304638981819153,
+          0.6753333210945129
+        ],
+        "ue_nonblack_ratio": 0.8424266975308642
+      },
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "status": "MEASURED",
+      "ue_render": "validation_results/path_c_d3_exports/ue_renders/path_c_center_k1_p0p5_shifty_p0p5/path_c_center_k1_p0p5_shifty_p0p5.0000.png"
+    }
+  ],
+  "interpretation": "Direct RGB metrics are a pairing/render-pipeline probe, not final shader correctness evidence.",
+  "low_diff_candidate_count": 1,
+  "measured_count": 13,
+  "status": "NEEDS_REVIEW"
+}

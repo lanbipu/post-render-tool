@@ -1,0 +1,319 @@
+{
+    "fps": 60.0,
+    "clockType": "30.0 FPS NDF",
+    "sources": [
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera",
+            "type": "Camera",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.engineCameraPos.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.engineCameraPos.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.engineCameraPos.z",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.engineCameraRotation.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.engineCameraRotation.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.engineCameraRotation.z",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.resolution.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.resolution.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.fieldOfViewV",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.fieldOfViewH",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.overscan.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.overscan.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.overscanResolution.x",
+            "type": "int",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.overscanResolution.y",
+            "type": "int",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.aspectRatio",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.focalLengthMM",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.paWidthMM",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.centerShiftMM.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.centerShiftMM.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.k1k2k3.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.k1k2k3.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "spatialmap:mr_set_1_target__backplate_.activeCamera.k1k2k3.z",
+            "type": "float",
+            "options": []
+        }
+    ],
+    "changes": [
+        {
+            "timestamp": "00:00:30.00",
+            "frame": 48932,
+            "changedValues": [
+                {
+                    "key": 0,
+                    "value": "objects/camera/cam 1.apx"
+                },
+                {
+                    "key": 1,
+                    "value": 0.002509769983589649
+                },
+                {
+                    "key": 2,
+                    "value": 1.9987000226974488
+                },
+                {
+                    "key": 3,
+                    "value": -11.459600448608399
+                },
+                {
+                    "key": 4,
+                    "value": 0.0008392329909838736
+                },
+                {
+                    "key": 5,
+                    "value": 0.00343323010019958
+                },
+                {
+                    "key": 6,
+                    "value": 360.0
+                },
+                {
+                    "key": 7,
+                    "value": 1920.0
+                },
+                {
+                    "key": 8,
+                    "value": 1080.0
+                },
+                {
+                    "key": 9,
+                    "value": 35.99300003051758
+                },
+                {
+                    "key": 10,
+                    "value": 60.01449966430664
+                },
+                {
+                    "key": 11,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 12,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 13,
+                    "value": 2496
+                },
+                {
+                    "key": 14,
+                    "value": 1404
+                },
+                {
+                    "key": 15,
+                    "value": 1.7777899503707886
+                },
+                {
+                    "key": 16,
+                    "value": 43.28860092163086
+                },
+                {
+                    "key": 17,
+                    "value": 50.0
+                },
+                {
+                    "key": 18,
+                    "value": 0.00489949993789196
+                },
+                {
+                    "key": 19,
+                    "value": 0.0046729701571166519
+                },
+                {
+                    "key": 20,
+                    "value": 0.0002861219982150942
+                },
+                {
+                    "key": 21,
+                    "value": -0.003953420091420412
+                },
+                {
+                    "key": 22,
+                    "value": 0.011301999911665917
+                }
+            ]
+        },
+        {
+            "timestamp": "00:00:30.00",
+            "frame": 48958,
+            "changedValues": [
+                {
+                    "key": 0,
+                    "value": "objects/camera/cam 1.apx"
+                },
+                {
+                    "key": 1,
+                    "value": 0.002509769983589649
+                },
+                {
+                    "key": 2,
+                    "value": 1.9987000226974488
+                },
+                {
+                    "key": 3,
+                    "value": -11.459600448608399
+                },
+                {
+                    "key": 4,
+                    "value": 0.0008392329909838736
+                },
+                {
+                    "key": 5,
+                    "value": 0.00343323010019958
+                },
+                {
+                    "key": 6,
+                    "value": 360.0
+                },
+                {
+                    "key": 7,
+                    "value": 1920.0
+                },
+                {
+                    "key": 8,
+                    "value": 1080.0
+                },
+                {
+                    "key": 9,
+                    "value": 35.99300003051758
+                },
+                {
+                    "key": 10,
+                    "value": 60.01449966430664
+                },
+                {
+                    "key": 11,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 12,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 13,
+                    "value": 2496
+                },
+                {
+                    "key": 14,
+                    "value": 1404
+                },
+                {
+                    "key": 15,
+                    "value": 1.7777899503707886
+                },
+                {
+                    "key": 16,
+                    "value": 43.28860092163086
+                },
+                {
+                    "key": 17,
+                    "value": 50.0
+                },
+                {
+                    "key": 18,
+                    "value": 0.00489949993789196
+                },
+                {
+                    "key": 19,
+                    "value": 0.0046729701571166519
+                },
+                {
+                    "key": 20,
+                    "value": 0.0002861219982150942
+                },
+                {
+                    "key": 21,
+                    "value": -0.003953420091420412
+                },
+                {
+                    "key": 22,
+                    "value": 0.011301999911665917
+                }
+            ]
+        }
+    ]
+}

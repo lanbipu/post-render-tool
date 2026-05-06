@@ -1,0 +1,231 @@
+{
+  "cases": [
+    {
+      "anchor": "path_c_focal24_k_zero",
+      "case": "path_c_focal24_k1_p0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.7216412680041152,
+        "delta_max": 1.0352940559387207,
+        "delta_mean": 0.13242565095424652,
+        "delta_median": 0.0156862735748291,
+        "delta_p95": 0.7529411911964417,
+        "delta_p99": 0.8078431487083435,
+        "delta_rms": 0.27778854966163635
+      },
+      "group": "focal_k_axis",
+      "phase": {
+        "d3_response": 0.6310166129359492,
+        "d3_shift_x_px": 0.10169772984772862,
+        "d3_shift_y_px": -0.2899508915623983,
+        "shift_delta_x_px": 0.049037555856216386,
+        "shift_delta_y_px": -0.16791428974318023,
+        "ue_response": 0.4334308600572892,
+        "ue_shift_x_px": 0.150735285703945,
+        "ue_shift_y_px": -0.4578651813055785
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_focal30p302_k_zero",
+      "case": "path_c_focal30p302_k1_p0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.6254626414609054,
+        "delta_max": 1.066666603088379,
+        "delta_mean": 0.1312669813632965,
+        "delta_median": 0.011764705181121826,
+        "delta_p95": 0.7647058963775635,
+        "delta_p99": 0.8313725590705872,
+        "delta_rms": 0.28948667645454407
+      },
+      "group": "focal_k_axis",
+      "phase": {
+        "d3_response": 0.5250846307071638,
+        "d3_shift_x_px": 0.07260202816701167,
+        "d3_shift_y_px": -0.04661851470041256,
+        "shift_delta_x_px": -0.00699694969932807,
+        "shift_delta_y_px": 0.033451090993253274,
+        "ue_response": 0.33202857712168754,
+        "ue_shift_x_px": 0.0656050784676836,
+        "ue_shift_y_px": -0.013167423707159287
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_focal50_k_zero",
+      "case": "path_c_focal50_k1_p0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.6720217656893004,
+        "delta_max": 1.1490195989608765,
+        "delta_mean": 0.1401699334383011,
+        "delta_median": 0.011764705181121826,
+        "delta_p95": 0.772549033164978,
+        "delta_p99": 0.8313725590705872,
+        "delta_rms": 0.29275789856910706
+      },
+      "group": "focal_k_axis",
+      "phase": {
+        "d3_response": 0.33662129955527226,
+        "d3_shift_x_px": -0.030564613216029102,
+        "d3_shift_y_px": -0.05863222794505418,
+        "shift_delta_x_px": 0.02423718964314503,
+        "shift_delta_y_px": 9.420638775736734e-06,
+        "ue_response": 0.3387595768916754,
+        "ue_shift_x_px": -0.006327423572884072,
+        "ue_shift_y_px": -0.058622807306278446
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_focal30p302_k_zero",
+      "case": "path_c_focal30p302_k2_p0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.504876221707819,
+        "delta_max": 1.0117647647857666,
+        "delta_mean": 0.05314961448311806,
+        "delta_median": 0.00784313678741455,
+        "delta_p95": 0.2392156720161438,
+        "delta_p99": 0.7764706015586853,
+        "delta_rms": 0.1593993604183197
+      },
+      "group": "focal_k_axis",
+      "phase": {
+        "d3_response": 0.9236153400091477,
+        "d3_shift_x_px": 0.07845377732883207,
+        "d3_shift_y_px": -0.14678669631882713,
+        "shift_delta_x_px": -0.0295629012508698,
+        "shift_delta_y_px": 0.028517989770648455,
+        "ue_response": 0.7525710674568459,
+        "ue_shift_x_px": 0.048890876077962275,
+        "ue_shift_y_px": -0.11826870654817867
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_focal30p302_k_zero",
+      "case": "path_c_focal30p302_k3_p0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.43635223765432096,
+        "delta_max": 1.0,
+        "delta_mean": 0.029599273577332497,
+        "delta_median": 0.003921568393707275,
+        "delta_p95": 0.1254901885986328,
+        "delta_p99": 0.658823549747467,
+        "delta_rms": 0.09312042593955994
+      },
+      "group": "focal_k_axis",
+      "phase": {
+        "d3_response": 0.9126648469618809,
+        "d3_shift_x_px": 0.0063790370954848186,
+        "d3_shift_y_px": -0.0559010227135559,
+        "shift_delta_x_px": 0.004206571428994721,
+        "shift_delta_y_px": 0.02731223153375595,
+        "ue_response": 0.8476277151225525,
+        "ue_shift_x_px": 0.01058560852447954,
+        "ue_shift_y_px": -0.028588791179799955
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.5373098315329218,
+        "delta_max": 1.1529412269592285,
+        "delta_mean": 0.030607271939516068,
+        "delta_median": 0.00784313678741455,
+        "delta_p95": 0.1254901885986328,
+        "delta_p99": 0.3450980484485626,
+        "delta_rms": 0.08305094391107559
+      },
+      "group": "center_shift",
+      "phase": {
+        "d3_response": 0.8917628241174015,
+        "d3_shift_x_px": -16.052075238309612,
+        "d3_shift_y_px": -0.055485141278836636,
+        "shift_delta_x_px": 15.501034694768691,
+        "shift_delta_y_px": 0.004518340198842452,
+        "ue_response": 0.7282082729575075,
+        "ue_shift_x_px": -0.5510405435409211,
+        "ue_shift_y_px": -0.050966801079994184
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.5468994341563786,
+        "delta_max": 1.1254901885986328,
+        "delta_mean": 0.032640546560287476,
+        "delta_median": 0.00784313678741455,
+        "delta_p95": 0.13725489377975464,
+        "delta_p99": 0.3450980484485626,
+        "delta_rms": 0.08569780737161636
+      },
+      "group": "center_shift",
+      "phase": {
+        "d3_response": 0.8952261809360834,
+        "d3_shift_x_px": 16.084227209918822,
+        "d3_shift_y_px": 0.07836283203528183,
+        "shift_delta_x_px": -15.511910286805005,
+        "shift_delta_y_px": -0.02588364052360248,
+        "ue_response": 0.7200606294325841,
+        "ue_shift_x_px": 0.5723169231138172,
+        "ue_shift_y_px": 0.052479191511679346
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.7768166473765432,
+        "delta_max": 1.015686273574829,
+        "delta_mean": 0.05069872364401817,
+        "delta_median": 0.027450978755950928,
+        "delta_p95": 0.18431371450424194,
+        "delta_p99": 0.43921568989753723,
+        "delta_rms": 0.09930051863193512
+      },
+      "group": "center_shift",
+      "phase": {
+        "d3_response": 0.8750959567670469,
+        "d3_shift_x_px": -0.01612400382555279,
+        "d3_shift_y_px": 21.160397516232706,
+        "shift_delta_x_px": 0.0627183637724329,
+        "shift_delta_y_px": -22.44570672506427,
+        "ue_response": 0.8091156361279664,
+        "ue_shift_x_px": 0.046594359946880104,
+        "ue_shift_y_px": -1.2853092088315634
+      },
+      "status": "MEASURED"
+    },
+    {
+      "anchor": "path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "delta_metrics": {
+        "changed_value_ratio_gt_1_lsb": 0.7681417181069958,
+        "delta_max": 1.2509803771972656,
+        "delta_mean": 0.05282974988222122,
+        "delta_median": 0.0313725471496582,
+        "delta_p95": 0.18431371450424194,
+        "delta_p99": 0.43921568989753723,
+        "delta_rms": 0.10275112092494965
+      },
+      "group": "center_shift",
+      "phase": {
+        "d3_response": 0.815898376982889,
+        "d3_shift_x_px": 0.03587015150435491,
+        "d3_shift_y_px": -21.26097169036018,
+        "shift_delta_x_px": -0.07317450105756507,
+        "shift_delta_y_px": 22.482758645945864,
+        "ue_response": 0.8115369957759057,
+        "ue_shift_x_px": -0.03730434955321016,
+        "ue_shift_y_px": 1.221786955585685
+      },
+      "status": "MEASURED"
+    }
+  ],
+  "interpretation": "Relative delta metrics subtract each pipeline anchor frame first; phase compares within-pipeline case-vs-anchor shift.",
+  "status": "MEASURED"
+}

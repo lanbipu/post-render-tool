@@ -1,0 +1,2739 @@
+{
+  "asset_root": "/Game/PathCD3CenterShiftProjectionSweep",
+  "import_root": "/Game/PathCD3CenterShiftProjectionSweep/Imports",
+  "imports": [
+    {
+      "bindings": [
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shift_zero.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shift_zero",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero.LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xp_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shiftx_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5.LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xp_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shiftx_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5.LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xp_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shifty_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5.LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xp_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shifty_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5.LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xp_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shift_zero.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shift_zero",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero.LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xp_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shiftx_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5.LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xp_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shiftx_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5.LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xp_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shifty_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5.LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xp_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shifty_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5.LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xp_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shift_zero.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shift_zero",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero.LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xn_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shiftx_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5.LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xn_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shiftx_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5.LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xn_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shifty_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5.LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xn_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shifty_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5.LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xn_yp",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shift_zero",
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shift_zero.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shift_zero",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero.LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xn_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_n0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shiftx_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5.LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xn_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shiftx_p0p5",
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shiftx_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shiftx_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5.LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xn_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_n0p5",
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_n0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shifty_n0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5.LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xn_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "bindings": [
+        {
+          "name": "PostRenderDistortionController",
+          "track_count": 7,
+          "tracks": [
+            {
+              "display_name": "K1",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K2",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "K3",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterU",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CenterV",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "Aspect",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "DistortionWeight",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        },
+        {
+          "name": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+          "track_count": 1,
+          "tracks": [
+            {
+              "display_name": "Transform",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieScene3DTransformTrack"
+            }
+          ]
+        },
+        {
+          "name": "CameraComponent",
+          "track_count": 5,
+          "tracks": [
+            {
+              "display_name": "CurrentFocalLength",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "CurrentAperture",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "ManualFocusDistance",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorHorizontalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            },
+            {
+              "display_name": "SensorVerticalOffset",
+              "property_debug": {},
+              "section_count": 1,
+              "track_class": "MovieSceneFloatTrack"
+            }
+          ]
+        }
+      ],
+      "camera_label": "CineCamera_path_c_center_k1_p0p5_shifty_p0p5",
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "csv_path": "C:\\temp\\ue-remote\\path_c_d3_exports\\canonical\\center_shift\\path_c_center_k1_p0p5_shifty_p0p5.csv",
+      "distortion_tracks_found": [
+        "aspect",
+        "centeru",
+        "centerv",
+        "distortionweight",
+        "k1",
+        "k2",
+        "k3"
+      ],
+      "error_message": "",
+      "missing_distortion_tracks": [],
+      "missing_projection_tracks": [],
+      "package_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shifty_p0p5",
+      "projection_tracks_found": [
+        "sensorhorizontaloffset",
+        "sensorverticaloffset"
+      ],
+      "sequence_path": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5.LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xn_yn",
+      "success": true,
+      "track_status": "PASS",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    }
+  ],
+  "jobs": [
+    {
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yp\\path_c_center_k1_p0p5_shift_zero",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xp_yp",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yp\\path_c_center_k1_p0p5_shiftx_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xp_yp",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yp\\path_c_center_k1_p0p5_shiftx_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xp_yp",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yp\\path_c_center_k1_p0p5_shifty_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xp_yp",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yp\\path_c_center_k1_p0p5_shifty_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yp/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xp_yp",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yn\\path_c_center_k1_p0p5_shift_zero",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xp_yn",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yn\\path_c_center_k1_p0p5_shiftx_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xp_yn",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yn\\path_c_center_k1_p0p5_shiftx_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xp_yn",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yn\\path_c_center_k1_p0p5_shifty_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xp_yn",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xp_yn\\path_c_center_k1_p0p5_shifty_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xp_yn/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xp_yn",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yp\\path_c_center_k1_p0p5_shift_zero",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xn_yp",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yp\\path_c_center_k1_p0p5_shiftx_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xn_yp",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yp\\path_c_center_k1_p0p5_shiftx_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xn_yp",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yp\\path_c_center_k1_p0p5_shifty_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xn_yp",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yp\\path_c_center_k1_p0p5_shifty_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yp/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xn_yp",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shift_zero",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yn\\path_c_center_k1_p0p5_shift_zero",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shift_zero/LS_path_c_center_k1_p0p5_shift_zero",
+      "sign_id": "xn_yn",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yn\\path_c_center_k1_p0p5_shiftx_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shiftx_n0p5/LS_path_c_center_k1_p0p5_shiftx_n0p5",
+      "sign_id": "xn_yn",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shiftx_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yn\\path_c_center_k1_p0p5_shiftx_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shiftx_p0p5/LS_path_c_center_k1_p0p5_shiftx_p0p5",
+      "sign_id": "xn_yn",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_n0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yn\\path_c_center_k1_p0p5_shifty_n0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shifty_n0p5/LS_path_c_center_k1_p0p5_shifty_n0p5",
+      "sign_id": "xn_yn",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    },
+    {
+      "case": "path_c_center_k1_p0p5_shifty_p0p5",
+      "map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+      "output_dir": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep\\xn_yn\\path_c_center_k1_p0p5_shifty_p0p5",
+      "sequence": "/Game/PathCD3CenterShiftProjectionSweep/Imports/xn_yn/path_c_center_k1_p0p5_shifty_p0p5/LS_path_c_center_k1_p0p5_shifty_p0p5",
+      "sign_id": "xn_yn",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    }
+  ],
+  "output_root": "C:\\temp\\ue-remote\\path_c_center_shift_projection_sweep",
+  "render_map": "/Game/PathCD3CenterShiftProjectionSweep/PathCD3CenterShiftProjectionSweep_Main",
+  "resolution": {
+    "x": 1920,
+    "y": 1080
+  },
+  "selection_status": "PENDING_RENDER_COMPARE",
+  "sign_sweeps": [
+    {
+      "id": "xp_yp",
+      "x_sign": 1.0,
+      "y_sign": 1.0
+    },
+    {
+      "id": "xp_yn",
+      "x_sign": 1.0,
+      "y_sign": -1.0
+    },
+    {
+      "id": "xn_yp",
+      "x_sign": -1.0,
+      "y_sign": 1.0
+    },
+    {
+      "id": "xn_yn",
+      "x_sign": -1.0,
+      "y_sign": -1.0
+    }
+  ],
+  "source_map": "/Game/Main",
+  "status": "DISPATCHED"
+}

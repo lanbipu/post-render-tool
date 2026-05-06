@@ -1,0 +1,77 @@
+{
+  "cases": [
+    {
+      "case_id": "k_zero_shiftx_n0p5",
+      "k1": 0.0,
+      "phase_response": 0.9751856301448963,
+      "predicted_shift_x_px": -15.831741636337597,
+      "predicted_shift_y_px": -0.0010846882867099339,
+      "shift_x_mm": -0.5,
+      "shift_y_mm": 0.0
+    },
+    {
+      "case_id": "k_zero_shiftx_p0p5",
+      "k1": 0.0,
+      "phase_response": 0.9695951090109202,
+      "predicted_shift_x_px": 15.83124616946941,
+      "predicted_shift_y_px": -0.002184030970738604,
+      "shift_x_mm": 0.5,
+      "shift_y_mm": 0.0
+    },
+    {
+      "case_id": "k_zero_shifty_n0p5",
+      "k1": 0.0,
+      "phase_response": 0.9102705644310256,
+      "predicted_shift_x_px": -0.006164769588963281,
+      "predicted_shift_y_px": 15.835223294117895,
+      "shift_x_mm": 0.0,
+      "shift_y_mm": -0.5
+    },
+    {
+      "case_id": "k_zero_shifty_p0p5",
+      "k1": 0.0,
+      "phase_response": 0.9580278739811462,
+      "predicted_shift_x_px": 0.002098825207099253,
+      "predicted_shift_y_px": -15.829920880142367,
+      "shift_x_mm": 0.0,
+      "shift_y_mm": 0.5
+    },
+    {
+      "case_id": "k1_p0p5_shiftx_n0p5",
+      "k1": 0.5,
+      "phase_response": 0.43538980001284755,
+      "predicted_shift_x_px": -16.09013388216215,
+      "predicted_shift_y_px": -0.048022299576814476,
+      "shift_x_mm": -0.5,
+      "shift_y_mm": 0.0
+    },
+    {
+      "case_id": "k1_p0p5_shiftx_p0p5",
+      "k1": 0.5,
+      "phase_response": 0.432787772755564,
+      "predicted_shift_x_px": 16.222585579962356,
+      "predicted_shift_y_px": -0.08245135109666535,
+      "shift_x_mm": 0.5,
+      "shift_y_mm": 0.0
+    },
+    {
+      "case_id": "k1_p0p5_shifty_n0p5",
+      "k1": 0.5,
+      "phase_response": 0.4086740114070751,
+      "predicted_shift_x_px": -0.02651276255483026,
+      "predicted_shift_y_px": 15.715016083965452,
+      "shift_x_mm": 0.0,
+      "shift_y_mm": -0.5
+    },
+    {
+      "case_id": "k1_p0p5_shifty_p0p5",
+      "k1": 0.5,
+      "phase_response": 0.45752934832631803,
+      "predicted_shift_x_px": 0.16245006821304742,
+      "predicted_shift_y_px": -15.930660304223238,
+      "shift_x_mm": 0.0,
+      "shift_y_mm": 0.5
+    }
+  ],
+  "y_normalizer": "sensor_width"
+}

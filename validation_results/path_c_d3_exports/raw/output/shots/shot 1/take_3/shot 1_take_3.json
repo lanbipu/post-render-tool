@@ -1,0 +1,332 @@
+{
+    "fps": 60.0,
+    "clockType": "30.0 FPS NDF",
+    "sources": [
+        {
+            "name": "camera:live_cam_2.offset.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.offset.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.offset.z",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.rotation.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.rotation.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.rotation.z",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.resolution.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.resolution.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.fieldOfViewV",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.fieldOfViewH",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.overscan.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.overscan.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.overscanResolution.x",
+            "type": "int",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.overscanResolution.y",
+            "type": "int",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.aspectRatio",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.focalLengthMM",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.paWidthMM",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.centerShiftMM.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.centerShiftMM.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.k1k2k3.x",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.k1k2k3.y",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.k1k2k3.z",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.aperture",
+            "type": "float",
+            "options": []
+        },
+        {
+            "name": "camera:live_cam_2.focusDistance",
+            "type": "float",
+            "options": []
+        }
+    ],
+    "changes": [
+        {
+            "timestamp": "00:00:30.00",
+            "frame": 32988,
+            "changedValues": [
+                {
+                    "key": 0,
+                    "value": 0.0
+                },
+                {
+                    "key": 1,
+                    "value": 2.25
+                },
+                {
+                    "key": 2,
+                    "value": -11.600000381469727
+                },
+                {
+                    "key": 3,
+                    "value": 0.0
+                },
+                {
+                    "key": 4,
+                    "value": 0.0
+                },
+                {
+                    "key": 5,
+                    "value": 0.0
+                },
+                {
+                    "key": 6,
+                    "value": 1920.0
+                },
+                {
+                    "key": 7,
+                    "value": 1080.0
+                },
+                {
+                    "key": 8,
+                    "value": 35.99300003051758
+                },
+                {
+                    "key": 9,
+                    "value": 60.01459884643555
+                },
+                {
+                    "key": 10,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 11,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 12,
+                    "value": 2496
+                },
+                {
+                    "key": 13,
+                    "value": 1404
+                },
+                {
+                    "key": 14,
+                    "value": 1.7777899503707886
+                },
+                {
+                    "key": 15,
+                    "value": 30.302000045776368
+                },
+                {
+                    "key": 16,
+                    "value": 35.0
+                },
+                {
+                    "key": 17,
+                    "value": 0.0
+                },
+                {
+                    "key": 18,
+                    "value": 0.0
+                },
+                {
+                    "key": 19,
+                    "value": 0.0
+                },
+                {
+                    "key": 20,
+                    "value": 0.0
+                },
+                {
+                    "key": 21,
+                    "value": 0.0
+                },
+                {
+                    "key": 22,
+                    "value": 18.0
+                },
+                {
+                    "key": 23,
+                    "value": 12.0
+                }
+            ]
+        },
+        {
+            "timestamp": "00:00:30.00",
+            "frame": 33019,
+            "changedValues": [
+                {
+                    "key": 0,
+                    "value": 0.0
+                },
+                {
+                    "key": 1,
+                    "value": 2.25
+                },
+                {
+                    "key": 2,
+                    "value": -11.600000381469727
+                },
+                {
+                    "key": 3,
+                    "value": 0.0
+                },
+                {
+                    "key": 4,
+                    "value": 0.0
+                },
+                {
+                    "key": 5,
+                    "value": 0.0
+                },
+                {
+                    "key": 6,
+                    "value": 1920.0
+                },
+                {
+                    "key": 7,
+                    "value": 1080.0
+                },
+                {
+                    "key": 8,
+                    "value": 35.99300003051758
+                },
+                {
+                    "key": 9,
+                    "value": 60.01459884643555
+                },
+                {
+                    "key": 10,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 11,
+                    "value": 1.2999999523162842
+                },
+                {
+                    "key": 12,
+                    "value": 2496
+                },
+                {
+                    "key": 13,
+                    "value": 1404
+                },
+                {
+                    "key": 14,
+                    "value": 1.7777899503707886
+                },
+                {
+                    "key": 15,
+                    "value": 30.302000045776368
+                },
+                {
+                    "key": 16,
+                    "value": 35.0
+                },
+                {
+                    "key": 17,
+                    "value": 0.0
+                },
+                {
+                    "key": 18,
+                    "value": 0.0
+                },
+                {
+                    "key": 19,
+                    "value": 0.0
+                },
+                {
+                    "key": 20,
+                    "value": 0.0
+                },
+                {
+                    "key": 21,
+                    "value": 0.0
+                },
+                {
+                    "key": 22,
+                    "value": 18.0
+                },
+                {
+                    "key": 23,
+                    "value": 12.0
+                }
+            ]
+        }
+    ]
+}
