@@ -1,0 +1,96 @@
+{
+  "bindings": [
+    {
+      "name": "PostRenderDistortionController",
+      "track_count": 7,
+      "tracks": [
+        {
+          "display_name": "K1",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "K2",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "K3",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "CenterU",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "CenterV",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "Aspect",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "DistortionWeight",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        }
+      ]
+    },
+    {
+      "name": "CameraComponent",
+      "track_count": 3,
+      "tracks": [
+        {
+          "display_name": "CurrentFocalLength",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "CurrentAperture",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        },
+        {
+          "display_name": "ManualFocusDistance",
+          "section_count": 1,
+          "track_class": "MovieSceneFloatTrack"
+        }
+      ]
+    },
+    {
+      "name": "CineCamera_shot_1_take_5_dense",
+      "track_count": 1,
+      "tracks": [
+        {
+          "display_name": "Transform",
+          "section_count": 1,
+          "track_class": "MovieScene3DTransformTrack"
+        }
+      ]
+    }
+  ],
+  "camera_in_current_level": true,
+  "camera_label": "CineCamera_shot_1_take_5_dense",
+  "controller_base_material": "/PostRenderTool/Materials/M_PRT_OfficialSensorInverse.M_PRT_OfficialSensorInverse",
+  "controller_count_on_camera": 1,
+  "controller_defaults": {
+    "aspect": 1.7777777910232544,
+    "center_u": 0.5,
+    "center_v": 0.5,
+    "distortion_weight": 1.0,
+    "k1": 0.0,
+    "k2": 0.0,
+    "k3": 0.0
+  },
+  "display_rate": "<Struct 'FrameRate' (0x00000208D7FA19D8) {numerator: 24, denominator: 1}>",
+  "playback_end": 1112,
+  "playback_start": 0,
+  "sequence_exists": true,
+  "sequence_path": "/Game/PostRender/shot_1_take_5_dense/LS_shot_1_take_5_dense",
+  "status": "PASS"
+}

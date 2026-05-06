@@ -1,0 +1,14 @@
+{
+  "camera_actor": "CineCamera_shot_1_take_5_dense",
+  "csv_path": "E:/RenderStream Projects/test_0311/Plugins/post-render-tool/reference/shot 1_take_5_dense.csv",
+  "error_message": "",
+  "fps": 24.0,
+  "lens_file": "/Game/PostRender/shot_1_take_5_dense/LF_shot_1_take_5_dense.LF_shot_1_take_5_dense",
+  "level": "/Game/Main",
+  "level_sequence": "/Game/PostRender/shot_1_take_5_dense/LS_shot_1_take_5_dense.LS_shot_1_take_5_dense",
+  "package_path": "/Game/PostRender/shot_1_take_5_dense",
+  "report": "==================================================\n\u3010VP Post-Render \u9a8c\u8bc1\u62a5\u544a\u3011\n==================================================\n  \u5e27\u6570        : 974\n  \u65f6\u95f4\u7801\u8303\u56f4  : 00:00:30.00 \u2192 00:00:30.00\n  \u7126\u8ddd        : 30.302 mm\n  \u4f20\u611f\u5668\u5bbd\u5ea6  : 35.000 mm\n  \u5e27\u7387        : 24.000 fps\n\n\u3010FOV \u4e00\u81f4\u6027\u68c0\u67e5\u3011\n  \u2713 \u6700\u5927 FOV \u8bef\u5dee: 0.0001\u00b0 (\u5e27\u7d22\u5f15 0)\n  \u9608\u503c        : 0.05\u00b0\n\n\u3010\u5f02\u5e38\u5e27\u68c0\u6d4b\u3011\n  \u2713 \u672a\u53d1\u73b0\u4f4d\u7f6e/\u65cb\u8f6c\u8df3\u53d8\n==================================================",
+  "status": "PASS",
+  "success": true,
+  "world_path": "/Game/Main.Main"
+}

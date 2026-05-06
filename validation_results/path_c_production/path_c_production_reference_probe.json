@@ -1,0 +1,66 @@
+{
+  "candidates": [
+    {
+      "exists": true,
+      "metrics": {
+        "max": 1.0,
+        "median": 0.5607843399047852,
+        "p95": 0.8588235378265381,
+        "ref_mean_rgb": [
+          0.1714925616979599,
+          0.1596815586090088,
+          0.16699817776679993
+        ],
+        "rms": 0.6235264539718628,
+        "ue_mean_rgb": [
+          0.801121711730957,
+          0.7501737475395203,
+          0.7285736203193665
+        ]
+      },
+      "path": "/Volumes/Docs/temp/screen_cam 1 transmission_00000.png",
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "ue_shape": [
+        1080,
+        1920,
+        3
+      ]
+    },
+    {
+      "exists": true,
+      "metrics": {
+        "max": 1.0,
+        "median": 0.5764706134796143,
+        "p95": 0.8588235378265381,
+        "ref_mean_rgb": [
+          0.1546136885881424,
+          0.1420968770980835,
+          0.1423766165971756
+        ],
+        "rms": 0.6399325132369995,
+        "ue_mean_rgb": [
+          0.801121711730957,
+          0.7501737475395203,
+          0.7285736203193665
+        ]
+      },
+      "path": "/Volumes/Docs/temp/screen_live cam 1 transmission_00000.png",
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "ue_shape": [
+        1080,
+        1920,
+        3
+      ]
+    }
+  ],
+  "status": "BLOCKED_REFERENCE_PAIRING",
+  "ue_render": "validation_results/path_c_production/path_c_production_shot_1_take_5_dense.0000.png"
+}
