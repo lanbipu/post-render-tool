@@ -239,6 +239,8 @@ ssh lanpc '"D:\Program Files\Epic Games\UE_5.7\Engine\Binaries\ThirdParty\Python
 
 ### Current Sources
 - `developer-disguise-one` (8 files) → `.claude/knowledge/developer-disguise-one/`
+- `disguise_api` (11 files) → `.claude/knowledge/disguise_api/`
+- `disguise_python_api` (11 files) → `.claude/knowledge/disguise_python_api/`
 - `help-disguise-one` (262 files) → `.claude/knowledge/help-disguise-one/`
 - `ue50-docs` (292 files) → `.claude/knowledge/ue50-docs/`
 - `ue51-docs` (284 files) → `.claude/knowledge/ue51-docs/`

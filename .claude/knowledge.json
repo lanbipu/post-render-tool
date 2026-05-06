@@ -10,6 +10,14 @@
       "alias": "help-disguise-one"
     },
     {
+      "source": "processed/code/_global/disguise_api",
+      "alias": "disguise_api"
+    },
+    {
+      "source": "processed/code/_global/disguise_python_api",
+      "alias": "disguise_python_api"
+    },
+    {
       "source": "processed/code/_global/ue50-docs",
       "alias": "ue50-docs"
     },

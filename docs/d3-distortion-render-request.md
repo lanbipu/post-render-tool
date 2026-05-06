@@ -1,118 +1,69 @@
-# Disguise Render Request - Custom PostProcess Gates
+# Disguise Render Request — CenterShift Sweep
 
-目标: 补齐 `Custom Post-Process Material` 公式冻结前必须的数据。当前 Gate 0 已证明简单
-`official_sensor_inverse` polynomial 不能直接冻结; 下面这些帧用于判断 K2/K3 公式形态、
-`centerShiftMM` 单位/符号、以及 identity baseline。
+CenterShift 的 sign convention 已确认（`X` 用 +公式，`Y` 取反），但量级因 16-bit half-float 量化阶（≈2.8 px @ 4K）压扁。需要把步长从 ±0.10 mm 加大到 ±0.30 / ±0.50 mm，让信号超出量化阶 5–10 倍，拿到精确 mm/px 转换系数。
 
 ## Global Settings
 
 - Plate: `scripts/distortion_calibration/uv_probe_3840x2160.exr`
-- Output: `transmission frame`
-- Format: `OpenEXR`, 32-bit float, RGB/RGBA accepted
-- Resolution: `3840 x 2160`
-- Lens over-scan: `1.5x`
-- Color: linear, no tone mapping, no LUT, no gamma transform, no color management
-- Scaling: 1:1 pixel mapping, no resize, no crop beyond the existing Round 2.1 camera setup
-- Camera: same camera, focal length, sensor size, aspect, and framing as Round 2.1 K1 sweep
-- Naming: use lowercase `.exr`; use `p` for positive and decimal point, `n` for negative
+- Output: `transmission frame`, OpenEXR (linear, no tone mapping / LUT / gamma / color management)
+- Resolution: 3840 × 2160
+- Lens over-scan: 1.5×
+- Camera: same camera, focal, sensor, aspect, framing as Round 2.x
+- Naming: lowercase, `p` = positive / decimal point, `n` = negative
 
-## Set A - K2/K3 Sweep (10 Frames)
+## Frames
 
-Purpose: check whether K2/K3 share the same simple radial polynomial semantics as K1.
+所有帧固定 `K1=+0.3, K2=0, K3=0`。X-sweep 帧固定 `centerShiftMM.y=0`；Y-sweep 帧固定 `centerShiftMM.x=0`。
 
-For all K2 frames: `K1=0`, `K3=0`, `centerShiftMM=(0,0)`.
-
-| K2 | filename |
-|---:|---|
-| -0.5 | `disguise_K2_n0p5.exr` |
-| -0.3 | `disguise_K2_n0p3.exr` |
-| 0.0 | `disguise_K2_zero.exr` |
-| +0.3 | `disguise_K2_p0p3.exr` |
-| +0.5 | `disguise_K2_p0p5.exr` |
-
-For all K3 frames: `K1=0`, `K2=0`, `centerShiftMM=(0,0)`.
-
-| K3 | filename |
-|---:|---|
-| -0.5 | `disguise_K3_n0p5.exr` |
-| -0.3 | `disguise_K3_n0p3.exr` |
-| 0.0 | `disguise_K3_zero.exr` |
-| +0.3 | `disguise_K3_p0p3.exr` |
-| +0.5 | `disguise_K3_p0p5.exr` |
-
-## Set B - CenterShift Sweep (5 Frames)
-
-Purpose: validate `centerShiftMM.x` sign and unit before wiring `CenterUV`.
-
-For all frames: `K1=0`, `K2=0`, `K3=0`, `centerShiftMM.y=0`.
+### X axis (5 frames, blocker)
 
 | centerShiftMM.x | filename |
 |---:|---|
-| -0.10 | `disguise_centerShiftX_n0p10.exr` |
-| -0.05 | `disguise_centerShiftX_n0p05.exr` |
-| 0.00 | `disguise_centerShift_zero.exr` |
-| +0.05 | `disguise_centerShiftX_p0p05.exr` |
-| +0.10 | `disguise_centerShiftX_p0p10.exr` |
+| 0.00 | `disguise_K1p3_centerShift_zero.exr` |
+| -0.30 | `disguise_K1p3_centerShiftX_n0p30.exr` |
+| -0.50 | `disguise_K1p3_centerShiftX_n0p50.exr` |
+| +0.30 | `disguise_K1p3_centerShiftX_p0p30.exr` |
+| +0.50 | `disguise_K1p3_centerShiftX_p0p50.exr` |
 
-Optional if time allows: repeat the same 5 values for `centerShiftMM.y` with filenames
-`disguise_centerShiftY_*.exr`. The 5 X-axis frames above are the minimum blocker.
+`disguise_K1p3_centerShift_zero.exr` 同时是 X 和 Y sweep 的内部 anchor。
 
-## Set C - Identity Round-Trip (1 Frame)
+### Y axis (4 frames, optional)
 
-Purpose: clean no-distortion baseline for Gate 1.5 and future image diff.
-
-| K1 | K2 | K3 | centerShiftMM | filename |
-|---:|---:|---:|---|---|
-| 0 | 0 | 0 | `(0,0)` | `disguise_identity_K0_center0.exr` |
-
-This may match the K2/K3 zero frame visually, but keep the separate filename so reports can
-reference it without ambiguity.
-
-## Return Layout
-
-```text
-validation_results/custom_pp_gate_inputs/
-├── k2_k3_sweep/
-│   ├── disguise_K2_n0p5.exr
-│   ├── disguise_K2_n0p3.exr
-│   ├── disguise_K2_zero.exr
-│   ├── disguise_K2_p0p3.exr
-│   ├── disguise_K2_p0p5.exr
-│   ├── disguise_K3_n0p5.exr
-│   ├── disguise_K3_n0p3.exr
-│   ├── disguise_K3_zero.exr
-│   ├── disguise_K3_p0p3.exr
-│   └── disguise_K3_p0p5.exr
-├── center_shift_sweep/
-│   ├── disguise_centerShiftX_n0p10.exr
-│   ├── disguise_centerShiftX_n0p05.exr
-│   ├── disguise_centerShift_zero.exr
-│   ├── disguise_centerShiftX_p0p05.exr
-│   └── disguise_centerShiftX_p0p10.exr
-└── identity/
-    └── disguise_identity_K0_center0.exr
-```
+| centerShiftMM.y | filename |
+|---:|---|
+| -0.30 | `disguise_K1p3_centerShiftY_n0p30.exr` |
+| -0.50 | `disguise_K1p3_centerShiftY_n0p50.exr` |
+| +0.30 | `disguise_K1p3_centerShiftY_p0p30.exr` |
+| +0.50 | `disguise_K1p3_centerShiftY_p0p50.exr` |
 
 ## Quick Sanity Check
 
-Run this after exporting any 1-2 frames:
+渲完 1–2 帧先跑这个，确认 d3 真的把 centerShiftMM 写进去了：
 
 ```python
 import os
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
-
 import cv2
 
-img = cv2.imread("disguise_identity_K0_center0.exr", cv2.IMREAD_UNCHANGED)
-print(img.shape, img.dtype)
-print("R", float(img[..., 2].min()), float(img[..., 2].max()))
-print("G", float(img[..., 1].min()), float(img[..., 1].max()))
+img = cv2.imread("disguise_K1p3_centerShift_zero.exr", cv2.IMREAD_UNCHANGED)
+print(img.shape, img.dtype)                                          # (2160, 3840, 3+), float32
+print("R", float(img[..., 2].min()), float(img[..., 2].max()))       # 比 [0.1667, 0.8333] 略宽
+print("center", float(img[1080, 1920, 2]), float(img[1080, 1920, 1]))  # 接近 0.5
 ```
 
-Expected:
+Anchor 帧 (`centerShift_zero`) 中心像素 R/G 必须接近 0.5；任何 sweep 帧的 R 通道 md5 hash 跟 anchor 完全一样 → centerShift 没生效，排查再继续。
 
-```text
-shape: (2160, 3840, 3+) or (2160, 3840, 4)
-dtype: float32
-R/G range near [0.1667, 0.8333] for the identity frame with 1.5x lens over-scan
+## Return Layout
+
 ```
+validation_results/custom_pp_gate_inputs/center_shift_sweep/
+├── disguise_K1p3_centerShift_zero.exr
+├── disguise_K1p3_centerShiftX_{n0p30,n0p50,p0p30,p0p50}.exr
+└── disguise_K1p3_centerShiftY_{n0p30,n0p50,p0p30,p0p50}.exr
+```
+
+## 备注
+
+- ±0.50 mm = 1.43% sensor 宽度偏移；K1=+0.3 anchor R 范围实测 [0.1338, 0.8657]，加 1.43% 应该不溢出 [0,1]。
+- 渲完 ±0.50 没有大面积溢出（sanity check R/G 范围超出 [0,1] 的像素 < 1%），可补一组 ±1.0 mm 拿更干净的 mm/px 系数。
+- d3 EXR 实测量化阶 = 1/2048（half-float 16-bit），KB 没看到 32-bit float 输出选项；如果 d3 端真有，渲 32-bit 比加大步长更优。
