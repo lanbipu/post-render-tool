@@ -74,8 +74,12 @@ void FPostRenderToolModule::RegisterMenus()
     // The command-based InitToolBarButton overload doesn't take an icon arg
     // (UI_COMMAND has no icon slot); set it explicitly on the entry so Slate
     // renders something instead of a bare text label.
+    // Avoid LevelEditor.OpenCinematic — it's the same clapperboard the built-in
+    // Sequencer toolbar button uses; visual collision is confusing.
+    // ClassIcon.CineCameraActor is the camera-with-gears glyph, semantically
+    // aligned with this plugin's domain (cine camera + distortion post-render).
     Entry.Icon = TAttribute<FSlateIcon>(
-        FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("LevelEditor.OpenCinematic")));
+        FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("ClassIcon.CineCameraActor")));
 
     // LoadingPhase=Default puts this plugin's StartupModule after the Level
     // Editor has already built its toolbar widget. Without an explicit
