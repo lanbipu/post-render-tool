@@ -362,10 +362,22 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
         "center_shift_x_mm", "center_shift_y_mm",
         "fov_h",
     )
-    CARRY_SOFT = (    # optional: missing column or all-blank → silent 0.0
+    CARRY_SOFT = (    # optional: missing column or all-blank → safe default
         "aperture", "focus_distance",
     )
     CARRY_LOGICAL = CARRY_HARD + CARRY_SOFT
+
+    # Default values for SOFT fields when the column is absent OR blank in
+    # every row. 0.0 is wrong for these fields:
+    #   aperture = 0 → f/0 → infinitely shallow depth of field, full blur
+    #   focus_distance = 0 → focus locked at lens, no in-focus pixels
+    # spatialmap-style CSVs from Disguise omit these columns entirely; in that
+    # case we fall back to a deep-DOF cinema preset so the picture is sharp
+    # rather than artificially blurred.
+    SOFT_DEFAULTS = {
+        "aperture":       8.0,     # f/8 — large depth of field
+        "focus_distance": 100.0,   # 100 m → 10000 cm, effectively infinity in cm
+    }
 
     headers_set = set(headers)
 
@@ -421,11 +433,15 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
             elif c and c in last:
                 optics[logical] = last[c]
             else:
-                # Column missing entirely (soft) or blank in every row → 0.0.
-                # Only warn for hard logical fields; soft fields default silently.
-                optics[logical] = 0.0
-                if c and logical in CARRY_HARD:
-                    never_seen[c] += 1
+                # Column missing entirely or blank in every row.
+                # Soft fields use a cinema-safe default (see SOFT_DEFAULTS);
+                # hard fields warn loudly and fall back to 0.0.
+                if logical in CARRY_SOFT:
+                    optics[logical] = SOFT_DEFAULTS.get(logical, 0.0)
+                else:
+                    optics[logical] = 0.0
+                    if c:
+                        never_seen[c] += 1
 
         frames.append(FrameData(
             timestamp=ts,

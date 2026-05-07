@@ -252,8 +252,13 @@ class TestCsvDenseParser(unittest.TestCase):
         self.assertAlmostEqual(result.frames[0].focal_length_mm, 50.0, places=3)
         self.assertAlmostEqual(result.frames[1].focal_length_mm, 50.0, places=3)
 
-    def test_carry_forward_missing_everywhere_defaults_zero(self):
-        """If a lens field is blank in every row, default to 0.0 (no seed)."""
+    def test_carry_forward_missing_everywhere_defaults(self):
+        """Blank-in-every-row fallback: hard fields → 0.0, soft fields → cinema-safe.
+
+        Hard fields (k1/k2/k3, fov_h) get 0.0 with a "blank in ALL rows" warning.
+        Soft fields (aperture, focusDistance) get SOFT_DEFAULTS (8.0 / 100.0)
+        because 0 would mean f/0 + focus-at-lens, blurring the entire frame.
+        """
         from post_render_tool.csv_parser import parse_csv_dense
 
         prefix = "camera:cam_1"
@@ -269,9 +274,10 @@ class TestCsvDenseParser(unittest.TestCase):
         self.assertEqual(result.frame_count, 1)
         f = result.frames[0]
         self.assertEqual(f.k1, 0.0)
-        self.assertEqual(f.aperture, 0.0)
-        self.assertEqual(f.focus_distance, 0.0)
         self.assertEqual(f.fov_h, 0.0)
+        # SOFT defaults — must NOT be 0
+        self.assertEqual(f.aperture, 8.0)
+        self.assertEqual(f.focus_distance, 100.0)
 
     def test_all_rows_empty_raises(self):
         """If every row has empty required fields, raise CsvParseError
@@ -381,9 +387,32 @@ class TestSpatialmapDialect(unittest.TestCase):
         self.assertAlmostEqual(f.k1, 0.000286122, places=8)
         self.assertAlmostEqual(f.k3, 0.011302, places=6)
         self.assertAlmostEqual(f.center_shift_x_mm, 0.0048995, places=6)
-        # aperture / focus_distance columns absent entirely → soft fall back to 0.0
-        self.assertEqual(f.aperture, 0.0)
-        self.assertEqual(f.focus_distance, 0.0)
+        # aperture / focusDistance columns absent entirely from spatialmap export.
+        # MUST fall back to cinema-safe defaults, not 0 (would cause full blur).
+        self.assertEqual(f.aperture, 8.0)
+        self.assertEqual(f.focus_distance, 100.0)
+
+    def test_take_4_aperture_focus_safe_defaults(self):
+        """Regression: take_4 spatialmap CSV omits aperture/focusDistance.
+
+        Before fix, parser fell back to 0 for both, which made
+        CineCameraComponent render f/0 with focus locked at the lens — every
+        Sequencer frame came out blurred. Verify SOFT_DEFAULTS now apply.
+        """
+        from post_render_tool.csv_parser import parse_csv_dense, trim_static_padding
+        import os
+        real_csv = "/tmp/test_take_4_dense.csv"
+        if not os.path.exists(real_csv):
+            self.skipTest(f"sample CSV not present: {real_csv}")
+        result = trim_static_padding(parse_csv_dense(real_csv))
+        for fr in result.frames[:5]:
+            self.assertGreater(fr.aperture, 0,
+                               "aperture must be > 0 to avoid full-frame blur")
+            self.assertGreater(fr.focus_distance, 0,
+                               "focus_distance must be > 0 to avoid focus-at-lens")
+        # Specifically the cinema-safe defaults
+        self.assertEqual(result.frames[0].aperture, 8.0)
+        self.assertEqual(result.frames[0].focus_distance, 100.0)
 
     def test_parse_real_take_4_csv(self):
         """End-to-end: real Disguise take_4 dense CSV (756 rows)."""
