@@ -106,6 +106,19 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
                 package_path=package_path,
             )
 
+        # ── 检查 deployed Material asset 是否跟 Python HLSL 源码一致 ──
+        # Codex adversarial review (2026-05-07): 仅改 Python 源码不能保证 runtime
+        # shader 跟着更新, MRQ 仍然 hit 旧 .uasset. 启动前主动校验.
+        from . import build_distortion_material as bdm
+        is_fresh, msg = bdm.verify_material_freshness()
+        if not is_fresh:
+            return PipelineResult(
+                success=False,
+                error_message=f"Material 资产校验失败: {msg}",
+                package_path=package_path,
+            )
+        unreal.log(f"[pipeline] Material 资产校验通过: {msg}")
+
         unreal.log(f"[pipeline] 开始导入: {csv_path}")
         unreal.log(f"[pipeline] 资产目标路径: {package_path}")
         unreal.log(f"[pipeline] 使用帧率: {fps} fps")

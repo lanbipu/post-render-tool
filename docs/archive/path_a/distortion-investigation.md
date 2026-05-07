@@ -522,3 +522,70 @@ sub-pixel production-frame calibration claim.
 - Next d3 data request is no longer the old centerShift blocker set. Use
   `docs/d3-distortion-render-request.md` for focal-length sweep data to resolve
   the remaining sensor-full-width vs focal-length normalization confound.
+
+## 2026-05-07 — 12-frame Normalization Fit (focal sweep + K2/K3 + centerShift)
+
+12 帧 EXR(`validation_results/disguise_next_data/`)反推 d3 内部 distortion
+公式真身。Set A: 6 帧 focal × K1 sweep(focal ∈ {24, 30.302, 50})。Set B: 2
+帧 K2/K3 单变量(focal=30.302)。Set C: 4 帧 centerShift sweep(focal=30.302,
+csx ∈ {±0.05, ±0.10})。
+
+**Fit harness**: `scripts/distortion_calibration/fit_normalization_candidates.py`
+跨 5 候选 normalization(`full-width`, `focal-length`, `diagonal`, `height`,
+`half-width`)做 delta-residual + cross-focal k1_eff consistency 比较。
+
+**Reports**: `validation_results/normalization_gate/20260507_150346_*.{json,md}`
+(7 文件,含 hand-curated `_summary.md`)。
+
+**核心发现**:
+
+1. **K1/K2/K3 normalization = `full-width`(确认,跟之前 2026-05-06 gate 结论一致)。**
+   focal=30.302:full-width k1_eff = +0.5015(target +0.5,p95 = 2.1 px);
+   focal=50.0:full-width k1_eff = +0.5009(p95 = 3.3 px)。两 focal spread = 0.0003,
+   远低于 K1_TOL=5e-3。focal=24 over-scan margin ≈ 0(plate 边缘已被 lens FOV
+   压满),仿射恢复无效,该帧从 cross-focal 一致性中剔除。K2/K3(focal=30.302):
+   inferred 在 diagonal cand 下 = +0.8691 / +1.1439,精确等于 `0.5 × (diag/W)^4`
+   和 `0.5 × (diag/W)^6`(差 0.3%),即在 full-width 真值下 = +0.5。
+2. **centerShift 公式结构错(shader 缺源 UV 平移项)。** 4 帧 K=0+csx≠0 实测
+   median_dx_px 精确匹配 `−csx_mm/sensor_w × W`(残差 0.28–0.75 px);当前 Path
+   C shader 在 K=0 时 csx 通过 CenterUV 进入 d=UV−CenterUV → factor×d=0 →
+   source=UV,完全不平移。修复方案:`source = UV + (factor*d − csx_uv) ×
+   distortion_weight`,其中 `csx_uv = CenterUV − 0.5`。
+
+**Shader change**: `Content/Python/post_render_tool/distortion_math.py` /
+`Content/Python/post_render_tool/build_distortion_material.py` 加 `- csx_uv`
+源 UV 平移项;K1/K2/K3 公式(已是 full-width forward Brown-Conrady)不动;
+单元测试更新 + 3 个新 case(K=0 平移、weight=0 双零、d3 csx=−0.05 fit verification)。
+71 unit tests 全 pass。
+
+**lanPC remote material rebuild**: 改后的 .py 已 SCP 到
+`E:\RenderStream Projects\test_0311\Plugins\post-render-tool\Content\Python\
+post_render_tool\`,driver 脚本 `C:/temp/ue-remote/rebuild_material.py` ready,
+等用户开 UE Editor 后跑下面命令完成 .uasset 重 build:
+
+```bash
+ssh lanpc '"D:\Program Files\Epic Games\UE_5.7\Engine\Binaries\ThirdParty\Python3\Win64\python.exe" C:/temp/ue-remote/run_ue.py C:/temp/ue-remote/rebuild_material.py'
+```
+
+**Production regression(待跑)**: take_4 production CSV 是 spatialmap schema,
+csx 几乎全 0(commit `5f2fa2b`),新加的 `- csx_uv` 项贡献 = 0,baseline
+`valid_p95 = 0.1255` 不应受影响。Task 9 在 8b 完成后跑 verify。
+
+**Codex adversarial review 加固(同日补)**:
+
+1. **SHADER_VERSION 防止 .uasset 与 .py 漂移**:`build_distortion_material.py`
+   增加 `SHADER_VERSION = "2026-05-07-centershift-source-translation"` 常量,
+   `run_build()` 把它写进 deployed material asset 的 metadata tag (`PRT.ShaderVersion`),
+   `pipeline.run_import()` 启动前用 `verify_material_freshness()` 比对。不一致就拒绝跑
+   import,提示"请重跑 `build_distortion_material.run_build()`"。HLSL_CODE 顶部
+   也 bake 了 `// VERSION: <SHADER_VERSION>` 注释,让 saved asset 里 Custom node
+   code 跟 source 一字一致。**任何形态变化都 bump SHADER_VERSION**,deployment
+   不重 build → runtime 主动 fail-loud。
+2. **fit harness REVIEW 时不再产 phantom winner**:
+   `fit_normalization_candidates.evaluate_focal_sweep` 没有 qualifying candidate
+   时 `winner = None`(不再 fallback 到 `ranked[0][0]`);`main()` 加
+   `--assume-winner CANDIDATE` operator override,没 override 就 skip K2/K3 +
+   centerShift,`render_summary_md` 拒绝下结论性的 "d3 normalization is X"
+   断言。这次 12 帧 fit 跑出来其实是 verdict=REVIEW(focal=24 数据被 over-scan
+   margin≈0 污染),靠 hand-curated summary + per-focal 拆分才确认 full-width
+   是真值。新行为下 unattended re-run 不会把 phantom winner 推到 shader 决策。

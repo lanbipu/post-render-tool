@@ -158,7 +158,8 @@ def compute_normalized_distortion(frame_data: FrameData) -> dict:
 #     r = (d.x, d.y / aspect)                  # sensor full-width 归一化 (2026-05-06 Gate 结论)
 #     r² = r·r
 #     factor = K1·r² + K2·r⁴ + K3·r⁶          # OpenCV 标准形态打底, Gate 6 后可能改
-#     sourceUV = UV + factor · d · DistortionWeight
+#     csxUV = CenterUV - (0.5, 0.5)            # principal-point 平移项 (2026-05-07 12 帧 fit 结论)
+#     sourceUV = UV + (factor · d - csxUV) · DistortionWeight
 #
 # 越界 (sourceUV ∉ [0,1]²) 时 shader 输出 black, 这里返回原始坐标即可,
 # 黑边判断由调用者负责.
@@ -188,11 +189,17 @@ def official_sensor_inverse_uv(
     center_uv
         畸变中心 UV (光学中心), Path C pipeline 通过
         ``CenterU = 0.5 + centerShiftMM.x / sensorWidthMM`` 计算 (plan §2.5).
+        本参数在公式里有两个作用:
+        1. 作为径向项的零点 (``d = UV - center_uv``);
+        2. 推出 ``csx_uv = center_uv - 0.5``, 在 source UV 上额外减去
+           principal-point 平移. K=0 时 d3 仍然平移 source, 跟早期假设相反,
+           参见 validation_results/normalization_gate/20260507_150346_center_shift_report.md.
     aspect
         画面长宽比 W/H. r.y 用 ``d.y/aspect`` 把 y 归一化到 sensor full-width
         空间, 跟 r.x 同尺度.
     distortion_weight
         位移幅度乘子. 1.0 = 完整 distortion, 0.0 = identity, 中间值用于淡入.
+        注意 weight 同时作用在径向项 *和* 平移项上 (weight=0 → 完全 identity).
 
     Returns
     -------
@@ -204,6 +211,10 @@ def official_sensor_inverse_uv(
     本函数是 scalar-only 实现. Gate 2 (offline shader-equivalent CPU reference)
     需要 numpy 向量化版本时, 在调用方写 vectorized wrapper 即可, 公式形态
     在这里钉死.
+
+    centerShift 平移项 (2026-05-07 加): 12-frame fit at K=0 with varying csx_mm
+    显示 d3 在 source UV 上额外减去 ``csx_uv = center_uv - 0.5``, 跟 radial
+    解耦. 详见 validation_results/normalization_gate/20260507_150346_summary.md.
     """
     cu, cv = center_uv
     dx = u - cu
@@ -215,6 +226,12 @@ def official_sensor_inverse_uv(
 
     factor = k1 * r2 + k2 * r2 * r2 + k3 * r2 * r2 * r2
 
-    source_u = u + factor * dx * distortion_weight
-    source_v = v + factor * dy * distortion_weight
+    # centerShift = (CenterU - 0.5, CenterV - 0.5) — d3 translates source UV by -csx_uv
+    # in addition to the radial term, even when K=0. Verified by
+    # validation_results/normalization_gate/20260507_150346_center_shift_report.md.
+    csx_u = cu - 0.5
+    csx_v = cv - 0.5
+
+    source_u = u + (factor * dx - csx_u) * distortion_weight
+    source_v = v + (factor * dy - csx_v) * distortion_weight
     return source_u, source_v

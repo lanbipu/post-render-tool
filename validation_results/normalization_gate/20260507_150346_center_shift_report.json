@@ -1,0 +1,46 @@
+{
+  "gate": "center_shift",
+  "frames": [
+    {
+      "file": "disguise_focal30p302_csx_n0p05.exr",
+      "csx_mm": -0.05,
+      "median_dx_px": 4.7378161628626,
+      "median_dy_px": 0.0,
+      "expected_plus_dx_px": -5.485714285714286,
+      "plus_formula_err_px": 10.223530448576886,
+      "minus_formula_err_px": 0.7478981228516854,
+      "best_sign": "-formula"
+    },
+    {
+      "file": "disguise_focal30p302_csx_n0p10.exr",
+      "csx_mm": -0.1,
+      "median_dx_px": 11.252313386798278,
+      "median_dy_px": 0.0,
+      "expected_plus_dx_px": -10.971428571428572,
+      "plus_formula_err_px": 22.22374195822685,
+      "minus_formula_err_px": 0.28088481536970633,
+      "best_sign": "-formula"
+    },
+    {
+      "file": "disguise_focal30p302_csx_p0p05.exr",
+      "csx_mm": 0.05,
+      "median_dx_px": -5.033929673041314,
+      "median_dy_px": 0.0,
+      "expected_plus_dx_px": 5.485714285714286,
+      "plus_formula_err_px": 10.5196439587556,
+      "minus_formula_err_px": 0.4517846126729719,
+      "best_sign": "-formula"
+    },
+    {
+      "file": "disguise_focal30p302_csx_p0p10.exr",
+      "csx_mm": 0.1,
+      "median_dx_px": -11.252313386798278,
+      "median_dy_px": 0.0,
+      "expected_plus_dx_px": 10.971428571428572,
+      "plus_formula_err_px": 22.22374195822685,
+      "minus_formula_err_px": 0.28088481536970633,
+      "best_sign": "-formula"
+    }
+  ],
+  "verdict": "REVIEW"
+}

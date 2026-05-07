@@ -55,16 +55,28 @@ ASSET_NAME = "M_PRT_OfficialSensorInverse"
 FULL_ASSET_PATH = f"{PACKAGE_PATH}/{ASSET_NAME}"
 
 
+# ── Shader source version ───────────────────────────────────────────────
+# 必须在每次 HLSL_CODE / formula 形态变化时 bump. 通过 metadata tag
+# 写到 deployed Material asset 上, pipeline.run_import() 启动时校验,
+# 不一致 → 拒绝跑 import, 提示用户重跑 run_build().
+SHADER_VERSION = "2026-05-07-centershift-source-translation"
+SHADER_VERSION_TAG = "PRT.ShaderVersion"
+
+
 # ── 主公式 HLSL (跟 official_sensor_inverse_uv 一字一致; full-width 归一化) ───
 # Custom node 的 inputs 顺序: UV, CenterUV, K1, K2, K3, Aspect, DistortionWeight
-HLSL_CODE = """
+HLSL_CODE = f"""
+// VERSION: {SHADER_VERSION}
 // Mirrors distortion_math.official_sensor_inverse_uv (Python reference).
 // Output → source UV sampling map (cv2.remap forward).
+// Per validation_results/normalization_gate/20260507_150346_summary.md,
+// d3 translates source UV by -csx_uv on top of the radial term — even at K=0.
 float2 d = UV - CenterUV.rg;
 float2 r = float2(d.x, d.y / Aspect);
 float r2 = dot(r, r);
 float fac = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
-return UV + fac * d * DistortionWeight;
+float2 csxUV = CenterUV.rg - float2(0.5, 0.5);
+return UV + (fac * d - csxUV) * DistortionWeight;
 """.strip()
 
 
@@ -262,8 +274,53 @@ def run_build() -> "unreal.Material":
     saved = unreal.EditorAssetLibrary.save_loaded_asset(material)
     if not saved:
         logger.warning(f"save_loaded_asset 返回 False: {FULL_ASSET_PATH}")
-    logger.info(f"完成: {FULL_ASSET_PATH}")
+
+    # ── 写 SHADER_VERSION metadata tag + 验证 round-trip ──
+    unreal.EditorAssetLibrary.set_metadata_tag(material, SHADER_VERSION_TAG, SHADER_VERSION)
+    saved_tag = unreal.EditorAssetLibrary.get_metadata_tag(material, SHADER_VERSION_TAG)
+    if saved_tag != SHADER_VERSION:
+        raise RuntimeError(
+            f"metadata tag round-trip failed: wrote '{SHADER_VERSION}', "
+            f"read back '{saved_tag}'. UE 5.7 EditorAssetLibrary set/get may have changed."
+        )
+    # 再次 save_loaded_asset 把 tag 落盘 (set_metadata_tag 改的是 in-memory UMetaData,
+    # 必须再保存一次才会写入 .uasset).
+    saved2 = unreal.EditorAssetLibrary.save_loaded_asset(material)
+    if not saved2:
+        logger.warning(f"save_loaded_asset (post-tag) 返回 False: {FULL_ASSET_PATH}")
+    logger.info(f"完成: {FULL_ASSET_PATH} (SHADER_VERSION={SHADER_VERSION})")
     return material
+
+
+def verify_material_freshness() -> tuple[bool, str]:
+    """Compare deployed Material asset's SHADER_VERSION metadata tag against source.
+
+    Returns
+    -------
+    (is_fresh, message)
+        is_fresh = True iff asset exists AND its tag matches current source SHADER_VERSION.
+        Otherwise message has actionable text.
+
+    Caller (pipeline.run_import) decides how to react. We return tuple instead
+    of raising so the caller can format its own error / unreal.log path.
+    """
+    if not unreal.EditorAssetLibrary.does_asset_exist(FULL_ASSET_PATH):
+        return False, (
+            f"M_PRT_OfficialSensorInverse 资产不存在: {FULL_ASSET_PATH}. "
+            f"请在 UE Editor 里跑 build_distortion_material.run_build()."
+        )
+    asset = unreal.EditorAssetLibrary.load_asset(FULL_ASSET_PATH)
+    if asset is None:
+        return False, f"load_asset 失败: {FULL_ASSET_PATH}."
+    deployed = unreal.EditorAssetLibrary.get_metadata_tag(asset, SHADER_VERSION_TAG)
+    if deployed != SHADER_VERSION:
+        return False, (
+            f"M_PRT_OfficialSensorInverse 落后于 Python 源码. "
+            f"deployed SHADER_VERSION='{deployed or '<未写入>'}' vs "
+            f"source SHADER_VERSION='{SHADER_VERSION}'. "
+            f"请在 UE Editor 里跑 build_distortion_material.run_build() 重 build."
+        )
+    return True, f"M_PRT_OfficialSensorInverse 已最新 (SHADER_VERSION={SHADER_VERSION})."
 
 
 if __name__ == "__main__":

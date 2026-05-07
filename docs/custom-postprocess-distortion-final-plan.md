@@ -234,6 +234,14 @@ formula 默认值。
 > **2026-05-06 归一化 Gate 结论**：full-width（除以 W）比 half-width（除以 W/2）在
 > K1+K2+K3 联合 sweep 上低 466–567× 残差。下方公式已更新为 full-width。
 > 证据见 `docs/distortion-investigation.md` § "2026-05-06 — Normalization Gate"。
+>
+> **2026-05-07 12-frame normalization gate 复核**：跨 3 焦距 (24 / 30.302 / 50 mm)
+> + K2/K3 + centerShift 12 帧 EXR fit 重新确认 K1/K2/K3 用 `full-width`(除以 W)。
+> 焦距归一化 / 对角线归一化 / 半高归一化 / 半宽归一化候选全部排除。
+> focal=30.302 / 50 上 full-width k1_eff = +0.5015 / +0.5009(target +0.5,
+> spread 0.0003,well under K1_TOL=5e-3)。K2/K3 同 normalization 验证。
+> centerShift 公式形态错——见下方 § 2.5 更新。
+> 证据见 `validation_results/normalization_gate/20260507_150346_summary.md`。
 
 设：
 
@@ -262,6 +270,9 @@ source_y = y + factor * (y - cy)
 
 ### 2.4 UV-space shader 公式
 
+> **2026-05-07 update**: 增加源 UV 平移项 `- csxUV`,对应 d3 在 K=0 时仍平移
+> source UV 的实测行为(见 § 2.5)。
+
 在 UE material 里更自然的写法是 UV（UV 原点已是归一化空间，d.x ∈ [-0.5, 0.5]，即天然除以 W）：
 
 ```hlsl
@@ -271,21 +282,24 @@ float2 r = float2(d.x, d.y / Aspect);
 float r2 = dot(r, r);
 float factor = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
 
-float2 sourceUV = UV + factor * d;
+float2 csxUV = CenterUV - float2(0.5, 0.5);
+float2 sourceUV = UV + (factor * d - csxUV) * DistortionWeight;
 ```
 
 说明：
 
 - `r.x = d.x` 对应 `x / W` (sensor full-width)。
 - `r.y = d.y / Aspect` 对应 `y / W`，横竖同尺度归一化。
-- `sourceUV = UV + factor*d` 对应 `source_pixel = pixel + factor*(pixel-center)`。
+- `factor * d` 是 radial 项,centerShift 同时影响 radial 中心(d 的原点)和源 UV 平移。
+- `- csxUV` 是源 UV 平移项,实现 K=0+csx≠0 时源 UV 仍平移的 d3 行为(2026-05-07 12 帧 fit)。
+- DistortionWeight 同时缩放 radial 和 translation,weight=0 → identity。
 - 如果 `sourceUV` 超出 `[0,1]`，输出 black，匹配离线 `constant black border`。
 
 Material graph 可以用 `SceneTexture:PostProcessInput0` 节点采样，也可以在 `Custom` HLSL node 里调用 `SceneTextureLookup`。优先用 UE graph 原生节点，避免硬编码 scene texture index。
 
 ### 2.5 CenterShift 映射
 
-沿用当前 PostRenderTool 的中心点换算：
+CenterUV 用 mm-to-UV 换算：
 
 ```text
 CenterU = 0.5 + centerShiftMM.x / sensorWidthMM
@@ -293,10 +307,14 @@ sensorHeightMM = sensorWidthMM / aspect
 CenterV = 0.5 + centerShiftMM.y / sensorHeightMM
 ```
 
-这部分必须单独做 centerShift 验证，因为它和 K1/K2/K3 是不同问题：
+CenterUV 在 shader 里有**两个角色**(2026-05-07 12 帧 fit 验证):
 
-- K 验证证明 radial distortion shape。
-- centerShift 验证证明 principal point offset 的单位和符号。
+1. **radial center**：`d = UV - CenterUV`,distortion 的径向原点。
+2. **源 UV 平移**：`csxUV = CenterUV - 0.5`,从 source UV 中减掉 → `source = UV + factor*d - csxUV`(全部乘 DistortionWeight)。
+
+K 验证证明 radial distortion shape。centerShift sweep(K=0+csx≠0)证明源 UV 平移项
+的存在 + 单位 + 符号(实测 source = output - csx_mm/sensor_w × W,残差 < 1 px,
+见 `validation_results/normalization_gate/20260507_150346_center_shift_report.md`)。
 
 ---
 

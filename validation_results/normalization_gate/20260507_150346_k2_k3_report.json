@@ -1,0 +1,33 @@
+{
+  "gate": "k2_k3",
+  "winner_normalization": "diagonal",
+  "frames": [
+    {
+      "file": "disguise_focal30p302_K2_p0p5.exr",
+      "axis": "K2",
+      "value_d3": 0.5,
+      "k_eff_inferred": 0.8691239219132879,
+      "delta_residual": {
+        "n": 200000,
+        "median_px": 2.3028692295424458,
+        "p95_px": 26.429431236800127,
+        "rms_px": 11.14877576867269,
+        "max_px": 52.178295290902184
+      }
+    },
+    {
+      "file": "disguise_focal30p302_K3_p0p5.exr",
+      "axis": "K3",
+      "value_d3": 0.5,
+      "k_eff_inferred": 1.143918132172481,
+      "delta_residual": {
+        "n": 200000,
+        "median_px": 0.2235258786986608,
+        "p95_px": 8.940113095695056,
+        "rms_px": 3.7178613740764193,
+        "max_px": 23.730990265303713
+      }
+    }
+  ],
+  "verdict": "REVIEW"
+}
