@@ -1,13 +1,24 @@
 # CLAUDE.md
 
-> **🚧 IN-PROGRESS 调试中**：Disguise CSV K → UE LensFile 的 distortion 映射
-> 还差最后 1-3 像素残差才 pixel-perfect。下次 session 接手前**先读
-> `docs/distortion-investigation.md`** —— 包含完整 context、两条解决路径、
-> 关键资产位置、不要重复踩的坑。
+> **Distortion 路线状态(2026-05-07)**:Path C(Custom Post-Process Material)
+> 已落地,take_4 production diff 通过(commit `5f2fa2b`)。Path A(LensFile +
+> M_RAT6/M_RAT8 公式拟合)dormant 归档(commit `ce3cbcc`)。
+>
+> - 主 plan: `docs/custom-postprocess-distortion-final-plan.md`
+> - Path C 验证: `validation_results/path_c_validation/path_c_validation_summary.md`
+> - Path A 史料(决策证据 + dataset): `docs/archive/path_a/` +
+>   `scripts/distortion_calibration/archive/` +
+>   `scripts/distortion_calibration/validation_results/archive/`
+>
+> Pipeline 仍调 `build_lens_file()` 写 LF_* 资产,LensComponent 仍挂 camera 上但
+> `apply_distortion=False` —— 留作 fallback baseline + 调试对比,不参与
+> Path C distortion(详见 `camera_builder.py:218-226`)。
 
 ## Project Overview
 
-VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor + LensFile + LevelSequence.
+VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor +
+Custom Post-Process Distortion(Path C)+ LevelSequence。LensFile 资产仍生成
+但仅作 dormant fallback,不参与 distortion。
 
 Packaged as a **self-contained UE 5.7 plugin** (`PostRenderTool.uplugin` at repo root). Drops into any `<UEProject>/Plugins/` directory. C++ module provides a `UEditorUtilityWidget` subclass with a `meta=(BindWidget)` UPROPERTY contract; child Blueprint authored in the UMG Designer satisfies the contract; Python binds callbacks and drives the CSV → UE import pipeline.
 
@@ -68,38 +79,55 @@ See `docs/plugin-setup.md` for first-time plugin installation, UBT build, and Bl
 VP Post-Render Tool is a self-contained UE 5.7 plugin. The repo root IS the plugin root:
 
 ```
-post_render_tool/                               ← plugin root
-├── PostRenderTool.uplugin                      ← plugin manifest
+post_render_tool/                                       ← plugin root
+├── PostRenderTool.uplugin                              ← plugin manifest
 ├── Source/
 │   └── PostRenderTool/
-│       ├── PostRenderTool.Build.cs             ← module descriptor (UMG, Blutility, UnrealEd, …)
+│       ├── PostRenderTool.Build.cs                     ← module descriptor (UMG, Blutility, UnrealEd, …)
 │       ├── Public/
-│       │   ├── PostRenderToolModule.h          ← empty module entry point
-│       │   └── PostRenderToolWidget.h          ← C++ BindWidget contract (33 UPROPERTYs)
+│       │   ├── PostRenderToolModule.h                  ← empty module entry point
+│       │   ├── PostRenderToolWidget.h                  ← C++ BindWidget contract (33 UPROPERTYs)
+│       │   ├── PostRenderToolBuildHelper.h             ← C++ bridge for WidgetTree mutation (3 UFUNCTIONs)
+│       │   ├── PostRenderToolCommands.h                ← FUICommandInfo for VPTool toolbar button
+│       │   └── PostRenderDistortionControllerComponent.h ← Path C: 7 Sequencer-facing UPROPERTYs (K1/K2/K3/CenterU/CenterV/Aspect/DistortionWeight) + MID 管理
 │       └── Private/
-│           ├── PostRenderToolModule.cpp
-│           └── PostRenderToolWidget.cpp        ← empty NativeConstruct stub
+│           ├── PostRenderToolModule.cpp                ← toolbar + command 注册
+│           ├── PostRenderToolWidget.cpp                ← empty NativeConstruct stub
+│           ├── PostRenderToolBuildHelper.cpp
+│           ├── PostRenderToolCommands.cpp
+│           └── PostRenderDistortionControllerComponent.cpp
 ├── Content/
 │   ├── Blueprints/
-│   │   └── BP_PostRenderToolWidget.uasset     ← not in upstream plugin source; first bootstrap authors once via deployment-guide.md §1.3 and commits to the project repo, later clones/deployments just sync
+│   │   └── BP_PostRenderToolWidget.uasset              ← not in upstream plugin source; first bootstrap authors once via deployment-guide.md §1.3 and commits to the project repo, later clones/deployments just sync
+│   ├── Materials/
+│   │   └── M_PRT_OfficialSensorInverse.uasset          ← Path C Post-Process Material(K1/K2/K3/CenterUV/Aspect/Weight 参数 + HLSL 公式)
 │   └── Python/
-│       ├── init_post_render_tool.py            ← entry point, calls widget_builder.open_widget()
+│       ├── init_post_render_tool.py                    ← entry point, calls widget_builder.open_widget()
 │       └── post_render_tool/
-│           ├── config.py                       # Configurable constants (axis mapping, thresholds)
-│           ├── csv_parser.py                   # CSV Dense parser (pure Python)
-│           ├── coordinate_transform.py         # Coord transform (pure Python, configurable)
-│           ├── validator.py                    # FOV check + anomaly detection (pure Python)
-│           ├── lens_file_builder.py            # .ulens generation (requires unreal)
-│           ├── camera_builder.py               # CineCameraActor (requires unreal)
-│           ├── sequence_builder.py             # LevelSequence + animation (requires unreal)
-│           ├── pipeline.py                     # Orchestrator (requires unreal)
-│           ├── ui_interface.py                 # File dialog, sequencer, MRQ (requires unreal)
-│           ├── widget.py                       # BindWidget binder + callbacks
-│           ├── widget_builder.py               # Asset loader + tab spawner
-│           └── widget_programmatic.py.bak      # archival (pre-plugin builder, unused)
+│           ├── config.py                               # Configurable constants (axis mapping, thresholds)
+│           ├── csv_parser.py                           # CSV Dense parser (pure Python; 支持 legacy + spatialmap schema)
+│           ├── coordinate_transform.py                 # Coord transform (pure Python, configurable)
+│           ├── validator.py                            # FOV check + anomaly detection (pure Python)
+│           ├── distortion_math.py                      # 双路线共用:Path A `compute_normalized_distortion` (M_RAT6) + Path C `official_sensor_inverse_uv` (HLSL 镜像)
+│           ├── distortion_packing.py                   # Path A: BrownConradyUD 8 槽 packing (pure Python)
+│           ├── lens_file_builder.py                    # Path A dormant fallback: 仍生成 LF_* 资产但不参与 distortion (requires unreal)
+│           ├── build_distortion_material.py            # Path C: 程序化生成 M_PRT_OfficialSensorInverse material asset (requires unreal)
+│           ├── camera_builder.py                       # CineCameraActor + LensComponent + Path C controller component (requires unreal)
+│           ├── sequence_builder.py                     # LevelSequence + 7 条 Path C distortion 关键帧轨 (requires unreal)
+│           ├── pipeline.py                             # Orchestrator (requires unreal)
+│           ├── ui_interface.py                         # File dialog, sequencer, MRQ (requires unreal)
+│           ├── widget.py                               # BindWidget binder + callbacks
+│           ├── widget_builder.py                       # Asset loader + tab spawner
+│           ├── spec_loader.py                          # Pure Python: 解析 widget-tree-spec.json
+│           ├── widget_properties.py                    # Pure Python: per-widget + slot-layout 反射写入器
+│           ├── widget_variants.py                      # Widget tree variant 处理(deprecated 入口的 stub)
+│           └── widget_programmatic.py.bak              # archival (pre-plugin builder, unused)
 └── docs/
-    ├── plugin-setup.md                         ← first-time install guide
-    └── bindwidget-contract.md                  ← 33 widget name/type reference
+    ├── plugin-setup.md                                 ← first-time install guide
+    ├── bindwidget-contract.md                          ← 33 widget name/type reference
+    ├── custom-postprocess-distortion-final-plan.md     ← Path C 主 plan (active)
+    ├── deployment-guide.md
+    └── archive/path_a/                                 ← Path A 史料 (distortion-investigation / K1-implementation / 5 个 plans)
 ```
 
 UE loads the plugin from `<UEProject>/Plugins/PostRenderTool/`, mounts `Content/` at the virtual path `/PostRenderTool/`, and adds `Content/Python/` to `sys.path`.
@@ -132,6 +160,21 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   `tests/test_coordinate_transform.py::TestKnownPoses` — rerun after any axis-mapping change.
 - **LensFile API varies across UE versions.** `lens_file_builder.py` has dual try/except paths.
   If both fail, it raises RuntimeError (not silent).
+- **Distortion 由 Path C 接管,LensFile dormant.** `pipeline.py:155` 仍调
+  `build_lens_file()` 写 LF_* 资产,`camera_builder.py` 仍挂 LensComponent,
+  但 `apply_distortion=False`(`camera_builder.py:218-226`)—— 不参与渲染,只
+  作 fallback baseline + 调试对比。Distortion 走 `M_PRT_OfficialSensorInverse`
+  material + `PostRenderDistortionControllerComponent`,7 条参数轨由
+  `sequence_builder.py` 写入 LevelSequence。**不要**为了"清理"删 LensFile
+  pipeline 调用 —— Path C plan §7 明说留作 fallback。Path A 公式拟合代码
+  (`distortion_math.compute_normalized_distortion` + `distortion_packing` +
+  `lens_file_builder`)是**双路线共用文件**或被它共用,删任何一个都会破坏
+  fallback 路径。
+- **Path A 史料归档位置.** 公式拟合脚本 / UV probe 资产 / k1_sweep dataset 在
+  `scripts/distortion_calibration/archive/` +
+  `scripts/distortion_calibration/validation_results/archive/`(commit `ce3cbcc`
+  归档)。要复盘 K1 公式或 reverse-engineer K2/K3 时去那找,active 目录
+  (`scripts/distortion_calibration/` 顶层)只放 Path C / 跨路线工具。
 - **Frame cadence preserved.** sequence_builder uses `frame_number - first_frame_number` as keyframe
   time, NOT consecutive indices. Gaps in CSV frame column create gaps in LevelSequence.
 - **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.
