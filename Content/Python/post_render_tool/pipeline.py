@@ -26,7 +26,7 @@ import unreal
 
 from . import config
 from .camera_builder import build_camera
-from .csv_parser import CsvDenseResult, CsvParseError, parse_csv_dense
+from .csv_parser import CsvDenseResult, CsvParseError, parse_csv_dense, trim_static_padding
 from .lens_file_builder import build_lens_file
 from .sequence_builder import build_sequence
 from .validator import ValidationReport, generate_report
@@ -112,6 +112,14 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
 
         unreal.log("[pipeline] 步骤 1/5 — 解析 CSV Dense 文件...")
         csv_result: CsvDenseResult = parse_csv_dense(csv_path)
+        original_count = csv_result.frame_count
+        csv_result = trim_static_padding(csv_result)
+        if csv_result.frame_count != original_count:
+            unreal.log(
+                f"[pipeline] 裁掉首尾静止帧: {original_count} → "
+                f"{csv_result.frame_count} 帧 (运动起点 d3 frame "
+                f"{csv_result.frames[0].frame_number})"
+            )
         unreal.log(
             f"[pipeline] CSV 解析完成: {csv_result.frame_count} 帧, "
             f"传感器宽度 {csv_result.sensor_width_mm:.3f} mm, "

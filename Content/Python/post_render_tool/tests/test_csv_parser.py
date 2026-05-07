@@ -293,5 +293,203 @@ class TestCsvDenseParser(unittest.TestCase):
         self.assertIn("skipped 2", str(ctx.exception))
 
 
+class TestSpatialmapDialect(unittest.TestCase):
+    """Spatialmap-style export (Disguise mr_set_target__backplate_) parsing.
+
+    Schema split across two prefixes:
+      - transform: ``<base>.engineCameraPos.x`` / ``.engineCameraRotation.x``
+      - intrinsic: ``<base>.activeCamera.<field>``
+    aperture / focusDistance columns are absent entirely; parser must default 0.0.
+    """
+
+    def _make_headers(self, base: str):
+        cam = f"{base}.activeCamera"
+        return [
+            "timestamp", "frame",
+            f"{base}.activeCamera",                                   # decorative col seen in real CSV
+            f"{base}.engineCameraPos.x", f"{base}.engineCameraPos.y", f"{base}.engineCameraPos.z",
+            f"{base}.engineCameraRotation.x", f"{base}.engineCameraRotation.y", f"{base}.engineCameraRotation.z",
+            f"{cam}.resolution.x", f"{cam}.resolution.y",
+            f"{cam}.fieldOfViewV", f"{cam}.fieldOfViewH",
+            f"{cam}.overscan.x", f"{cam}.overscan.y",
+            f"{cam}.overscanResolution.x", f"{cam}.overscanResolution.y",
+            f"{cam}.aspectRatio",
+            f"{cam}.focalLengthMM",
+            f"{cam}.paWidthMM",
+            f"{cam}.centerShiftMM.x", f"{cam}.centerShiftMM.y",
+            f"{cam}.k1k2k3.x", f"{cam}.k1k2k3.y", f"{cam}.k1k2k3.z",
+            # NOTE: spatialmap export omits aperture + focusDistance columns
+        ]
+
+    def _make_row(self, ts: str, frame: int, focal: float = 43.2886):
+        return [
+            ts, str(frame),
+            "objects/camera/cam 1.apx",                # activeCamera col (string, ignored by parser)
+            "5.00252", "1.99925", "-12.0007",          # pos x/y/z
+            "0.001", "0.002", "0.003",                  # rot x/y/z
+            "1920", "1080",
+            "23.45", "40.55",
+            "1.0", "1.0",
+            "1920", "1080",
+            "1.77778",
+            str(focal),
+            "50",
+            "0.0048995", "0.00467297",
+            "0.000286122", "-0.00395342", "0.011302",
+        ]
+
+    def _write_csv(self, headers, rows):
+        f = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        )
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+        f.close()
+        return f.name
+
+    def tearDown(self):
+        for p in getattr(self, "_tmp", []):
+            try: os.unlink(p)
+            except OSError: pass
+
+    def _track(self, p):
+        if not hasattr(self, "_tmp"): self._tmp = []
+        self._tmp.append(p)
+        return p
+
+    def test_parse_spatialmap_single_row(self):
+        from post_render_tool.csv_parser import parse_csv_dense
+
+        base = "spatialmap:mr_set_1_target__backplate_"
+        headers = self._make_headers(base)
+        rows = [self._make_row("09:44:25.10", 625994)]
+        path = self._track(self._write_csv(headers, rows))
+
+        result = parse_csv_dense(path)
+
+        self.assertEqual(result.camera_prefix, base)
+        self.assertEqual(result.frame_count, 1)
+        f = result.frames[0]
+        # Transform columns came from engineCameraPos / engineCameraRotation
+        self.assertAlmostEqual(f.offset_x, 5.00252, places=4)
+        self.assertAlmostEqual(f.offset_z, -12.0007, places=4)
+        # Intrinsic from .activeCamera.* prefix
+        self.assertAlmostEqual(f.focal_length_mm, 43.2886, places=3)
+        self.assertAlmostEqual(f.sensor_width_mm, 50.0, places=3)
+        self.assertAlmostEqual(f.k1, 0.000286122, places=8)
+        self.assertAlmostEqual(f.k3, 0.011302, places=6)
+        self.assertAlmostEqual(f.center_shift_x_mm, 0.0048995, places=6)
+        # aperture / focus_distance columns absent entirely → soft fall back to 0.0
+        self.assertEqual(f.aperture, 0.0)
+        self.assertEqual(f.focus_distance, 0.0)
+
+    def test_parse_real_take_4_csv(self):
+        """End-to-end: real Disguise take_4 dense CSV (756 rows)."""
+        from post_render_tool.csv_parser import parse_csv_dense
+
+        real_csv = "/tmp/test_take_4_dense.csv"
+        if not os.path.exists(real_csv):
+            self.skipTest(f"sample CSV not present: {real_csv}")
+        result = parse_csv_dense(real_csv)
+        self.assertEqual(result.camera_prefix, "spatialmap:mr_set_1_target__backplate_")
+        self.assertEqual(result.frame_count, 756)
+        self.assertAlmostEqual(result.frames[0].offset_x, 5.00252, places=4)
+        self.assertAlmostEqual(result.frames[0].focal_length_mm, 43.2886, places=3)
+        # row 1 = first motion (per location-change analysis)
+        self.assertNotEqual(
+            (result.frames[0].offset_x, result.frames[0].offset_y, result.frames[0].offset_z),
+            (result.frames[1].offset_x, result.frames[1].offset_y, result.frames[1].offset_z),
+        )
+
+    def test_spatialmap_missing_anchor_column_raises(self):
+        from post_render_tool.csv_parser import CsvParseError, parse_csv_dense
+
+        # Headers with NO legacy / spatialmap anchor → parser cannot detect dialect.
+        headers = ["timestamp", "frame", "foo.bar.x", "foo.bar.y"]
+        path = self._track(self._write_csv(headers, [["00:00:00.00", "0", "0", "0"]]))
+        with self.assertRaises(CsvParseError) as ctx:
+            parse_csv_dense(path)
+        self.assertIn("dialect", str(ctx.exception).lower())
+
+
+class TestTrimStaticPadding(unittest.TestCase):
+    """trim_static_padding drops leading/trailing rows with frozen camera pos."""
+
+    def _make_result(self, poses):
+        """Build a minimal CsvDenseResult from a list of (x,y,z) tuples."""
+        from post_render_tool.csv_parser import CsvDenseResult, FrameData
+        frames = [
+            FrameData(
+                timestamp=f"00:00:00.{i:02d}", frame_number=1000 + i,
+                offset_x=p[0], offset_y=p[1], offset_z=p[2],
+                rotation_x=0.0, rotation_y=0.0, rotation_z=0.0,
+                focal_length_mm=30.0, sensor_width_mm=35.0, aspect_ratio=1.778,
+                aperture=2.8, focus_distance=5.0,
+                k1=0.0, k2=0.0, k3=0.0,
+                center_shift_x_mm=0.0, center_shift_y_mm=0.0,
+                fov_h=60.0, fov_v=None, resolution_x=1920, resolution_y=1080,
+            )
+            for i, p in enumerate(poses)
+        ]
+        return CsvDenseResult(
+            file_path="dummy.csv", camera_prefix="camera:cam_1",
+            frames=frames, frame_count=len(frames),
+            timecode_start=frames[0].timestamp,
+            timecode_end=frames[-1].timestamp,
+            focal_length_range=(30.0, 30.0),
+            sensor_width_mm=35.0, aspect_ratio=1.778,
+        )
+
+    def test_round_trip_static_padding(self):
+        """Round-trip recording (camera returns to start): trim head + tail static."""
+        from post_render_tool.csv_parser import trim_static_padding
+        # 2 static @ origin + 3 motion + 2 static @ origin
+        origin = (0.0, 0.0, 0.0)
+        poses = [origin, origin, (1.0, 0.0, 0.0), (2.0, 0.0, 0.0), (1.0, 0.0, 0.0), origin, origin]
+        result = trim_static_padding(self._make_result(poses))
+        # head trimmed → first frame is first motion row (idx 2 in original)
+        self.assertEqual(result.frames[0].frame_number, 1002)
+        # tail keeps 1 anchor static frame at original origin
+        self.assertEqual(
+            (result.frames[-1].offset_x, result.frames[-1].offset_y, result.frames[-1].offset_z),
+            origin,
+        )
+
+    def test_full_motion_through_no_round_trip(self):
+        """take_5-style: camera ends elsewhere than it started → no trim.
+
+        Mid-shot CSV without leading/trailing static padding must be returned
+        as-is, because the head/tail-pose-equality heuristic correctly
+        identifies this case as not-a-round-trip.
+        """
+        from post_render_tool.csv_parser import trim_static_padding
+        poses = [(i * 0.1, 0.0, 0.0) for i in range(5)]   # head=(0,0,0), tail=(0.4,0,0)
+        original = self._make_result(poses)
+        result = trim_static_padding(original)
+        self.assertEqual(result.frame_count, original.frame_count)
+        self.assertIs(result, original)
+
+    def test_fully_static_csv_returns_unchanged(self):
+        """All-static CSV (camera never moved) → return original (no motion to extract)."""
+        from post_render_tool.csv_parser import trim_static_padding
+        poses = [(1.0, 2.0, 3.0)] * 5
+        original = self._make_result(poses)
+        result = trim_static_padding(original)
+        self.assertIs(result, original)
+
+    def test_take_4_real_csv_trim(self):
+        """Real take_4 CSV: 756 → motion-only (753 ish), starts at d3 frame 625994."""
+        from post_render_tool.csv_parser import parse_csv_dense, trim_static_padding
+        import os
+        real_csv = "/tmp/test_take_4_dense.csv"
+        if not os.path.exists(real_csv):
+            self.skipTest(f"sample CSV not present: {real_csv}")
+        result = trim_static_padding(parse_csv_dense(real_csv))
+        self.assertLess(result.frame_count, 756)
+        self.assertEqual(result.frames[0].frame_number, 625994)
+
+
 if __name__ == "__main__":
     unittest.main()
