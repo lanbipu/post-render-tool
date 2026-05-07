@@ -16,12 +16,15 @@
 
 ### 实现任务（方案 C）
 
-- [x] C++ `StartupModule()` 注册 Level Editor toolbar extension（`UToolMenus` + `RegisterStartupCallback`，扩展点 `LevelEditor.LevelEditorToolBar.User`）
+- [x] C++ `StartupModule()` 注册 Level Editor toolbar extension（`UToolMenus` + `RegisterStartupCallback`，实际扩展点 `LevelEditor.LevelEditorToolBar.PlayToolBar` / section `PluginTools`）
 - [x] Toolbar 按钮点击回调：`IPythonScriptPlugin::ExecPythonCommand("from post_render_tool.widget_builder import open_widget; open_widget()")`
 - [x] `PostRenderTool.Build.cs` 添加依赖：`PythonScriptPlugin`（`ToolMenus`/`Slate`/`SlateCore` 已在）
 - [x] `PostRenderTool.uplugin` 添加插件依赖：`PythonScriptPlugin` + `EditorScriptingUtilities`
-- [x] 按钮 label = "VPTool"，icon 暂用空（后续替换自定义 icon）
-- [ ] 验证：UE 重启并 rebuild 后按钮出现；关闭 UI 后再次点击能重开
+- [x] 按钮 label = "VPTool"，icon 用 `ClassIcon.CineCameraActor`（camera-with-gears，跟 Sequencer clapperboard 不撞，commit `5028e23`）
+- [x] 验证：UE 重启并 rebuild 后按钮出现；关闭 UI 后再次点击能重开
+  - 启动日志确认 toolbar 注册：`Toolbar button registered via FUICommandInfo at PlayToolBar / section 'PluginTools'`
+  - widget 多次重开：`NativeConstruct: widget bindings resolved` 出现 4+ 次
+  - 视觉验证（2026-05-07）：rebuild plugin DLL（UBT 40s）+ UE Editor 重启 → 用户肉眼确认 icon 是 cine camera 风格，不再跟 Sequencer 撞
 
 ### 注意事项
 
