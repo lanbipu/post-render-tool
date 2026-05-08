@@ -29,7 +29,7 @@
 ## 后续
 
 - **take_4 production diff 残差疑点收尾**: take_5 用同套镜头参数 + 干净 Sequence Shot 基准通过 → take_4 残差只能来自 motion 数据或 .seq feed 信号链,与 shader 无关。
-- **悬而未决的 normalization 二义性仍在**: 见 `docs/d3-distortion-render-request.md`,take_5 的镜头规格让 fx ≈ W,无法分辨 sensor 全宽归一化 vs 焦距归一化等候选。下次需要变焦或不同 sensor 的 take 才能压力测试。
+- **变焦归一化二义性已经在 commit `f027a46` 完全解决**: 12 帧 fit + 跨焦距 K_eff 漂移 + 影子定理数学严格证明 d3 跨焦距用同一个 full-width 归一化公式,变焦不切公式。focal-length 候选被 K_eff 漂移 0.376→1.022 直接证伪;diagonal/height/half-width 候选 K_eff 跨焦距虽稳但绝对值偏离,通过 `K_eff = K_truth × (N_cand/N_truth)^(2n)` 影子定理证明都是 full-width 真值的几何映射(预测精度 < 0.32%)。实测覆盖 focal 30.302mm → 50mm,24mm 帧因 over-scan 不够剔除。超长焦 / 超广角 / 不同 sensor 规格没实测,但 d3 不切公式的结论已坐实,理论上同一公式继续成立。
 
 ## 输出物
 

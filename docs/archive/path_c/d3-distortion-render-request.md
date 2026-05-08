@@ -1,5 +1,21 @@
 # Disguise Render Request — 12 帧扩展版 normalization gate
 
+> **EXECUTED 2026-05-07** — commit `f027a46`。12 帧 EXR 已渲完(focal_length_sweep
+> 6 帧 + k2_k3_sweep 2 帧 + center_shift_sweep 4 帧),fit harness 已跑,结论:
+>
+> - **K1/K2/K3 normalization = full-width**(focal=30.302 K1_eff +0.5015,
+>   focal=50 +0.5009,跨焦距 spread 0.0006);diagonal/height/half-width 候选是
+>   full-width 真值的几何影子(影子定理预测精度 < 0.32%);focal-length 候选被
+>   K_eff 跨焦距漂移 0.376→1.022 直接证伪。
+> - **centerShift 公式漏一项 source UV 平移** — K=0+csx≠0 时 d3 把源 UV 平移
+>   `-csx_uv`,shader 已修。
+> - focal=24mm 帧因 over-scan margin≈0 数据剔除,30.302mm→50mm(1.65× 跨度)
+>   足够定型。
+>
+> 完整 fit 报告:`validation_results/normalization_gate/20260507_150346_*`。
+> take_5 静态帧 diff 后续验证(`validation_results/take_5_diff/summary.md`)
+> 进一步坐实结论。
+
 ## 目的
 
 Path C shader (`M_PRT_OfficialSensorInverse`) 当前用 sensor 全宽归一化(`r=(px-cx)/W`),这是从 normalization gate(`docs/distortion-investigation.md` § 2026-05-06)选出来的,但当时只排掉了半宽公式,**没排除焦距归一化(`r=(px-cx)/fx`)、对角线归一化、高度归一化等候选**——因为现有 take(take_4 / take_5)的镜头规格让 `fx ≈ W`,这些候选公式数值上重合,看不出差异。

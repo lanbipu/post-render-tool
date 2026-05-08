@@ -1,5 +1,20 @@
 # Disguise Production 参考帧请求 — test / take_4
 
+> **EXECUTED 2026-05-07** — take_4 production diff 已通过,完成于:
+> - `a9db75c feat(csv_parser): 支持 spatialmap schema + 加 trim_static_padding`
+> - `5f2fa2b fix(csv_parser): SOFT_DEFAULTS 兜底 aperture/focus_distance`
+>
+> 当时"还没做的"3 项现在状态:
+>
+> 1. **lanPC UE Editor import + MRQ frame 0 渲染** — 跑过,有 PNG 输出
+> 2. **UE PNG vs .seq frame 8 diff** — 跑过,`production_diff_frame2_vs_seq0.json`
+>    valid_p95 ≈ 0.1255(8-bit PNG 量化地板附近)
+> 3. **production_diff.json 报告** — 落在 `validation_results/path_c_production/`
+>
+> 后续 take_5 静态帧 diff(2026-05-08, commit `43a6ead`)进一步覆盖
+> "干净 Sequence Shot 基准 vs UE Path C" 这条对比路径,
+> 见 `validation_results/take_5_diff/summary.md`。
+
 ## 目的
 
 UE 端 Path C production 单帧 MRQ 跟 Disguise Designer 端**同一 CSV、同一帧、同一台相机**的 transmission frame 做一对一像素 diff。
