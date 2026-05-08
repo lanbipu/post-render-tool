@@ -1,14 +1,20 @@
 # CLAUDE.md
 
-> **Distortion 路线状态(2026-05-07)**:Path C(Custom Post-Process Material)
-> 已落地,take_4 production diff 通过(commit `5f2fa2b`)。Path A(LensFile +
+> **Distortion 路线状态(2026-05-08)**:Path C(Custom Post-Process Material)
+> 已落地,take_4 production diff 通过(commit `5f2fa2b`),take_5 静态帧 diff
+> 几何完全对齐(`validation_results/take_5_diff/summary.md`)。Path A(LensFile +
 > M_RAT6/M_RAT8 公式拟合)dormant 归档(commit `ce3cbcc`)。
 >
 > - 主 plan: `docs/custom-postprocess-distortion-final-plan.md`
 > - Path C 验证: `validation_results/path_c_validation/path_c_validation_summary.md`
+> - take_5 静态帧 diff: `validation_results/take_5_diff/summary.md`
 > - Path A 史料(决策证据 + dataset): `docs/archive/path_a/` +
 >   `scripts/distortion_calibration/archive/` +
 >   `scripts/distortion_calibration/validation_results/archive/`
+>
+> **看 diff 时的坑**:场景里的粉色 sphere mesh 是 helper 几何,不是 distortion
+> 校正网格;天空云是 time-based procedural noise,每次渲染都不一样,diff
+> heatmap 上的天空残差不计入验收。详见 take_5 summary。
 >
 > Pipeline 仍调 `build_lens_file()` 写 LF_* 资产,LensComponent 仍挂 camera 上但
 > `apply_distortion=False` —— 留作 fallback baseline + 调试对比,不参与
@@ -69,6 +75,7 @@ cd Content/Python && python -m unittest post_render_tool.tests.test_spec_drift -
 - **Worktree convention**: For multi-commit refactors, create a worktree outside the repo: `git worktree add ~/.config/superpowers/worktrees/post_render_tool/<branch> -b feature/<name>`. Keeps the main working tree and the p4 workspace mirror clean. Each commit still pushes the feature branch to the depot (safe — `main` doesn't move until merge).
 - **Main repo vs worktree**: Edits in a worktree on a non-main branch are invisible to the main repo's working tree until you `git checkout <branch>` in main or merge. If someone says "I don't see the new files", that's usually why.
 - **Known hook quirk — `--no-ff` merges don't trigger the hook.** `git merge --no-ff` creates a merge commit, but the `post-commit` hook does NOT fire on it in this setup (observed at `2db9686`, session 2026-04-12). After any `--no-ff` merge into `main`, manually run `git push p4 main` to advance the p4 depot. Fast-forward merges (no new commit) don't need a push at all.
+- **lanPC P4 workspace overlap — plugin `.uasset` risks mis-add to traditional depot.** `graph-sync-lanPC` (`//ue/post-render-tool/`) and `super_lanPC_rs_projects` (`//rs_projects/test_0311/...`) both map the same physical path. Plugin assets (BP / Material / textures) belong in graph depot only — commit to plugin git, hook pushes to `//ue/post-render-tool/`. Fix mis-add: `p4 revert` (pending) or `p4 delete -k + submit` (already submitted). Ref `3b28d1c`.
 
 ## First-time setup
 
