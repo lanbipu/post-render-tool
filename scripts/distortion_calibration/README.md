@@ -4,6 +4,10 @@
 > Path A（LensFile + 公式拟合）已结案 NO-GO，Path B（STMap）保留为备胎。
 > 完整设计文档见 `docs/custom-postprocess-distortion-final-plan.md`，
 > Disguise 端渲染清单见 `docs/d3-distortion-render-request.md`。
+>
+> ⚠️ **2026-05-08 更新**：plugin 已**完整下架** Path A runtime 代码。下文提到
+> 的 `lens_file_builder.py` / `stmap_writer.py` 在 plugin 中不再存在；Path A
+> 代码快照在 `archive/path_a_runtime/`，不参与 production pipeline。
 
 | Path | Strategy | 状态 |
 |---|---|---|

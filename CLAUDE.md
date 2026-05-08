@@ -3,11 +3,14 @@
 > **Distortion 路线状态(2026-05-08)**:Path C(Custom Post-Process Material)
 > 已落地,take_4 production diff 通过(commit `5f2fa2b`),take_5 静态帧 diff
 > 几何完全对齐(`validation_results/take_5_diff/summary.md`)。Path A(LensFile +
-> M_RAT6/M_RAT8 公式拟合)dormant 归档(commit `ce3cbcc`)。
+> M_RAT6/M_RAT8 公式拟合)已**完整下架**(2026-05-08),plugin 不再生成 `LF_*`
+> 资产、不再挂 LensComponent 到 camera。Path A 代码快照保留在
+> `archive/path_a_runtime/`(可对照 README.md 回退)。
 >
 > - 主 plan: `docs/custom-postprocess-distortion-final-plan.md`
 > - Path C 验证: `validation_results/path_c_validation/path_c_validation_summary.md`
 > - take_5 静态帧 diff: `validation_results/take_5_diff/summary.md`
+> - Path A runtime 代码快照: `archive/path_a_runtime/`
 > - Path A 史料(决策证据 + dataset): `docs/archive/path_a/` +
 >   `scripts/distortion_calibration/archive/` +
 >   `scripts/distortion_calibration/validation_results/archive/`
@@ -15,16 +18,12 @@
 > **看 diff 时的坑**:场景里的粉色 sphere mesh 是 helper 几何,不是 distortion
 > 校正网格;天空云是 time-based procedural noise,每次渲染都不一样,diff
 > heatmap 上的天空残差不计入验收。详见 take_5 summary。
->
-> Pipeline 仍调 `build_lens_file()` 写 LF_* 资产,LensComponent 仍挂 camera 上但
-> `apply_distortion=False` —— 留作 fallback baseline + 调试对比,不参与
-> Path C distortion(详见 `camera_builder.py:218-226`)。
 
 ## Project Overview
 
 VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor +
-Custom Post-Process Distortion(Path C)+ LevelSequence。LensFile 资产仍生成
-但仅作 dormant fallback,不参与 distortion。
+Custom Post-Process Distortion(Path C)+ LevelSequence。Distortion 完全由
+Path C 接管,LensFile 资产不再生成。
 
 Packaged as a **self-contained UE 5.7 plugin** (`PostRenderTool.uplugin` at repo root). Drops into any `<UEProject>/Plugins/` directory. C++ module provides a `UEditorUtilityWidget` subclass with a `meta=(BindWidget)` UPROPERTY contract; child Blueprint authored in the UMG Designer satisfies the contract; Python binds callbacks and drives the CSV → UE import pipeline.
 
@@ -35,7 +34,7 @@ Packaged as a **self-contained UE 5.7 plugin** (`PostRenderTool.uplugin` at repo
 cd Content/Python && python -m unittest discover -s post_render_tool/tests -p "test_c*.py" -p "test_v*.py" -v
 
 # Syntax check for UE-dependent modules
-for f in post_render_tool/{lens_file_builder,camera_builder,sequence_builder,pipeline,ui_interface,widget,widget_builder}.py; do
+for f in post_render_tool/{camera_builder,sequence_builder,pipeline,ui_interface,widget,widget_builder,build_distortion_material}.py; do
   python3 -c "import ast; ast.parse(open('$f').read()); print('OK: $f')"
 done
 
@@ -115,11 +114,9 @@ post_render_tool/                                       ← plugin root
 │           ├── csv_parser.py                           # CSV Dense parser (pure Python; 支持 legacy + spatialmap schema)
 │           ├── coordinate_transform.py                 # Coord transform (pure Python, configurable)
 │           ├── validator.py                            # FOV check + anomaly detection (pure Python)
-│           ├── distortion_math.py                      # 双路线共用:Path A `compute_normalized_distortion` (M_RAT6) + Path C `official_sensor_inverse_uv` (HLSL 镜像)
-│           ├── distortion_packing.py                   # Path A: BrownConradyUD 8 槽 packing (pure Python)
-│           ├── lens_file_builder.py                    # Path A dormant fallback: 仍生成 LF_* 资产但不参与 distortion (requires unreal)
+│           ├── distortion_math.py                      # Path C `official_sensor_inverse_uv` (HLSL 镜像, pure Python)
 │           ├── build_distortion_material.py            # Path C: 程序化生成 M_PRT_OfficialSensorInverse material asset (requires unreal)
-│           ├── camera_builder.py                       # CineCameraActor + LensComponent + Path C controller component (requires unreal)
+│           ├── camera_builder.py                       # CineCameraActor + Path C controller component (requires unreal)
 │           ├── sequence_builder.py                     # LevelSequence + 7 条 Path C distortion 关键帧轨 (requires unreal)
 │           ├── pipeline.py                             # Orchestrator (requires unreal)
 │           ├── ui_interface.py                         # File dialog, sequencer, MRQ (requires unreal)
@@ -129,6 +126,13 @@ post_render_tool/                                       ← plugin root
 │           ├── widget_properties.py                    # Pure Python: per-widget + slot-layout 反射写入器
 │           ├── widget_variants.py                      # Widget tree variant 处理(deprecated 入口的 stub)
 │           └── widget_programmatic.py.bak              # archival (pre-plugin builder, unused)
+├── archive/
+│   └── path_a_runtime/                                 ← Path A runtime 快照(2026-05-08 下架,见 README.md)
+│       ├── README.md
+│       ├── lens_file_builder.py
+│       ├── distortion_packing.py
+│       ├── distortion_math_path_a.py
+│       └── tests/{test_distortion_rational.py, test_c_distortion_packing.py}
 └── docs/
     ├── plugin-setup.md                                 ← first-time install guide
     ├── bindwidget-contract.md                          ← 33 widget name/type reference
@@ -165,23 +169,20 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   Validated against an FBX-imported camera wrapped in a Z=+90° parent Actor (the user-confirmed
   correct reference); two pose pairs match to <0.001 cm / <0.001°. Regression-guarded by
   `tests/test_coordinate_transform.py::TestKnownPoses` — rerun after any axis-mapping change.
-- **LensFile API varies across UE versions.** `lens_file_builder.py` has dual try/except paths.
-  If both fail, it raises RuntimeError (not silent).
-- **Distortion 由 Path C 接管,LensFile dormant.** `pipeline.py:155` 仍调
-  `build_lens_file()` 写 LF_* 资产,`camera_builder.py` 仍挂 LensComponent,
-  但 `apply_distortion=False`(`camera_builder.py:218-226`)—— 不参与渲染,只
-  作 fallback baseline + 调试对比。Distortion 走 `M_PRT_OfficialSensorInverse`
-  material + `PostRenderDistortionControllerComponent`,7 条参数轨由
-  `sequence_builder.py` 写入 LevelSequence。**不要**为了"清理"删 LensFile
-  pipeline 调用 —— Path C plan §7 明说留作 fallback。Path A 公式拟合代码
-  (`distortion_math.compute_normalized_distortion` + `distortion_packing` +
-  `lens_file_builder`)是**双路线共用文件**或被它共用,删任何一个都会破坏
-  fallback 路径。
-- **Path A 史料归档位置.** 公式拟合脚本 / UV probe 资产 / k1_sweep dataset 在
+- **Distortion 完全由 Path C 接管,LensFile 已下架(2026-05-08).** Pipeline 不再
+  生成 `LF_*` 资产、不再挂 LensComponent 到 camera。Distortion 走
+  `M_PRT_OfficialSensorInverse` material + `PostRenderDistortionControllerComponent`,
+  7 条参数轨由 `sequence_builder.py` 写入 LevelSequence。如果未来 Path C 出现
+  不可调和 regression 需要回退,代码快照在 `archive/path_a_runtime/`,回退步骤见
+  该目录 README.md。**不要**重新引入 LensFile 路径 —— 没经过验证就同时跑两条
+  路线 = `apply_distortion` 没关时双倍畸变。
+- **Path A 史料归档位置.** Runtime 代码(下架前的最后版本)在
+  `archive/path_a_runtime/`。公式拟合脚本 / UV probe 资产 / k1_sweep dataset 在
   `scripts/distortion_calibration/archive/` +
   `scripts/distortion_calibration/validation_results/archive/`(commit `ce3cbcc`
-  归档)。要复盘 K1 公式或 reverse-engineer K2/K3 时去那找,active 目录
-  (`scripts/distortion_calibration/` 顶层)只放 Path C / 跨路线工具。
+  归档)。决策文档 / 5 个旧 plan 在 `docs/archive/path_a/`。要复盘 K1 公式或
+  reverse-engineer K2/K3 时去那找,active 目录(`scripts/distortion_calibration/`
+  顶层)只放 Path C / 跨路线工具。
 - **Frame cadence preserved.** sequence_builder uses `frame_number - first_frame_number` as keyframe
   time, NOT consecutive indices. Gaps in CSV frame column create gaps in LevelSequence.
 - **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.

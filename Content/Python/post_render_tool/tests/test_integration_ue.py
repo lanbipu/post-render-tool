@@ -39,7 +39,8 @@ def test_full_pipeline():
     from post_render_tool.pipeline import run_import
     result = run_import(CSV_PATH, fps=24.0)
     assert result.success, f"Pipeline failed: {result.error_message}"
-    assert result.lens_file is not None
+    # Path A 下架后 lens_file 字段保留但永远 None.
+    assert result.lens_file is None
     assert result.camera_actor is not None
     assert result.level_sequence is not None
     assert result.report is not None

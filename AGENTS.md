@@ -1,13 +1,15 @@
 # AGENTS.md
 
-> **🚧 IN-PROGRESS 调试中**：Disguise CSV K → UE LensFile 的 distortion 映射
-> 还差最后 1-3 像素残差才 pixel-perfect。下次 session 接手前**先读
-> `docs/distortion-investigation.md`** —— 包含完整 context、两条解决路径、
-> 关键资产位置、不要重复踩的坑。
+> ⚠️ **AGENTS.md 是旧版 agent 入口快照, 内容可能落后于 `CLAUDE.md`.**
+> 信任优先级: `CLAUDE.md` (latest) > `AGENTS.md` (this) > codebase. Distortion
+> 路径状态以 CLAUDE.md 顶部 callout 为准 (Path C 已落地, Path A 已下架,
+> 2026-05-08).
 
 ## Project Overview
 
-VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor + LensFile + LevelSequence.
+VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor +
+Custom Post-Process Distortion (Path C) + LevelSequence. Path A (LensFile +
+BrownConradyUD M_RAT6) 已下架 (2026-05-08), 代码快照在 `archive/path_a_runtime/`.
 
 Packaged as a **self-contained UE 5.7 plugin** (`PostRenderTool.uplugin` at repo root). Drops into any `<UEProject>/Plugins/` directory. C++ module provides a `UEditorUtilityWidget` subclass with a `meta=(BindWidget)` UPROPERTY contract; child Blueprint authored in the UMG Designer satisfies the contract; Python binds callbacks and drives the CSV → UE import pipeline.
 
@@ -18,7 +20,7 @@ Packaged as a **self-contained UE 5.7 plugin** (`PostRenderTool.uplugin` at repo
 cd Content/Python && python -m unittest discover -s post_render_tool/tests -p "test_c*.py" -p "test_v*.py" -v
 
 # Syntax check for UE-dependent modules
-for f in post_render_tool/{lens_file_builder,camera_builder,sequence_builder,pipeline,ui_interface,widget,widget_builder}.py; do
+for f in post_render_tool/{camera_builder,sequence_builder,pipeline,ui_interface,widget,widget_builder,build_distortion_material}.py; do
   python3 -c "import ast; ast.parse(open('$f').read()); print('OK: $f')"
 done
 
@@ -89,8 +91,9 @@ post_render_tool/                               ← plugin root
 │           ├── csv_parser.py                   # CSV Dense parser (pure Python)
 │           ├── coordinate_transform.py         # Coord transform (pure Python, configurable)
 │           ├── validator.py                    # FOV check + anomaly detection (pure Python)
-│           ├── lens_file_builder.py            # .ulens generation (requires unreal)
-│           ├── camera_builder.py               # CineCameraActor (requires unreal)
+│           ├── distortion_math.py              # Path C distortion 公式 (pure Python)
+│           ├── build_distortion_material.py    # Path C: Post-Process Material 程序化生成 (requires unreal)
+│           ├── camera_builder.py               # CineCameraActor + distortion controller (requires unreal)
 │           ├── sequence_builder.py             # LevelSequence + animation (requires unreal)
 │           ├── pipeline.py                     # Orchestrator (requires unreal)
 │           ├── ui_interface.py                 # File dialog, sequencer, MRQ (requires unreal)
@@ -130,8 +133,6 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   Validated against an FBX-imported camera wrapped in a Z=+90° parent Actor (the user-confirmed
   correct reference); two pose pairs match to <0.001 cm / <0.001°. Regression-guarded by
   `tests/test_coordinate_transform.py::TestKnownPoses` — rerun after any axis-mapping change.
-- **LensFile API varies across UE versions.** `lens_file_builder.py` has dual try/except paths.
-  If both fail, it raises RuntimeError (not silent).
 - **Frame cadence preserved.** sequence_builder uses `frame_number - first_frame_number` as keyframe
   time, NOT consecutive indices. Gaps in CSV frame column create gaps in LevelSequence.
 - **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.

@@ -972,14 +972,24 @@ scripts/distortion_calibration/.venv/bin/python scripts/distortion_calibration/e
 
 ## 7. Fallback Strategy
 
-Fallback priority:
+**Status as of 2026-05-08**: Path A (LensFile + M_RAT6) has been removed from the
+shipping plugin. The runtime no longer builds `LF_*` assets and does not attach
+`LensComponent` to the camera. Code is preserved as a snapshot in
+`archive/path_a_runtime/` for reference and emergency rollback.
 
-1. `Legacy LensFile + M_RAT6` remains available for current project continuity.
-2. `Custom Post-Process Material` becomes preferred once gates pass.
-3. `Custom STMap Material` is fallback if formula cannot express K2/K3.
-4. Standard UE `LensFile STMap` is only fallback if Focus/Zoom keyed STMap is enough for the take.
+Active fallback priority:
 
-Do not delete old LensFile code during this phase. It is the known working fallback and a useful comparison baseline.
+1. `Custom Post-Process Material` (Path C) — current production path. Already
+   passed take_4 production diff and take_5 static-frame diff verification.
+2. `Custom STMap Material` — fallback if formula cannot express K2/K3 once
+   future calibration data arrives.
+3. `Legacy LensFile + M_RAT6` — only retrievable by manual rollback from
+   `archive/path_a_runtime/` (see that directory's README for steps).
+
+Rationale for removing Path A from the shipping plugin: Path C has been
+production-validated, the LensFile path was already inert (`apply_distortion=False`),
+and shipping dormant code adds confusion for end users without providing real
+fallback value. The git history plus the archive snapshot are sufficient.
 
 ---
 
@@ -1029,7 +1039,7 @@ Project docs/code:
 - `docs/K1-implementation.md`
 - `docs/distortion-precision-analysis.md`
 - `Content/Python/post_render_tool/pipeline.py`
-- `Content/Python/post_render_tool/lens_file_builder.py`
+- `archive/path_a_runtime/lens_file_builder.py` (Path A removed 2026-05-08)
 - `Content/Python/post_render_tool/camera_builder.py`
 - `Content/Python/post_render_tool/sequence_builder.py`
 - `Content/Python/post_render_tool/stmap_writer.py`

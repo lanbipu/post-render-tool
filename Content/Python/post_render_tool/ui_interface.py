@@ -212,8 +212,8 @@ _PREREQUISITE_CHECKS: List[Tuple[str, str, str]] = [
      "Edit > Plugins > search 'Python Editor Script' > Enable > Restart"),
     ("Editor Scripting Utilities", "EditorAssetLibrary",
      "Edit > Plugins > search 'Editor Scripting' > Enable > Restart"),
-    ("Camera Calibration", "LensFile",
-     "Edit > Plugins > search 'Camera Calibration' > Enable > Restart"),
+    # Camera Calibration / LensFile 已不再需要 (Path A 下架, 2026-05-08).
+    # Distortion 走 Path C Custom Post-Process Material, 不依赖 CameraCalibrationCore 模块.
     ("CineCameraActor", "CineCameraActor", ""),
     ("LevelSequence", "LevelSequence",
      "Edit > Plugins > search 'Level Sequence Editor' > Enable > Restart"),

@@ -1,6 +1,6 @@
 # VP Post-Render Tool
 
-Disguise Designer Shot Recorder CSV Dense → UE 5.7 CineCameraActor + LensFile + LevelSequence
+Disguise Designer Shot Recorder CSV Dense → UE 5.7 CineCameraActor + Custom Post-Process Distortion + LevelSequence
 
 一键将虚拟制片现场录制的摄影机数据导入 Unreal Engine，用于离线重渲染。
 
@@ -13,9 +13,8 @@ VP/XR 拍摄后，后期合成师需要在 UE 中对 CG 画面进行离线重渲
 本工具自动完成：
 - **CSV 解析** — 自动识别 camera 前缀，提取全部物理镜头参数
 - **坐标系转换** — Designer Y-up (m) → UE Z-up (cm)，可配置轴映射
-- **Lens File 生成** — 按焦距采样，自动计算 FxFy / ImageCenter / k1k2k3
-- **CineCameraActor 创建** — 配置 Filmback + LensComponent + 畸变
-- **Level Sequence 动画** — 逐帧写入 Transform、Focal Length、Aperture、Focus Distance
+- **CineCameraActor 创建** — 配置 Filmback + Path C distortion controller (`PostRenderDistortionControllerComponent` + `M_PRT_OfficialSensorInverse` Post-Process Material)
+- **Level Sequence 动画** — 逐帧写入 Transform、Focal Length、Aperture、Focus Distance + 7 条 distortion 关键帧轨 (K1/K2/K3/CenterU/CenterV/Aspect/Weight)
 - **验证报告** — FOV 交叉校验 + 异常帧检测
 
 ## Quick Start
@@ -25,7 +24,6 @@ VP/XR 拍摄后，后期合成师需要在 UE 中对 CG 画面进行离线重渲
 UE 5.7 项目中启用以下插件：
 - Python Editor Script Plugin
 - Editor Scripting Utilities
-- Camera Calibration
 
 ### Installation
 
@@ -60,22 +58,19 @@ Plugin 源码里**不包含** `BP_PostRenderToolWidget.uasset`（UE 5.7 的 `UWi
 
 ```
 Content/Python/
-├── init_post_render_tool.py          # 前置条件检查
+├── init_post_render_tool.py          # 入口，加载 BP_PostRenderToolWidget
 └── post_render_tool/
     ├── config.py                     # 配置（坐标映射、阈值）
     ├── csv_parser.py                 # CSV Dense 解析
     ├── coordinate_transform.py       # 坐标系转换
-    ├── lens_file_builder.py          # .ulens 生成
-    ├── camera_builder.py             # CineCameraActor 创建
-    ├── sequence_builder.py           # LevelSequence + 动画曲线
+    ├── distortion_math.py            # Path C distortion 公式 (pure Python)
+    ├── build_distortion_material.py  # Path C: 程序化生成 Post-Process Material
+    ├── camera_builder.py             # CineCameraActor + distortion controller
+    ├── sequence_builder.py           # LevelSequence + 动画曲线 + distortion 轨
     ├── validator.py                  # FOV 校验 + 异常检测
     ├── pipeline.py                   # 流水线编排
     ├── ui_interface.py               # Blueprint UI 接口
-    └── tests/
-        ├── test_csv_parser.py        # 8 tests
-        ├── test_coordinate_transform.py  # 7 tests
-        ├── test_validator.py         # 11 tests
-        └── test_integration_ue.py    # UE 内集成测试
+    └── tests/                        # pure-Python 单测套件
 ```
 
 ## Testing
@@ -111,9 +106,8 @@ py exec(open('Content/Python/post_render_tool/tests/test_integration_ue.py').rea
 ## Output
 
 导入后生成：
-1. **Lens File** (`.ulens`) — 畸变标定数据
-2. **CineCameraActor** — Filmback + LensComponent 已配置
-3. **Level Sequence** — 完整动画曲线，保留原始帧 cadence
+1. **CineCameraActor** — Filmback + `PostRenderDistortionControllerComponent` 已配置 (Path C: Post-Process Material distortion)
+2. **Level Sequence** — 完整动画曲线 (Transform/Focal/Aperture/Focus 4 条 + K1/K2/K3/CenterU/CenterV/Aspect/Weight 7 条 distortion 轨)，保留原始帧 cadence
 
 资产保存在 `/Content/PostRender/{CSV文件名}/`。
 

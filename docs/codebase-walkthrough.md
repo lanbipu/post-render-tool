@@ -5,6 +5,13 @@
 > UI 参考：[Figma — VP Post-Render Tool · UE Panel Design](https://www.figma.com/design/H6WkczRHFmCVuPmTFahZBN/VP-Post-Render-Tool-%E2%80%94-UE-Panel-Design?node-id=1-2)  
 > 阅读前提：了解基本 Python 语法；不需要了解 UE 或 C++，文中会逐一解释。
 
+> ⚠️ **Distortion 路线已变（2026-05-08 更新）**: 本文档 §4.5 / §4.6 描述的
+> `lens_file_builder.py` + LensFile + LensComponent 流程已**完整下架**。Distortion
+> 现在由 Path C (Custom Post-Process Material + `PostRenderDistortionControllerComponent`)
+> 接管, `LF_*` 资产不再生成。下架前的 Path A 代码快照在 `archive/path_a_runtime/`,
+> 当前流程见 `CLAUDE.md` 顶部 callout + `docs/custom-postprocess-distortion-final-plan.md`。
+> 本文档其余部分(BP 自动化 / WidgetTree / pure-Python 模块)仍有效。
+
 > ⚠️ **架构反转说明**：早期版本（commit `bd140d7`）曾认定"BP 必须手工搭建、不可自动化"。
 > 2026-04-17 起，引入 `UPostRenderToolBuildHelper`（C++ 桥接 `UWidgetBlueprint::WidgetTree`）+
 > `docs/widget-tree-spec.json`（单一真相源）+ `build_widget_blueprint.run_build()`（幂等编排器），
