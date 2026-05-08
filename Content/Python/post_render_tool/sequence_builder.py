@@ -320,7 +320,12 @@ def build_sequence(
 
         sensor_height_mm = frame.sensor_width_mm / frame.aspect_ratio
         center_u = 0.5 + frame.center_shift_x_mm / frame.sensor_width_mm
-        center_v = 0.5 + frame.center_shift_y_mm / sensor_height_mm
+        # Y axis flip: Disguise centerShiftMM.y 在 sensor-space (Y up),
+        # UE/HLSL CenterUV 在 UV-space (Y down),所以 Y 分量取反;X 方向不 flip。
+        # take_6 (cs_y=-0.192mm) 实测验证:不 flip 时 vertical shift ≈ -21 px
+        # (= -2 × predicted csx_v),flip 后 ≈ 0。详见
+        # validation_results/path_c_production/take_6/summary.md。
+        center_v = 0.5 - frame.center_shift_y_mm / sensor_height_mm
         ch_center_u.add_key(frame_number, center_u, interpolation=interp)
         ch_center_v.add_key(frame_number, center_v, interpolation=interp)
 
