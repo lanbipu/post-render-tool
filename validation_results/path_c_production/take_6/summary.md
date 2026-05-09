@@ -1,16 +1,18 @@
 # take_6 production diff — PASS(中心结构 + frustum 完整,2026-05-09 修复)
 
-**最后更新**: 2026-05-09
+**最后更新**: 2026-05-10
 **状态**: **PASS**
 - ✅ 中心结构匹配 + Y 方向 vertical shift < 0.1 px 中位
 - ✅ Top + right edge frustum 完整(2026-05-09 修复后,用户实测新 render 跟 Disguise reference 视觉对比通过)
+- ✅ 2026-05-10 update #3 之后(overscan 接入 + shader 归一化)regression 仍 PASS — 数学上 OS=1.3334 时归一化包装严格等价于在原 frustum 跑原算法,实测无回退
 
 ## 历史(供回溯)
 
 - **2026-05-08 第一版**: 误标 PASS,因为 phase correlation 只测中心结构,看不出 frustum 截断
 - **2026-05-09 中段降级**: 发现 `LS_test_take_6_dense.0001.png` 上 + 右边缘比 Disguise 少约 10 px 内容,降级 PARTIAL/BLOCKED
 - **2026-05-09 修复**: commit `69a9bea` 把 `centerShift` 从 shader UV 平移迁到 `CineCameraComponent.Filmback.SensorHorizontalOffset/Vertical`(走 `OffCenterProjectionOffset`),sign 取负(`= -cs_*_mm`),frustum 在渲染时已对到 principal point。用户在 lanPC 重渲后实测验证通过 → 升 PASS
-- 修复方案 + 推理证据:`docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md`
+- **2026-05-10 update #3**: take_7 加大 distortion 暴露 commit `43173c4` (overscan 接入)+ commit `c3ccabb` (shader frustum 归一化)的 regression 测试 — take_6 重渲跟之前 PASS 状态一致,无回退
+- 修复方案 + 推理证据:`docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md` + `docs/superpowers/plans/2026-05-09-overscan-support.md`
 
 > **0001.png 是旧 shader-translation 公式产物**(2026-05-08 渲),保留作历史对照,**不是当前 PASS 的 evidence**。新 render evidence 待 lanPC sync 回 mac 后补到本目录。
 
