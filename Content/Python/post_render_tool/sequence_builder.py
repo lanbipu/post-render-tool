@@ -16,7 +16,7 @@ from .coordinate_transform import (
     transform_position,
     transform_rotation,
 )
-from .csv_parser import CsvDenseResult
+from .csv_parser import CsvDenseResult, csv_overscan_to_ue_overscan
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +73,17 @@ def build_sequence(
     unreal.LevelSequence
         The created and saved LevelSequence asset.
     """
+    # ------------------------------------------------------------------
+    # Step 0: Pre-validate per-frame derived values that may raise (overscan).
+    # 若任意帧 unsupported (asymmetric / >2.0 / mixed underscan-overscan),
+    # 必须在任何 asset mutation 之前就 fail-fast — 否则下面 Step 1 已经清掉
+    # 旧 LevelSequence 的 bindings + master tracks,中途 raise 会留 dirty asset.
+    # ------------------------------------------------------------------
+    for frame in csv_result.frames:
+        csv_overscan_to_ue_overscan(
+            frame.overscan_x, frame.overscan_y, frame_number=frame.frame_number
+        )
+
     # ------------------------------------------------------------------
     # Step 1: Create or reuse LevelSequence asset (idempotent)
     # ------------------------------------------------------------------
@@ -251,6 +262,12 @@ def build_sequence(
         comp_binding, "SensorVerticalOffset", "Filmback.SensorVerticalOffset"
     )
 
+    # Overscan: UE 5.7 UCameraComponent.Overscan (Interp UPROPERTY, [0, 1] 增量制).
+    # bind 在 comp_binding (CineCameraComponent), 不是 controller_binding.
+    # 配合 _configure_camera 的 scale_resolution_with_overscan + crop_overscan
+    # 镜像 Disguise overscan→render→crop 流程.
+    overscan_section = _add_float_track(comp_binding, "Overscan", "Overscan")
+
     # ------------------------------------------------------------------
     # Step 6: Write keyframes
     # ------------------------------------------------------------------
@@ -284,6 +301,7 @@ def build_sequence(
     ch_weight   = weight_section.get_all_channels()[0]
     ch_sensor_h_offset = sensor_h_offset_section.get_all_channels()[0]
     ch_sensor_v_offset = sensor_v_offset_section.get_all_channels()[0]
+    ch_overscan = overscan_section.get_all_channels()[0]
 
     interp = unreal.MovieSceneKeyInterpolation.LINEAR
 
@@ -352,6 +370,14 @@ def build_sequence(
         ch_sensor_v_offset.add_key(
             frame_number, -frame.center_shift_y_mm, interpolation=interp
         )
+
+        # CSV.overscan (1.0+ 倍率) → UE.Overscan (0–1 增量), 见
+        # csv_parser.csv_overscan_to_ue_overscan. asymmetric overscan (x≠y > 0.5%)
+        # 或 ratio > 2.0 raise ValueError, 整个 import 失败 — 当前 Path C 不支持.
+        ue_overscan = csv_overscan_to_ue_overscan(
+            frame.overscan_x, frame.overscan_y, frame_number=frame.frame_number
+        )
+        ch_overscan.add_key(frame_number, ue_overscan, interpolation=interp)
 
     # DistortionWeight 全程 1.0, 不必每帧打 key. 在 frame 0 打一个常值 key 让
     # Sequencer 里这条 track 仍然可见 (方便手动暂时调 0 验证 identity 路径).

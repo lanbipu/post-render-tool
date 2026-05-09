@@ -29,6 +29,20 @@
 > 部署后必须重跑 `build_distortion_material.run_build()` 才能通过 metadata-tag
 > 校验。详见
 > `docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md`。
+>
+> **2026-05-09 update #2 (overscan)**: take_7 加大 distortion 暴露
+> 边缘黑边 — 因为 UE 之前一直没用 CSV 自带的 overscan 字段(1.3334),
+> radial 弯曲把边缘 sourceUV 弯到 frustum 外 = 黑;Disguise 多渲一圈
+> 后边缘有内容。修复:接上 UE 5.7 引擎原生 `UCameraComponent.Overscan`
+> + `bScaleResolutionWithOverscan` + `bCropOverscan`,Sequencer 关键帧
+> 写 `Overscan = (CSV.overscan_x + overscan_y) / 2 - 1.0`(等比检查
+> fail-fast,>2.0 fail-fast)。**这一修复跟 commit 69a9bea(centerShift
+> via SensorOffset)并存,不冲突** — uniform overscan 不动
+> `OffCenterProjectionOffset`(`CameraStackTypes.cpp:528`),引擎自己
+> 处理两个修复的交互。Custom PP material 在 crop 之前
+> (`PostProcessing.cpp:3270` BL pass 在 `:3340` SecondaryUpscale 之前),
+> blendable location 不需要改。详见
+> `docs/superpowers/plans/2026-05-09-overscan-support.md`。
 
 ## Project Overview
 

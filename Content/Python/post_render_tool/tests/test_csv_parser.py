@@ -536,5 +536,64 @@ class TestTrimStaticPadding(unittest.TestCase):
         self.assertLess(result.frame_count, 756)
         self.assertEqual(result.frames[0].frame_number, 625994)
 
+
+class TestCsvOverscanMapping(unittest.TestCase):
+    """csv_overscan_to_ue_overscan: CSV 1.0+ 倍率 → UE 0–1 增量."""
+
+    def test_equal_xy_returns_minus_one(self):
+        from post_render_tool.csv_parser import csv_overscan_to_ue_overscan
+        self.assertAlmostEqual(
+            csv_overscan_to_ue_overscan(1.3334, 1.3334, frame_number=42),
+            0.3334, places=4,
+        )
+
+    def test_none_fallback_zero(self):
+        from post_render_tool.csv_parser import csv_overscan_to_ue_overscan
+        self.assertEqual(
+            csv_overscan_to_ue_overscan(None, None, frame_number=0), 0.0
+        )
+        self.assertEqual(
+            csv_overscan_to_ue_overscan(1.3, None, frame_number=0), 0.0
+        )
+
+    def test_below_one_clamped_zero(self):
+        from post_render_tool.csv_parser import csv_overscan_to_ue_overscan
+        self.assertEqual(
+            csv_overscan_to_ue_overscan(0.95, 0.95, frame_number=0), 0.0
+        )
+
+    def test_asymmetric_raises(self):
+        from post_render_tool.csv_parser import csv_overscan_to_ue_overscan
+        with self.assertRaises(ValueError) as ctx:
+            csv_overscan_to_ue_overscan(1.3, 1.5, frame_number=42)
+        self.assertIn("42", str(ctx.exception))
+        self.assertIn("asymmetric", str(ctx.exception).lower())
+
+    def test_within_tolerance_does_not_raise(self):
+        # 1.3334 vs 1.3340 = ~0.045% 差异,<0.5% 阈值,不报错,取均值
+        from post_render_tool.csv_parser import csv_overscan_to_ue_overscan
+        v = csv_overscan_to_ue_overscan(1.3334, 1.3340, frame_number=0)
+        self.assertAlmostEqual(v, 0.3337, places=4)
+
+    def test_above_two_raises(self):
+        # CSV ratio > 2.0 → UE.Overscan > 1.0 超出 UCameraComponent.Overscan
+        # 的 ClampMax,fail-fast,不 silent clamp.
+        from post_render_tool.csv_parser import csv_overscan_to_ue_overscan
+        with self.assertRaises(ValueError) as ctx:
+            csv_overscan_to_ue_overscan(2.5, 2.5, frame_number=99)
+        self.assertIn("99", str(ctx.exception))
+        msg = str(ctx.exception).lower()
+        self.assertTrue("上界" in str(ctx.exception) or "exceed" in msg)
+
+    def test_mixed_underscan_overscan_raises(self):
+        # 一轴 < 1.0 (underscan), 另一轴有 overscan: 必须 raise asymmetric,
+        # 不能 silent clamp 0.0. 否则 unsupported 输入会产生错误 render.
+        from post_render_tool.csv_parser import csv_overscan_to_ue_overscan
+        with self.assertRaises(ValueError) as ctx:
+            csv_overscan_to_ue_overscan(0.95, 1.30, frame_number=7)
+        self.assertIn("7", str(ctx.exception))
+        self.assertIn("asymmetric", str(ctx.exception).lower())
+
+
 if __name__ == "__main__":
     unittest.main()

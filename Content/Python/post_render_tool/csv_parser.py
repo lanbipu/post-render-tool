@@ -258,6 +258,77 @@ def _get_opt_int(row: dict, key: str) -> Optional[int]:
 # ---------------------------------------------------------------------------
 
 
+def csv_overscan_to_ue_overscan(
+    overscan_x: Optional[float],
+    overscan_y: Optional[float],
+    *,
+    frame_number: int,
+    asymmetric_tolerance: float = 0.005,
+) -> float:
+    """把 Disguise CSV 的 overscan ratio (1.0+ 倍率) 转成 UE 5.7
+    ``UCameraComponent.Overscan`` 的增量制 (0.0 = 不开,0.3334 = 33% 扩大).
+
+    Disguise CSV: ``overscan.x = 1.3334`` 表示 frustum + 渲染分辨率 1.3334 倍.
+    UE: ``Overscan = 0.3334`` 表示 frustum 扩 33% (配合 bScaleResolutionWithOverscan
+    + bCropOverscan 复刻 Disguise 流程).
+
+    Parameters
+    ----------
+    overscan_x, overscan_y
+        CSV 一帧的 overscan ratio. None = 该字段缺失.
+    frame_number
+        当前帧号, 仅用于 error message context.
+    asymmetric_tolerance
+        ``|x - y| / max(x, y)`` 超过这个比例就视为 asymmetric 抛 ValueError.
+        默认 0.5%.
+
+    Returns
+    -------
+    float
+        UE.Overscan 值, [0.0, 1.0]. 缺失或 < 1.0 一律 clamp 到 0.0.
+
+    Raises
+    ------
+    ValueError
+        - x ≠ y 超过 tolerance (本 spec 不支持 asymmetric overscan).
+        - CSV ratio > 2.0 (UE.Overscan > 1.0,超 UCameraComponent.Overscan
+          的 ClampMax = 1.0).
+    """
+    if overscan_x is None or overscan_y is None:
+        return 0.0
+
+    # Asymmetry check 优先 (在 <1.0 clamp 之前). 否则 mixed underscan/overscan
+    # 例如 (0.95, 1.30) 会在后面 "<1.0 早返 0.0" silently 关掉 overscan,而不是
+    # raise — 跟 spec "x≠y > tolerance 必须 fail-fast" 矛盾.
+    largest = max(overscan_x, overscan_y)
+    if largest > 0 and abs(overscan_x - overscan_y) > asymmetric_tolerance * largest:
+        raise ValueError(
+            f"frame {frame_number}: asymmetric overscan unsupported "
+            f"(x={overscan_x}, y={overscan_y}, |x-y|/max > {asymmetric_tolerance}). "
+            f"Path C uniform-only;后续 phase 再扩 AsymmetricOverscan."
+        )
+
+    # 仅当两轴都 < 1.0 (一致 underscan) 才 clamp 到 0.0. 两轴几乎相等但
+    # 一个稍 < 1 / 一个稍 > 1 (asymmetric tolerance 内) → 平均后取符号决定.
+    if overscan_x < 1.0 and overscan_y < 1.0:
+        return 0.0
+
+    ue_overscan = (overscan_x + overscan_y) / 2.0 - 1.0
+    if ue_overscan < 0.0:
+        # tolerance 内的 mixed underscan/overscan,平均后 < 1.0 → 视为不开 overscan.
+        return 0.0
+    if ue_overscan > 1.0:
+        # UCameraComponent.Overscan 的 ClampMax = 1.0 (CameraComponent.h:135),
+        # 超过等于让引擎 silent clamp,容易掩盖 CSV 异常输入 — fail-fast 更稳.
+        raise ValueError(
+            f"frame {frame_number}: overscan exceeds UE upper bound "
+            f"(CSV ratio x={overscan_x}, y={overscan_y} → UE.Overscan="
+            f"{ue_overscan:.4f} > 1.0;UCameraComponent.Overscan ClampMax=1.0). "
+            f"超 200% overscan 不在当前 spec 支持范围,如确需请扩 spec."
+        )
+    return ue_overscan
+
+
 def trim_static_padding(result: "CsvDenseResult") -> "CsvDenseResult":
     """Drop leading + trailing rows whose camera pos matches frames[0] / frames[-1].
 

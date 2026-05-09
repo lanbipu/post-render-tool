@@ -217,6 +217,17 @@ def _configure_camera(
         sensor_width_mm / sensor_height_mm if sensor_height_mm > 0 else 0.0,
     )
 
+    # Overscan 静态行为 (per-take 不变, 所以静态设;Overscan 数值由 sequence_builder
+    # 上 keyframe). 配合 bScaleResolutionWithOverscan + bCropOverscan 镜像 Disguise:
+    # 扩大 frustum + 扩大渲染分辨率 → distortion shader 在多渲一圈的图上采样
+    # → 末端 crop 回原 resolution. UE 源码: CameraStackTypes.cpp:500 ApplyOverscan,
+    # PostProcessing.cpp:3270-3273 (BL_SCENE_COLOR_AFTER_TONEMAPPING) 在
+    # SecondaryUpscale crop (PostProcessing.cpp:3340-3347) 之前, 所以 PP material
+    # 看到的是 overscanned SceneTexture.
+    comp.set_editor_property("scale_resolution_with_overscan", True)
+    comp.set_editor_property("crop_overscan", True)
+    logger.info("Overscan 行为已设置: scale_resolution_with_overscan=True, crop_overscan=True")
+
     # Path C: 挂 PostRenderDistortionControllerComponent + 绑 Material.
     # Controller 的 BeginPlay 是 camera 上 distortion blendable 的唯一来源.
     _ensure_distortion_controller(camera_actor)
