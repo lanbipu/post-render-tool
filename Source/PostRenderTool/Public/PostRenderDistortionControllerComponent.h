@@ -95,6 +95,18 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Interp, Category="Distortion")
     float DistortionWeight;
 
+    /** Overscan amount [0, 1] (UE convention; CSV ratio - 1.0). When camera
+     *  has Overscan > 0 + bScaleResolutionWithOverscan + bCropOverscan,
+     *  PP material renders on the overscanned SceneTexture (e.g. 2560x1440
+     *  for 0.3334), but K1/K2/K3 are calibrated against the original 1920x1080
+     *  frustum. Shader uses this to remap viewport UV → original frustum UV
+     *  before applying the radial formula, then unmaps back to viewport for
+     *  SceneTexture sampling. Overscan = 0 → identity remap (preserves the
+     *  pre-overscan algorithm 1:1, take_5/6 unchanged). Pipeline writes this
+     *  per-frame, mirrored from the CineCameraComponent.Overscan keyframe. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Interp, Category="Distortion")
+    float Overscan;
+
     // ======================================================================
     // Manually push current parameter state to the MID. Pipeline does not
     // need to call this — TickComponent does it every frame. Exposed for

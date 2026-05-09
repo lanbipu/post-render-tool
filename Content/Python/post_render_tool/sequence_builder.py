@@ -251,6 +251,14 @@ def build_sequence(
         controller_binding, "DistortionWeight", "DistortionWeight"
     )
 
+    # Overscan 也喂给 controller, 因为 shader 要拿它做 frustum 归一化
+    # (viewport UV 在扩大 SceneTexture 上,要换回原 frustum UV space 才能
+    # 正确套 K1/K2/K3 标定的公式). 跟 comp_binding.Overscan 同源, 关键帧值
+    # 一样, 写两条 track 让 camera 跟 controller 都看到同一个值.
+    controller_overscan_section = _add_float_track(
+        controller_binding, "Overscan", "Overscan"
+    )
+
     # CenterShift 走 camera projection (UE 5.7 Filmback.SensorHorizontalOffset/Vertical
     # → CineCameraComponent.GetCameraView 写入 OffCenterProjectionOffset, 渲染时
     # frustum 中心已对到 principal point). bind 在 comp_binding (CineCameraComponent),
@@ -302,6 +310,7 @@ def build_sequence(
     ch_sensor_h_offset = sensor_h_offset_section.get_all_channels()[0]
     ch_sensor_v_offset = sensor_v_offset_section.get_all_channels()[0]
     ch_overscan = overscan_section.get_all_channels()[0]
+    ch_controller_overscan = controller_overscan_section.get_all_channels()[0]
 
     interp = unreal.MovieSceneKeyInterpolation.LINEAR
 
@@ -374,10 +383,12 @@ def build_sequence(
         # CSV.overscan (1.0+ 倍率) → UE.Overscan (0–1 增量), 见
         # csv_parser.csv_overscan_to_ue_overscan. asymmetric overscan (x≠y > 0.5%)
         # 或 ratio > 2.0 raise ValueError, 整个 import 失败 — 当前 Path C 不支持.
+        # 同一个值喂两个 binding: camera (frustum 扩大) + controller (shader 归一化).
         ue_overscan = csv_overscan_to_ue_overscan(
             frame.overscan_x, frame.overscan_y, frame_number=frame.frame_number
         )
         ch_overscan.add_key(frame_number, ue_overscan, interpolation=interp)
+        ch_controller_overscan.add_key(frame_number, ue_overscan, interpolation=interp)
 
     # DistortionWeight 全程 1.0, 不必每帧打 key. 在 frame 0 打一个常值 key 让
     # Sequencer 里这条 track 仍然可见 (方便手动暂时调 0 验证 identity 路径).

@@ -31,6 +31,7 @@ UPostRenderDistortionControllerComponent::UPostRenderDistortionControllerCompone
     CenterV = 0.5f;
     Aspect = 16.0f / 9.0f;
     DistortionWeight = 1.0f;
+    Overscan = 0.0f;
 
     DistortionMID = nullptr;
 }
@@ -138,6 +139,7 @@ void UPostRenderDistortionControllerComponent::RefreshMaterialParameters()
     DistortionMID->SetScalarParameterValue(TEXT("K3"), K3);
     DistortionMID->SetScalarParameterValue(TEXT("Aspect"), Aspect);
     DistortionMID->SetScalarParameterValue(TEXT("DistortionWeight"), DistortionWeight);
+    DistortionMID->SetScalarParameterValue(TEXT("Overscan"), Overscan);
 
     // CenterUV is a Vector parameter (Vector4 / FLinearColor). Material reads
     // R for U, G for V; B and A unused. Two scalar UPROPERTYs (CenterU,

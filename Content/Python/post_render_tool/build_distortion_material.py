@@ -59,7 +59,7 @@ FULL_ASSET_PATH = f"{PACKAGE_PATH}/{ASSET_NAME}"
 # 必须在每次 HLSL_CODE / formula 形态变化时 bump. 通过 metadata tag
 # 写到 deployed Material asset 上, pipeline.run_import() 启动时校验,
 # 不一致 → 拒绝跑 import, 提示用户重跑 run_build().
-SHADER_VERSION = "2026-05-09-centershift-via-projection-offset"
+SHADER_VERSION = "2026-05-10-overscan-frustum-normalized"
 SHADER_VERSION_TAG = "PRT.ShaderVersion"
 
 
@@ -67,16 +67,31 @@ SHADER_VERSION_TAG = "PRT.ShaderVersion"
 # Custom node 的 inputs 顺序: UV, CenterUV, K1, K2, K3, Aspect, DistortionWeight
 HLSL_CODE = f"""
 // VERSION: {SHADER_VERSION}
-// Radial-only post-process distortion.
+// Radial-only post-process distortion + overscan frustum normalization.
+//
+// Pipeline 开 overscan 后, SceneTexture 是扩大 viewport (例如 2560x1440 for
+// CSV.overscan = 1.3334), shader 收到的 UV ∈ [0,1] 跨整个扩大 viewport.
+// K1/K2/K3 是按原始 1920x1080 frustum 标定的, 直接套在扩大 UV 上会让
+// distortion 应用在错误尺度 — 形状跟量级都不对.
+//
+// 修法: 在算法外面包一层坐标变换, 让原 distortion 公式仍在"原 frustum [0,1]
+// UV space"作用, 算完再换回 viewport sample 位置.
+//
+// Overscan = 0 (老 take, 没开 overscan) → OS = 1.0 → 两层换算都恒等映射 →
+// 公式跟旧 SHADER_VERSION 1:1 一致, take_5/6 等不会回退.
+//
 // CenterShift 已迁到 CineCameraComponent.Filmback.SensorHorizontalOffset/Vertical
 // (走 OffCenterProjectionOffset),frustum 在渲染时已对准 principal point;
 // 这里只做 radial term,radial 中心固定 = 图心 (0.5, 0.5),CenterUV 由
 // sequence_builder 写入 (0.5, 0.5) 常量,Aspect 仍按 per-frame CSV 关键帧。
-float2 d = UV - CenterUV.rg;
+float OS = 1.0 + Overscan;
+float2 normUV = (UV - float2(0.5, 0.5)) * OS + float2(0.5, 0.5);
+float2 d = normUV - CenterUV.rg;
 float2 r = float2(d.x, d.y / Aspect);
 float r2 = dot(r, r);
 float fac = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
-return UV + (fac * d) * DistortionWeight;
+float2 sourceNorm = normUV + (fac * d) * DistortionWeight;
+return (sourceNorm - float2(0.5, 0.5)) / OS + float2(0.5, 0.5);
 """.strip()
 
 
@@ -91,8 +106,8 @@ return inBounds.x * inBounds.y;
 """.strip()
 
 
-# ── Custom node 输入端口名 (顺序就是 HLSL 里 UV, CenterUV, K1, K2, K3, Aspect, DistortionWeight) ──
-CUSTOM_INPUT_NAMES = ("UV", "CenterUV", "K1", "K2", "K3", "Aspect", "DistortionWeight")
+# ── Custom node 输入端口名 (顺序就是 HLSL 里 UV, CenterUV, K1, K2, K3, Aspect, DistortionWeight, Overscan) ──
+CUSTOM_INPUT_NAMES = ("UV", "CenterUV", "K1", "K2", "K3", "Aspect", "DistortionWeight", "Overscan")
 
 
 # ── 节点画布坐标 (单位是 graph editor 里的像素, 视觉布局用) ───────────
@@ -103,7 +118,8 @@ LAYOUT = {
     "Aspect":           (-800, -100),
     "DistortionWeight": (-800,    0),
     "CenterUV":         (-800,  100),
-    "ScreenPosition":   (-800,  250),
+    "Overscan":         (-800,  200),
+    "ScreenPosition":   (-800,  350),
     "Custom":           (-400,    0),
     "SceneTexture":     ( -50, -100),
     "Mask":             ( -50,  150),
@@ -185,6 +201,7 @@ def run_build() -> "unreal.Material":
     n_Aspect = _make_scalar(material, "Aspect", 16.0 / 9.0, *LAYOUT["Aspect"])
     n_Weight = _make_scalar(material, "DistortionWeight", 1.0, *LAYOUT["DistortionWeight"])
     n_Center = _make_vector(material, "CenterUV", unreal.LinearColor(0.5, 0.5, 0.0, 0.0), *LAYOUT["CenterUV"])
+    n_Overscan = _make_scalar(material, "Overscan", 0.0, *LAYOUT["Overscan"])
 
     # ── ScreenPosition: viewport UV input ──
     n_ScreenPos = mel.create_material_expression(
@@ -247,12 +264,13 @@ def run_build() -> "unreal.Material":
     # CenterUV.RGB → Custom.CenterUV (Vector parameter 默认输出 = RGB)
     mel.connect_material_expressions(n_Center, "", n_Custom, "CenterUV")
 
-    # 5 个 scalar parameter → Custom 对应 input
+    # 6 个 scalar parameter → Custom 对应 input
     mel.connect_material_expressions(n_K1, "", n_Custom, "K1")
     mel.connect_material_expressions(n_K2, "", n_Custom, "K2")
     mel.connect_material_expressions(n_K3, "", n_Custom, "K3")
     mel.connect_material_expressions(n_Aspect, "", n_Custom, "Aspect")
     mel.connect_material_expressions(n_Weight, "", n_Custom, "DistortionWeight")
+    mel.connect_material_expressions(n_Overscan, "", n_Custom, "Overscan")
 
     # Custom (sourceUV) → SceneTexture.UVs (用于实际采样)
     mel.connect_material_expressions(n_Custom, "", n_SceneTex, "UVs")

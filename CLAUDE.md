@@ -43,6 +43,22 @@
 > (`PostProcessing.cpp:3270` BL pass 在 `:3340` SecondaryUpscale 之前),
 > blendable location 不需要改。详见
 > `docs/superpowers/plans/2026-05-09-overscan-support.md`。
+>
+> **2026-05-10 update #3 (overscan shader frustum 归一化)**: commit
+> 43173c4 (overscan support)实测 take_7 渲染 distortion 形状完全错 —
+> 因为 SceneTexture 现在是扩大 viewport (2560×1440),shader UV [0,1]
+> 跨整个扩大区,但 K1/K2/K3 是按原 1920×1080 frustum 标定的,直接套
+> 得到的 r²/d 偏离原标定。修复:shader **不动核心算法**,在外面包一层
+> 坐标变换 — `normUV = (UV - 0.5) * (1+Overscan) + 0.5` 把 viewport UV
+> 转回原 frustum UV space → 原 distortion 公式照常作用 → 反映射回
+> viewport sample 位置。Overscan=0 时 OS=1.0 → 两层换算恒等 → 跟旧
+> SHADER_VERSION 1:1 一致(take_5/6 重 import 不会回退)。
+> SHADER_VERSION → `2026-05-10-overscan-frustum-normalized`,
+> controller `PostRenderDistortionControllerComponent` 加 `Overscan`
+> UPROPERTY(Interp)+ MID set,sequence_builder 在 controller_binding
+> 也加一条 Overscan track(跟 camera 上的 Overscan 同源)。**改了 C++
+> UPROPERTY → 必须 UBT 重编 plugin + 重启 UE Editor + run_build()
+> 重生 material**。
 
 ## Project Overview
 
