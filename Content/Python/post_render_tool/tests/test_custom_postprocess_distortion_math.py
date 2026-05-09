@@ -114,49 +114,47 @@ class TestAspectNormalization(unittest.TestCase):
         self.assertAlmostEqual(u_horiz - 0.6, v_vert - 0.6, places=6)
 
 
-class TestCenterShift(unittest.TestCase):
-    """CenterUV 决定位移零点 (光学中心), 偏移它把畸变中心搬走.
+class TestCenterUvAsRadialCenter(unittest.TestCase):
+    """CenterUV 在新模型 (2026-05-09) 下仅作为 radial distortion 中心.
 
-    2026-05-07 加: d3 在 source UV 上额外减去 ``csx_uv = CenterUV - 0.5``,
-    跟 radial 解耦. 详见 validation_results/normalization_gate/20260507_150346_summary.md.
+    centerShift 平移已移到 CineCameraComponent.Filmback.SensorHorizontalOffset/
+    Vertical (走 OffCenterProjectionOffset),frustum 在渲染时已对准 principal
+    point。生产 pipeline 写入 CenterUV = (0.5, 0.5) 常量,这里测的是参数仍按
+    radial 中心语义工作 (调试 / 向后兼容用)。
     """
 
-    def test_shifted_center_maps_to_image_center_in_source(self):
-        # center_uv=(0.6, 0.5) → csx_uv=(0.1, 0). Output at the shifted center
-        # (UV=(0.6, 0.5)) → d=0 → no radial — but source translates by -csx_uv.
-        # So source = (0.6, 0.5) - (0.1, 0) = (0.5, 0.5). i.e. the principal
-        # point in OUTPUT lands at image center in SOURCE.
+    def test_shifted_center_zero_at_center(self):
+        # center_uv=(0.6, 0.5) 时 UV=(0.6, 0.5) → d=0 → source 应该 = UV (radial=0).
+        # 不再 -csx 平移 (那块已经移到 camera projection offset)。
         u, v = official_sensor_inverse_uv(
             0.6, 0.5, k1=0.5, k2=0.3, k3=-0.2,
+            center_uv=(0.6, 0.5), aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(u, 0.6, places=6)
+        self.assertAlmostEqual(v, 0.5, places=6)
+
+    def test_shifted_center_radial_around_offset(self):
+        # center_uv=(0.6, 0.5), UV=(0.5, 0.5), K1=+0.5:
+        #   d = (-0.1, 0), r2 = 0.01, fac = 0.005
+        #   source_u = 0.5 + 0.005 * (-0.1) = 0.4995
+        u, v = official_sensor_inverse_uv(
+            0.5, 0.5, k1=0.5, k2=0.0, k3=0.0,
+            center_uv=(0.6, 0.5), aspect=ASPECT_16_9,
+        )
+        self.assertAlmostEqual(u, 0.4995, places=6)
+        self.assertAlmostEqual(v, 0.5, places=6)
+
+    def test_K_zero_no_translation(self):
+        # K=0 + 任意 center_uv → 没有 radial,新公式下也没有 csx 平移 → source = UV。
+        u, v = official_sensor_inverse_uv(
+            0.5, 0.5, k1=0.0, k2=0.0, k3=0.0,
             center_uv=(0.6, 0.5), aspect=ASPECT_16_9,
         )
         self.assertAlmostEqual(u, 0.5, places=6)
         self.assertAlmostEqual(v, 0.5, places=6)
 
-    def test_center_shift_displaces_old_center(self):
-        # center_uv=(0.6, 0.5), UV=(0.5, 0.5), K1=+0.5, K2=K3=0:
-        #   d = (-0.1, 0), r = (-0.1, 0), r2 = 0.01, fac = 0.5*0.01 = 0.005
-        #   csx_uv = (0.1, 0)
-        #   source_u = 0.5 + (0.005*(-0.1) - 0.1) = 0.5 + (-0.1005) = 0.3995
-        u, v = official_sensor_inverse_uv(
-            0.5, 0.5, k1=0.5, k2=0.0, k3=0.0,
-            center_uv=(0.6, 0.5), aspect=ASPECT_16_9,
-        )
-        self.assertAlmostEqual(u, 0.3995, places=6)
-        self.assertAlmostEqual(v, 0.5, places=6)
-
-    def test_center_shift_translates_source_at_K_zero(self):
-        # Pure translation: K1=K2=K3=0, center_uv=(0.6, 0.5) → csx_uv=(0.1, 0).
-        # Any UV: source = UV - (0.1, 0).
-        u, v = official_sensor_inverse_uv(
-            0.5, 0.5, k1=0.0, k2=0.0, k3=0.0,
-            center_uv=(0.6, 0.5), aspect=ASPECT_16_9,
-        )
-        self.assertAlmostEqual(u, 0.4, places=6)
-        self.assertAlmostEqual(v, 0.5, places=6)
-
-    def test_center_shift_weight_zero_kills_translation(self):
-        # weight=0 must zero out BOTH radial and translation.
+    def test_weight_zero_identity(self):
+        # weight=0 → identity,跟 center_uv 无关。
         u, v = official_sensor_inverse_uv(
             0.5, 0.5, k1=0.5, k2=0.0, k3=0.0,
             center_uv=(0.6, 0.5), aspect=ASPECT_16_9,
@@ -164,23 +162,6 @@ class TestCenterShift(unittest.TestCase):
         )
         self.assertAlmostEqual(u, 0.5, places=6)
         self.assertAlmostEqual(v, 0.5, places=6)
-
-    def test_d3_fit_csx_minus_0p05(self):
-        # 12-frame fit (csx_mm=-0.05, sensor_w_mm=35.0, W=3840):
-        #   csx_uv = -0.05/35 ≈ -0.001428571
-        #   center_uv = (0.5 + csx_uv, 0.5) = (0.498571, 0.5)
-        #   Output at image center (0.5, 0.5), K=0 → source_u = 0.5 - csx_uv
-        #     = 0.5 - (-0.001428571) = 0.501428571
-        # Multiplied by W=3840: source_x_px ≈ 1925.486 → dx_px ≈ +5.486
-        # Matches docs/d3-distortion-render-request.md center_shift_sweep evidence
-        # (residual ~0.45 px on the fit).
-        center_uv = (0.5 + (-0.05 / 35.0), 0.5)
-        u, v = official_sensor_inverse_uv(
-            0.5, 0.5, k1=0.0, k2=0.0, k3=0.0,
-            center_uv=center_uv, aspect=ASPECT_16_9,
-        )
-        self.assertAlmostEqual(u, 0.5 + 0.05 / 35.0, places=8)
-        self.assertAlmostEqual(v, 0.5, places=8)
 
 
 class TestK2K3Powers(unittest.TestCase):

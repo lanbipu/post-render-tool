@@ -240,6 +240,17 @@ def build_sequence(
         controller_binding, "DistortionWeight", "DistortionWeight"
     )
 
+    # CenterShift 走 camera projection (UE 5.7 Filmback.SensorHorizontalOffset/Vertical
+    # → CineCameraComponent.GetCameraView 写入 OffCenterProjectionOffset, 渲染时
+    # frustum 中心已对到 principal point). bind 在 comp_binding (CineCameraComponent),
+    # 不是 controller_binding.
+    sensor_h_offset_section = _add_float_track(
+        comp_binding, "SensorHorizontalOffset", "Filmback.SensorHorizontalOffset"
+    )
+    sensor_v_offset_section = _add_float_track(
+        comp_binding, "SensorVerticalOffset", "Filmback.SensorVerticalOffset"
+    )
+
     # ------------------------------------------------------------------
     # Step 6: Write keyframes
     # ------------------------------------------------------------------
@@ -271,6 +282,8 @@ def build_sequence(
     ch_center_v = center_v_section.get_all_channels()[0]
     ch_aspect   = aspect_section.get_all_channels()[0]
     ch_weight   = weight_section.get_all_channels()[0]
+    ch_sensor_h_offset = sensor_h_offset_section.get_all_channels()[0]
+    ch_sensor_v_offset = sensor_v_offset_section.get_all_channels()[0]
 
     interp = unreal.MovieSceneKeyInterpolation.LINEAR
 
@@ -318,18 +331,27 @@ def build_sequence(
         ch_k2.add_key(frame_number, frame.k2, interpolation=interp)
         ch_k3.add_key(frame_number, frame.k3, interpolation=interp)
 
-        sensor_height_mm = frame.sensor_width_mm / frame.aspect_ratio
-        center_u = 0.5 + frame.center_shift_x_mm / frame.sensor_width_mm
-        # Y axis flip: Disguise centerShiftMM.y 在 sensor-space (Y up),
-        # UE/HLSL CenterUV 在 UV-space (Y down),所以 Y 分量取反;X 方向不 flip。
-        # take_6 (cs_y=-0.192mm) 实测验证:不 flip 时 vertical shift ≈ -21 px
-        # (= -2 × predicted csx_v),flip 后 ≈ 0。详见
-        # validation_results/path_c_production/take_6/summary.md。
-        center_v = 0.5 - frame.center_shift_y_mm / sensor_height_mm
-        ch_center_u.add_key(frame_number, center_u, interpolation=interp)
-        ch_center_v.add_key(frame_number, center_v, interpolation=interp)
+        # CenterUV 在 2026-05-09 之后仅作为 radial distortion 中心.
+        # CenterShift 已通过 Filmback.SensorHorizontalOffset/Vertical 在 frustum
+        # 渲染时把 principal point 对到图心,所以 radial 中心 = 图心 = (0.5, 0.5)。
+        ch_center_u.add_key(frame_number, 0.5, interpolation=interp)
+        ch_center_v.add_key(frame_number, 0.5, interpolation=interp)
 
         ch_aspect.add_key(frame_number, frame.aspect_ratio, interpolation=interp)
+
+        # Filmback offset 取 -centerShift_mm. 推理:
+        #   Disguise cs<0 → 主点在 sensor 左/下(标定 Y-up)→ Disguise camera
+        #   拍到右/上边多。UE 要复刻 → frustum 向右/上扩 →
+        #   OffCenterProjectionOffset.{X,Y} > 0 → 因为
+        #   OffCenter = 2 * Sensor*Offset / SensorDim,Sensor*Offset 必须 > 0
+        #   → 当 cs<0 时,Sensor*Offset = -cs_mm > 0。take_6 观察 cs=(-0.166, -0.192)
+        #   且 UE 缺 top+right,跟此推理方向一致。
+        ch_sensor_h_offset.add_key(
+            frame_number, -frame.center_shift_x_mm, interpolation=interp
+        )
+        ch_sensor_v_offset.add_key(
+            frame_number, -frame.center_shift_y_mm, interpolation=interp
+        )
 
     # DistortionWeight 全程 1.0, 不必每帧打 key. 在 frame 0 打一个常值 key 让
     # Sequencer 里这条 track 仍然可见 (方便手动暂时调 0 验证 identity 路径).

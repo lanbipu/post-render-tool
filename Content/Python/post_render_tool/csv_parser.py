@@ -69,6 +69,10 @@ class FrameData:
     fov_v: Optional[float]
     resolution_x: Optional[int]
     resolution_y: Optional[int]
+    overscan_x: Optional[float] = None
+    overscan_y: Optional[float] = None
+    overscan_resolution_x: Optional[int] = None
+    overscan_resolution_y: Optional[int] = None
 
 
 @dataclass
@@ -141,6 +145,10 @@ def _build_legacy_dialect(prefix: str) -> _Dialect:
         "fov_v":             f"{p}.fieldOfViewV",
         "resolution_x":      f"{p}.resolution.x",
         "resolution_y":      f"{p}.resolution.y",
+        "overscan_x":              f"{p}.overscan.x",
+        "overscan_y":              f"{p}.overscan.y",
+        "overscan_resolution_x":   f"{p}.overscanResolution.x",
+        "overscan_resolution_y":   f"{p}.overscanResolution.y",
     }
     return _Dialect(name="legacy", camera_prefix=prefix, columns=cols, soft_columns=soft)
 
@@ -174,6 +182,10 @@ def _build_spatialmap_dialect(base: str) -> _Dialect:
         "fov_v":             f"{cam}.fieldOfViewV",
         "resolution_x":      f"{cam}.resolution.x",
         "resolution_y":      f"{cam}.resolution.y",
+        "overscan_x":              f"{cam}.overscan.x",
+        "overscan_y":              f"{cam}.overscan.y",
+        "overscan_resolution_x":   f"{cam}.overscanResolution.x",
+        "overscan_resolution_y":   f"{cam}.overscanResolution.y",
     }
     return _Dialect(name="spatialmap", camera_prefix=base, columns=cols, soft_columns=soft)
 
@@ -408,6 +420,10 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
     col_fov_v = dialect.soft_columns["fov_v"]
     col_res_x = dialect.soft_columns["resolution_x"]
     col_res_y = dialect.soft_columns["resolution_y"]
+    col_oversc_x  = dialect.soft_columns["overscan_x"]
+    col_oversc_y  = dialect.soft_columns["overscan_y"]
+    col_oversc_rx = dialect.soft_columns["overscan_resolution_x"]
+    col_oversc_ry = dialect.soft_columns["overscan_resolution_y"]
 
     for row in all_rows:
         try:
@@ -451,6 +467,10 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
             fov_v=_get_opt_float(row, col_fov_v),
             resolution_x=_get_opt_int(row, col_res_x),
             resolution_y=_get_opt_int(row, col_res_y),
+            overscan_x=_get_opt_float(row, col_oversc_x),
+            overscan_y=_get_opt_float(row, col_oversc_y),
+            overscan_resolution_x=_get_opt_int(row, col_oversc_rx),
+            overscan_resolution_y=_get_opt_int(row, col_oversc_ry),
         ))
 
     if skipped:

@@ -59,7 +59,7 @@ FULL_ASSET_PATH = f"{PACKAGE_PATH}/{ASSET_NAME}"
 # 必须在每次 HLSL_CODE / formula 形态变化时 bump. 通过 metadata tag
 # 写到 deployed Material asset 上, pipeline.run_import() 启动时校验,
 # 不一致 → 拒绝跑 import, 提示用户重跑 run_build().
-SHADER_VERSION = "2026-05-07-centershift-source-translation"
+SHADER_VERSION = "2026-05-09-centershift-via-projection-offset"
 SHADER_VERSION_TAG = "PRT.ShaderVersion"
 
 
@@ -67,16 +67,16 @@ SHADER_VERSION_TAG = "PRT.ShaderVersion"
 # Custom node 的 inputs 顺序: UV, CenterUV, K1, K2, K3, Aspect, DistortionWeight
 HLSL_CODE = f"""
 // VERSION: {SHADER_VERSION}
-// Mirrors distortion_math.official_sensor_inverse_uv (Python reference).
-// Output → source UV sampling map (cv2.remap forward).
-// Per validation_results/normalization_gate/20260507_150346_summary.md,
-// d3 translates source UV by -csx_uv on top of the radial term — even at K=0.
+// Radial-only post-process distortion.
+// CenterShift 已迁到 CineCameraComponent.Filmback.SensorHorizontalOffset/Vertical
+// (走 OffCenterProjectionOffset),frustum 在渲染时已对准 principal point;
+// 这里只做 radial term,radial 中心固定 = 图心 (0.5, 0.5),CenterUV 由
+// sequence_builder 写入 (0.5, 0.5) 常量,Aspect 仍按 per-frame CSV 关键帧。
 float2 d = UV - CenterUV.rg;
 float2 r = float2(d.x, d.y / Aspect);
 float r2 = dot(r, r);
 float fac = K1 * r2 + K2 * r2 * r2 + K3 * r2 * r2 * r2;
-float2 csxUV = CenterUV.rg - float2(0.5, 0.5);
-return UV + (fac * d - csxUV) * DistortionWeight;
+return UV + (fac * d) * DistortionWeight;
 """.strip()
 
 

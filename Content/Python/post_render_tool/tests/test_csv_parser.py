@@ -298,6 +298,23 @@ class TestCsvDenseParser(unittest.TestCase):
             parse_csv_dense(path)
         self.assertIn("skipped 2", str(ctx.exception))
 
+    def test_overscan_fields_parsed(self):
+        """Overscan + overscanResolution 4 个字段从 CSV 解出来,挂到 FrameData."""
+        from post_render_tool.csv_parser import parse_csv_dense
+
+        prefix = "camera:cam_1"
+        headers = self._make_headers(prefix)
+        rows = [self._make_row("00:00:00.00", 0)]
+        path = self._tmp(self._write_csv(headers, rows))
+
+        result = parse_csv_dense(path)
+        f0 = result.frames[0]
+
+        self.assertAlmostEqual(f0.overscan_x, 1.3, places=4)
+        self.assertAlmostEqual(f0.overscan_y, 1.3, places=4)
+        self.assertEqual(f0.overscan_resolution_x, 2496)
+        self.assertEqual(f0.overscan_resolution_y, 1404)
+
 
 class TestSpatialmapDialect(unittest.TestCase):
     """Spatialmap-style export (Disguise mr_set_target__backplate_) parsing.
@@ -518,7 +535,6 @@ class TestTrimStaticPadding(unittest.TestCase):
         result = trim_static_padding(parse_csv_dense(real_csv))
         self.assertLess(result.frame_count, 756)
         self.assertEqual(result.frames[0].frame_number, 625994)
-
 
 if __name__ == "__main__":
     unittest.main()

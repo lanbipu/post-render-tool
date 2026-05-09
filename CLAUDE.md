@@ -18,6 +18,17 @@
 > **看 diff 时的坑**:场景里的粉色 sphere mesh 是 helper 几何,不是 distortion
 > 校正网格;天空云是 time-based procedural noise,每次渲染都不一样,diff
 > heatmap 上的天空残差不计入验收。详见 take_5 summary。
+>
+> **2026-05-09 update**: take_6 完整 production diff 暴露非对称 frustum 截断
+> (上 + 右少 ~10 px),原因是 `centerShift` 当成 post-process UV 平移只能搬
+> 已渲像素,补不回 frustum 外内容(phase correlation 看不出来,它测中心结构,
+> 不测 frustum 范围)。修复:`centerShift` 改走
+> `CineCameraComponent.Filmback.SensorHorizontalOffset/Vertical`(UE 原生
+> `OffCenterProjectionOffset`),shader 只剩 radial term,radial 中心 = 图心
+> (0.5, 0.5)。SHADER_VERSION → `2026-05-09-centershift-via-projection-offset`,
+> 部署后必须重跑 `build_distortion_material.run_build()` 才能通过 metadata-tag
+> 校验。详见
+> `docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md`。
 
 ## Project Overview
 
