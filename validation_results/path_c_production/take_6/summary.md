@@ -1,15 +1,18 @@
-# take_6 production diff — PARTIAL(中心结构通过,frustum 不完整待修)
+# take_6 production diff — PASS(中心结构 + frustum 完整,2026-05-09 修复)
 
 **最后更新**: 2026-05-09
-**状态**: **PARTIAL / BLOCKED**
-- ✅ 中心结构匹配 + Y 方向 vertical shift < 0.1 px 中位(`LS_test_take_6_dense.0001.png`)
-- ❌ 上 + 右边缘比 Disguise reference 少约 10 px 内容(frustum 不完整)
-- ⏳ 修复方案已切 camera projection offset(`CineCameraComponent.Filmback.SensorHorizontalOffset/Vertical`),代码改动已落,等 Phase 1/2 新 render 验证后才能改回 PASS
+**状态**: **PASS**
+- ✅ 中心结构匹配 + Y 方向 vertical shift < 0.1 px 中位
+- ✅ Top + right edge frustum 完整(2026-05-09 修复后,用户实测新 render 跟 Disguise reference 视觉对比通过)
 
-> **不要把当前 0001.png 当 production gate**。phase correlation 看不出 frustum
-> 截断(它测中心结构,不测 frustum 范围),所以早先一版 summary 误标了 PASS。
-> 修复计划:
-> `docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md`
+## 历史(供回溯)
+
+- **2026-05-08 第一版**: 误标 PASS,因为 phase correlation 只测中心结构,看不出 frustum 截断
+- **2026-05-09 中段降级**: 发现 `LS_test_take_6_dense.0001.png` 上 + 右边缘比 Disguise 少约 10 px 内容,降级 PARTIAL/BLOCKED
+- **2026-05-09 修复**: commit `69a9bea` 把 `centerShift` 从 shader UV 平移迁到 `CineCameraComponent.Filmback.SensorHorizontalOffset/Vertical`(走 `OffCenterProjectionOffset`),sign 取负(`= -cs_*_mm`),frustum 在渲染时已对到 principal point。用户在 lanPC 重渲后实测验证通过 → 升 PASS
+- 修复方案 + 推理证据:`docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md`
+
+> **0001.png 是旧 shader-translation 公式产物**(2026-05-08 渲),保留作历史对照,**不是当前 PASS 的 evidence**。新 render evidence 待 lanPC sync 回 mac 后补到本目录。
 
 ## 测试条件
 
@@ -20,8 +23,9 @@
 | centerShift | (−0.16569, **−0.19201**) mm |
 | Resolution | 1920 × 1080 |
 | Disguise reference | `screen_mr_set_1_00001.exr`(Sequence Shot screenshot, linear EXR) |
-| UE render(旧公式 / bug) | `LS_test_take_6_dense.0002.exr` |
-| UE render(修复后 / pass) | `LS_test_take_6_dense.0001.png`(MRQ Path C, sRGB PNG) |
+| UE render(2026-05-08 第一版 bug) | `LS_test_take_6_dense.0002.exr` |
+| UE render(中段 partial — 旧 shader translation) | `LS_test_take_6_dense.0001.png`(中心通过 / frustum 缺) |
+| UE render(2026-05-09 修复后 PASS) | 待 sync(commit `69a9bea` 后用户实测验证) |
 | 帧映射 | 机位静态 → ref 任一帧 ≡ UE 任一帧 |
 
 ## 跟 take_5 对比的意义
