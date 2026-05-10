@@ -81,7 +81,18 @@
                       12,
                       12
                     ],
-                    "Visibility": "SelfHitTestInvisible"
+                    "Visibility": "SelfHitTestInvisible",
+                    "OutlineSettings": {
+                      "CornerRadius": 4,
+                      "Color": [
+                        0.2,
+                        0.2,
+                        0.2,
+                        1.0
+                      ],
+                      "Width": 1,
+                      "RoundingType": "FixedRadius"
+                    }
                   },
                   "slot": {
                     "padding": [
@@ -202,7 +213,7 @@
                                   "name": "prereq_summary",
                                   "role": "optional",
                                   "properties": {
-                                    "Text": "6 / 6 OK",
+                                    "Text": "5 / 5 OK",
                                     "ColorAndOpacity": [
                                       0.298,
                                       0.686,
@@ -417,7 +428,7 @@
                                       "name": "prereq_label_2",
                                       "role": "optional",
                                       "properties": {
-                                        "Text": "OK: Camera Calibration",
+                                        "Text": "OK: CineCameraActor",
                                         "ColorAndOpacity": [
                                           0.878,
                                           0.878,
@@ -486,7 +497,7 @@
                                       "name": "prereq_label_3",
                                       "role": "optional",
                                       "properties": {
-                                        "Text": "OK: CineCameraActor",
+                                        "Text": "OK: LevelSequence",
                                         "ColorAndOpacity": [
                                           0.878,
                                           0.878,
@@ -555,7 +566,7 @@
                                       "name": "prereq_label_4",
                                       "role": "optional",
                                       "properties": {
-                                        "Text": "OK: LevelSequence",
+                                        "Text": "OK: EditorUtilitySubsystem",
                                         "ColorAndOpacity": [
                                           0.878,
                                           0.878,
@@ -606,7 +617,7 @@
                                             ],
                                             "Font": {
                                               "size": 12,
-                                              "type_face": "Regular"
+                                              "type_face": "Medium"
                                             },
                                             "Visibility": "SelfHitTestInvisible"
                                           },
@@ -626,7 +637,18 @@
                                           0.18,
                                           0.18,
                                           1.0
-                                        ]
+                                        ],
+                                        "OutlineSettings": {
+                                          "CornerRadius": 4,
+                                          "Color": [
+                                            0.267,
+                                            0.267,
+                                            0.267,
+                                            1.0
+                                          ],
+                                          "Width": 1,
+                                          "RoundingType": "FixedRadius"
+                                        }
                                       }
                                     }
                                   ],
@@ -665,7 +687,18 @@
                       12,
                       12
                     ],
-                    "Visibility": "SelfHitTestInvisible"
+                    "Visibility": "SelfHitTestInvisible",
+                    "OutlineSettings": {
+                      "CornerRadius": 4,
+                      "Color": [
+                        0.2,
+                        0.2,
+                        0.2,
+                        1.0
+                      ],
+                      "Width": 1,
+                      "RoundingType": "FixedRadius"
+                    }
                   },
                   "slot": {
                     "padding": [
@@ -785,7 +818,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -805,7 +838,18 @@
                                   0.18,
                                   0.18,
                                   1.0
-                                ]
+                                ],
+                                "OutlineSettings": {
+                                  "CornerRadius": 4,
+                                  "Color": [
+                                    0.267,
+                                    0.267,
+                                    0.267,
+                                    1.0
+                                  ],
+                                  "Width": 1,
+                                  "RoundingType": "FixedRadius"
+                                }
                               }
                             },
                             {
@@ -867,7 +911,18 @@
                       12,
                       12
                     ],
-                    "Visibility": "SelfHitTestInvisible"
+                    "Visibility": "SelfHitTestInvisible",
+                    "OutlineSettings": {
+                      "CornerRadius": 4,
+                      "Color": [
+                        0.2,
+                        0.2,
+                        0.2,
+                        1.0
+                      ],
+                      "Width": 1,
+                      "RoundingType": "FixedRadius"
+                    }
                   },
                   "slot": {
                     "padding": [
@@ -1148,7 +1203,7 @@
                                       ],
                                       "Font": {
                                         "size": 12,
-                                        "type_face": "Regular"
+                                        "type_face": "Medium"
                                       },
                                       "TextPadding": [
                                         8,
@@ -1168,481 +1223,20 @@
                                         8,
                                         6
                                       ],
-                                      "HasDownArrow": true
-                                    },
-                                    "ForegroundColor": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "MinDesiredWidth": 92
-                                  }
-                                }
-                              ]
-                            }
-                          ],
-                          "properties": {
-                            "Visibility": "SelfHitTestInvisible"
-                          }
-                        }
-                      ],
-                      "properties": {
-                        "Visibility": "SelfHitTestInvisible"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "Border",
-                  "name": "lbl_card_coord_verify",
-                  "role": "decorative",
-                  "properties": {
-                    "BrushColor": [
-                      0.141,
-                      0.141,
-                      0.141,
-                      1.0
-                    ],
-                    "Padding": [
-                      12,
-                      12,
-                      12,
-                      12
-                    ],
-                    "Visibility": "SelfHitTestInvisible"
-                  },
-                  "slot": {
-                    "padding": [
-                      0,
-                      0,
-                      0,
-                      8
-                    ]
-                  },
-                  "children": [
-                    {
-                      "type": "VerticalBox",
-                      "name": "lbl_coord_verify_vbox",
-                      "role": "decorative",
-                      "children": [
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_coord_verify_header",
-                          "role": "decorative",
-                          "children": [
-                            {
-                              "type": "SizeBox",
-                              "name": "lbl_coord_verify_accent",
-                              "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 3,
-                                "HeightOverride": 13,
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "padding": [
-                                  0,
-                                  0,
-                                  8,
-                                  0
-                                ],
-                                "v_align": "Center"
-                              },
-                              "children": [
-                                {
-                                  "type": "Image",
-                                  "name": "lbl_coord_verify_accent_img",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Tint": [
-                                      0.91,
-                                      0.439,
-                                      0.302,
-                                      1.0
-                                    ],
-                                    "ImageSize": [
-                                      3,
-                                      13
-                                    ],
-                                    "DrawAs": "Box",
-                                    "Visibility": "SelfHitTestInvisible"
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "TextBlock",
-                              "name": "lbl_coord_verify_title",
-                              "role": "decorative",
-                              "properties": {
-                                "Text": "Coordinate Verification",
-                                "ColorAndOpacity": [
-                                  0.878,
-                                  0.878,
-                                  0.878,
-                                  1.0
-                                ],
-                                "Font": {
-                                  "size": 13,
-                                  "type_face": "Bold"
-                                },
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "v_align": "Center"
-                              }
-                            }
-                          ],
-                          "properties": {
-                            "Visibility": "SelfHitTestInvisible"
-                          }
-                        },
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_coord_frame_row",
-                          "role": "decorative",
-                          "slot": {
-                            "padding": [
-                              0,
-                              10,
-                              0,
-                              0
-                            ]
-                          },
-                          "children": [
-                            {
-                              "type": "TextBlock",
-                              "name": "lbl_frame",
-                              "role": "decorative",
-                              "properties": {
-                                "Text": "Frame",
-                                "ColorAndOpacity": [
-                                  0.659,
-                                  0.659,
-                                  0.659,
-                                  1.0
-                                ],
-                                "Font": {
-                                  "size": 12,
-                                  "type_face": "Regular"
-                                },
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "padding": [
-                                  0,
-                                  6,
-                                  10,
-                                  6
-                                ],
-                                "v_align": "Center"
-                              }
-                            },
-                            {
-                              "type": "SizeBox",
-                              "name": "sz_spn_frame",
-                              "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 92,
-                                "HeightOverride": 26,
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "children": [
-                                {
-                                  "type": "SpinBox",
-                                  "name": "spn_frame",
-                                  "role": "optional",
-                                  "properties": {
-                                    "MinValue": 0.0,
-                                    "MaxValue": 973.0,
-                                    "Value": 0.0,
-                                    "MinFractionalDigits": 0,
-                                    "FigmaInputStyle": {
-                                      "BackgroundColor": [
-                                        0.102,
-                                        0.102,
-                                        0.102,
-                                        1.0
-                                      ],
-                                      "HoverColor": [
-                                        0.12,
-                                        0.12,
-                                        0.12,
-                                        1.0
-                                      ],
-                                      "PressedColor": [
-                                        0.08,
-                                        0.08,
-                                        0.08,
-                                        1.0
-                                      ],
-                                      "FillColor": [
-                                        0.18,
-                                        0.18,
-                                        0.18,
-                                        1.0
-                                      ],
-                                      "TextColor": [
-                                        0.878,
-                                        0.878,
-                                        0.878,
-                                        1.0
-                                      ],
-                                      "ArrowColor": [
-                                        0.5,
-                                        0.5,
-                                        0.5,
-                                        1.0
-                                      ],
-                                      "Font": {
-                                        "size": 12,
-                                        "type_face": "Regular"
-                                      },
-                                      "TextPadding": [
-                                        8,
-                                        3,
-                                        6,
-                                        3
-                                      ],
-                                      "InsetPadding": [
-                                        0,
-                                        0,
-                                        0,
-                                        0
-                                      ],
-                                      "ContentPadding": [
-                                        10,
-                                        6,
-                                        8,
-                                        6
-                                      ],
-                                      "HasDownArrow": true
-                                    },
-                                    "ForegroundColor": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "MinDesiredWidth": 92
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "TextBlock",
-                              "name": "txt_frame_hint",
-                              "role": "optional",
-                              "properties": {
-                                "Text": "0 / 973",
-                                "ColorAndOpacity": [
-                                  0.502,
-                                  0.502,
-                                  0.502,
-                                  1.0
-                                ],
-                                "Font": {
-                                  "size": 11,
-                                  "type_face": "Regular"
-                                },
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "padding": [
-                                  10,
-                                  6,
-                                  0,
-                                  6
-                                ],
-                                "v_align": "Center"
-                              }
-                            }
-                          ],
-                          "properties": {
-                            "Visibility": "SelfHitTestInvisible"
-                          }
-                        },
-                        {
-                          "type": "Border",
-                          "name": "lbl_coord_pair",
-                          "role": "decorative",
-                          "properties": {
-                            "BrushColor": [
-                              0.102,
-                              0.102,
-                              0.102,
-                              1.0
-                            ],
-                            "Padding": [
-                              10,
-                              10,
-                              10,
-                              10
-                            ],
-                            "Visibility": "SelfHitTestInvisible"
-                          },
-                          "slot": {
-                            "padding": [
-                              0,
-                              10,
-                              0,
-                              0
-                            ],
-                            "h_align": "Fill"
-                          },
-                          "children": [
-                            {
-                              "type": "VerticalBox",
-                              "name": "lbl_coord_pair_vbox",
-                              "role": "decorative",
-                              "children": [
-                                {
-                                  "type": "TextBlock",
-                                  "name": "lbl_designer_header",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Text": "DESIGNER (source)",
-                                    "ColorAndOpacity": [
-                                      0.502,
-                                      0.502,
-                                      0.502,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 10,
-                                      "type_face": "Bold"
-                                    },
-                                    "Visibility": "SelfHitTestInvisible"
-                                  }
-                                },
-                                {
-                                  "type": "TextBlock",
-                                  "name": "txt_designer_pos",
-                                  "role": "optional",
-                                  "properties": {
-                                    "Text": "Pos  (1.2345, -0.5678, 2.3456) m",
-                                    "ColorAndOpacity": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "Visibility": "SelfHitTestInvisible"
-                                  },
-                                  "slot": {
-                                    "padding": [
-                                      0,
-                                      8,
-                                      0,
-                                      0
-                                    ]
-                                  }
-                                },
-                                {
-                                  "type": "TextBlock",
-                                  "name": "txt_designer_rot",
-                                  "role": "optional",
-                                  "properties": {
-                                    "Text": "Rot  (12.34, -56.78, 90.12)\u00b0",
-                                    "ColorAndOpacity": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "Visibility": "SelfHitTestInvisible"
-                                  },
-                                  "slot": {
-                                    "padding": [
-                                      0,
-                                      4,
-                                      0,
-                                      0
-                                    ]
-                                  }
-                                },
-                                {
-                                  "type": "SizeBox",
-                                  "name": "lbl_coord_divider",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "HeightOverride": 1,
-                                    "Visibility": "SelfHitTestInvisible"
-                                  },
-                                  "slot": {
-                                    "padding": [
-                                      0,
-                                      8,
-                                      0,
-                                      8
-                                    ],
-                                    "h_align": "Fill"
-                                  },
-                                  "children": [
-                                    {
-                                      "type": "Image",
-                                      "name": "lbl_coord_divider_img",
-                                      "role": "decorative",
-                                      "properties": {
-                                        "Tint": [
-                                          0.18,
-                                          0.18,
-                                          0.18,
+                                      "HasDownArrow": true,
+                                      "OutlineSettings": {
+                                        "CornerRadius": 3,
+                                        "Color": [
+                                          0.227,
+                                          0.227,
+                                          0.227,
                                           1.0
                                         ],
-                                        "ImageSize": [
-                                          1,
-                                          1
-                                        ],
-                                        "DrawAs": "Box",
-                                        "Visibility": "SelfHitTestInvisible"
+                                        "Width": 1,
+                                        "RoundingType": "FixedRadius"
                                       }
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "TextBlock",
-                                  "name": "lbl_ue_header",
-                                  "role": "decorative",
-                                  "properties": {
-                                    "Text": "-> UE (result)",
-                                    "ColorAndOpacity": [
-                                      0.91,
-                                      0.439,
-                                      0.302,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 10,
-                                      "type_face": "Bold"
                                     },
-                                    "Visibility": "SelfHitTestInvisible"
-                                  }
-                                },
-                                {
-                                  "type": "TextBlock",
-                                  "name": "txt_ue_pos",
-                                  "role": "optional",
-                                  "properties": {
-                                    "Text": "Pos  (234.6, 123.5, -56.8) cm",
-                                    "ColorAndOpacity": [
+                                    "ForegroundColor": [
                                       0.878,
                                       0.878,
                                       0.878,
@@ -1650,103 +1244,16 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
-                                    "Visibility": "SelfHitTestInvisible"
-                                  },
-                                  "slot": {
-                                    "padding": [
-                                      0,
-                                      8,
-                                      0,
-                                      0
-                                    ]
-                                  }
-                                },
-                                {
-                                  "type": "TextBlock",
-                                  "name": "txt_ue_rot",
-                                  "role": "optional",
-                                  "properties": {
-                                    "Text": "Rot  P=-12.34  Y=56.78  R=90.12\u00b0",
-                                    "ColorAndOpacity": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "Visibility": "SelfHitTestInvisible"
-                                  },
-                                  "slot": {
-                                    "padding": [
-                                      0,
-                                      4,
-                                      0,
-                                      0
-                                    ]
+                                    "MinDesiredWidth": 92
                                   }
                                 }
-                              ],
-                              "properties": {
-                                "Visibility": "SelfHitTestInvisible"
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "Button",
-                          "name": "btn_spawn_cam",
-                          "role": "optional",
-                          "properties": {
-                            "BackgroundColor": [
-                              0.18,
-                              0.18,
-                              0.18,
-                              1.0
-                            ]
-                          },
-                          "children": [
-                            {
-                              "type": "TextBlock",
-                              "name": "lbl_btn_spawn_cam_text",
-                              "role": "decorative",
-                              "properties": {
-                                "Text": "Spawn Test Camera",
-                                "ColorAndOpacity": [
-                                  0.878,
-                                  0.878,
-                                  0.878,
-                                  1.0
-                                ],
-                                "Font": {
-                                  "size": 12,
-                                  "type_face": "Regular"
-                                },
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "padding": [
-                                  14,
-                                  6,
-                                  14,
-                                  6
-                                ],
-                                "h_align": "Center"
-                              }
+                              ]
                             }
                           ],
-                          "slot": {
-                            "padding": [
-                              0,
-                              10,
-                              0,
-                              0
-                            ],
-                            "h_align": "Left"
+                          "properties": {
+                            "Visibility": "SelfHitTestInvisible"
                           }
                         }
                       ],
@@ -1773,7 +1280,18 @@
                       12,
                       12
                     ],
-                    "Visibility": "SelfHitTestInvisible"
+                    "Visibility": "SelfHitTestInvisible",
+                    "OutlineSettings": {
+                      "CornerRadius": 4,
+                      "Color": [
+                        0.2,
+                        0.2,
+                        0.2,
+                        1.0
+                      ],
+                      "Width": 1,
+                      "RoundingType": "FixedRadius"
+                    }
                   },
                   "slot": {
                     "padding": [
@@ -1875,7 +1393,7 @@
                             ],
                             "Font": {
                               "size": 11,
-                              "type_face": "Bold"
+                              "type_face": "Medium"
                             },
                             "Visibility": "SelfHitTestInvisible"
                           },
@@ -1912,7 +1430,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -2009,7 +1527,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -2029,7 +1547,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": false
+                                          "HasDownArrow": false,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2039,7 +1568,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         }
                                       }
                                     }
@@ -2129,7 +1658,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -2149,7 +1678,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": true,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2159,7 +1699,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         },
                                         "MinDesiredWidth": 96
                                       }
@@ -2190,7 +1730,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -2287,7 +1827,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -2307,7 +1847,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": false
+                                          "HasDownArrow": false,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2317,7 +1868,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         }
                                       }
                                     }
@@ -2407,7 +1958,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -2427,7 +1978,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": true,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2437,7 +1999,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         },
                                         "MinDesiredWidth": 96
                                       }
@@ -2468,7 +2030,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -2565,7 +2127,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -2585,7 +2147,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": false
+                                          "HasDownArrow": false,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2595,7 +2168,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         }
                                       }
                                     }
@@ -2685,7 +2258,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -2705,7 +2278,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": true,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2715,7 +2299,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         },
                                         "MinDesiredWidth": 96
                                       }
@@ -2746,7 +2330,7 @@
                             ],
                             "Font": {
                               "size": 11,
-                              "type_face": "Bold"
+                              "type_face": "Medium"
                             },
                             "Visibility": "SelfHitTestInvisible"
                           },
@@ -2783,7 +2367,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -2880,7 +2464,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -2900,7 +2484,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": false
+                                          "HasDownArrow": false,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2910,7 +2505,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         }
                                       }
                                     }
@@ -3000,7 +2595,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -3020,7 +2615,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": true,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3030,7 +2636,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         },
                                         "MinDesiredWidth": 96
                                       }
@@ -3061,7 +2667,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -3158,7 +2764,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -3178,7 +2784,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": false
+                                          "HasDownArrow": false,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3188,7 +2805,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         }
                                       }
                                     }
@@ -3278,7 +2895,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -3298,7 +2915,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": true,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3308,7 +2936,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         },
                                         "MinDesiredWidth": 96
                                       }
@@ -3339,7 +2967,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -3436,7 +3064,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -3456,7 +3084,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": false
+                                          "HasDownArrow": false,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3466,7 +3105,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         }
                                       }
                                     }
@@ -3556,7 +3195,7 @@
                                           ],
                                           "Font": {
                                             "size": 12,
-                                            "type_face": "Regular"
+                                            "type_face": "Medium"
                                           },
                                           "TextPadding": [
                                             8,
@@ -3576,7 +3215,18 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": true,
+                                          "OutlineSettings": {
+                                            "CornerRadius": 3,
+                                            "Color": [
+                                              0.227,
+                                              0.227,
+                                              0.227,
+                                              1.0
+                                            ],
+                                            "Width": 1,
+                                            "RoundingType": "FixedRadius"
+                                          }
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3586,7 +3236,7 @@
                                         ],
                                         "Font": {
                                           "size": 12,
-                                          "type_face": "Regular"
+                                          "type_face": "Medium"
                                         },
                                         "MinDesiredWidth": 96
                                       }
@@ -3643,7 +3293,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -3663,7 +3313,18 @@
                                   0.18,
                                   0.18,
                                   1.0
-                                ]
+                                ],
+                                "OutlineSettings": {
+                                  "CornerRadius": 4,
+                                  "Color": [
+                                    0.267,
+                                    0.267,
+                                    0.267,
+                                    1.0
+                                  ],
+                                  "Width": 1,
+                                  "RoundingType": "FixedRadius"
+                                }
                               }
                             },
                             {
@@ -3685,7 +3346,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -3705,7 +3366,18 @@
                                   0.18,
                                   0.18,
                                   1.0
-                                ]
+                                ],
+                                "OutlineSettings": {
+                                  "CornerRadius": 4,
+                                  "Color": [
+                                    0.267,
+                                    0.267,
+                                    0.267,
+                                    1.0
+                                  ],
+                                  "Width": 1,
+                                  "RoundingType": "FixedRadius"
+                                }
                               }
                             }
                           ],
@@ -3737,7 +3409,18 @@
                       12,
                       12
                     ],
-                    "Visibility": "SelfHitTestInvisible"
+                    "Visibility": "SelfHitTestInvisible",
+                    "OutlineSettings": {
+                      "CornerRadius": 4,
+                      "Color": [
+                        0.2,
+                        0.2,
+                        0.2,
+                        1.0
+                      ],
+                      "Width": 1,
+                      "RoundingType": "FixedRadius"
+                    }
                   },
                   "slot": {
                     "padding": [
@@ -3874,7 +3557,18 @@
                               0.439,
                               0.302,
                               1.0
-                            ]
+                            ],
+                            "OutlineSettings": {
+                              "CornerRadius": 4,
+                              "Color": [
+                                0.0,
+                                0.0,
+                                0.0,
+                                0.0
+                              ],
+                              "Width": 0,
+                              "RoundingType": "FixedRadius"
+                            }
                           }
                         },
                         {
@@ -3919,7 +3613,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -3940,7 +3634,18 @@
                                   0.18,
                                   0.18,
                                   1.0
-                                ]
+                                ],
+                                "OutlineSettings": {
+                                  "CornerRadius": 4,
+                                  "Color": [
+                                    0.267,
+                                    0.267,
+                                    0.267,
+                                    1.0
+                                  ],
+                                  "Width": 1,
+                                  "RoundingType": "FixedRadius"
+                                }
                               }
                             },
                             {
@@ -3972,7 +3677,7 @@
                                     ],
                                     "Font": {
                                       "size": 12,
-                                      "type_face": "Regular"
+                                      "type_face": "Medium"
                                     },
                                     "Visibility": "SelfHitTestInvisible"
                                   },
@@ -3993,7 +3698,18 @@
                                   0.18,
                                   0.18,
                                   1.0
-                                ]
+                                ],
+                                "OutlineSettings": {
+                                  "CornerRadius": 4,
+                                  "Color": [
+                                    0.267,
+                                    0.267,
+                                    0.267,
+                                    1.0
+                                  ],
+                                  "Width": 1,
+                                  "RoundingType": "FixedRadius"
+                                }
                               }
                             }
                           ],
@@ -4045,7 +3761,18 @@
                               10,
                               10
                             ],
-                            "Visibility": "SelfHitTestInvisible"
+                            "Visibility": "SelfHitTestInvisible",
+                            "OutlineSettings": {
+                              "CornerRadius": 3,
+                              "Color": [
+                                0.18,
+                                0.18,
+                                0.18,
+                                1.0
+                              ],
+                              "Width": 1,
+                              "RoundingType": "FixedRadius"
+                            }
                           },
                           "children": [
                             {

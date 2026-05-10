@@ -183,11 +183,12 @@ class TestFigmaSpecFile(unittest.TestCase):
     def test_figma_spec_keeps_legacy_required_contract(self):
         req, opt, _dec = collect_contract_names(self.spec)
         self.assertEqual(req, REQUIRED_NAMES)
-        self.assertIn("spn_frame", opt)
-        self.assertIn("btn_spawn_cam", opt)
+        self.assertNotIn("spn_frame", opt)
+        self.assertNotIn("btn_spawn_cam", opt)
 
     def test_figma_spec_prerequisites_render_five_rows(self):
-        names = {node["name"] for node in self._walk_nodes(self.spec)}
+        nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
+        names = set(nodes_by_name)
         self.assertEqual(
             {name for name in names if name.startswith("lbl_prereq_row_")},
             {f"lbl_prereq_row_{i}" for i in range(5)},
@@ -196,12 +197,78 @@ class TestFigmaSpecFile(unittest.TestCase):
             {name for name in names if name.startswith("prereq_label_")},
             {f"prereq_label_{i}" for i in range(5)},
         )
+        label_texts = [
+            nodes_by_name[f"prereq_label_{i}"]["properties"]["Text"]
+            for i in range(5)
+        ]
+        self.assertEqual(
+            label_texts,
+            [
+                "OK: Python Editor Script Plugin",
+                "OK: Editor Scripting Utilities",
+                "OK: CineCameraActor",
+                "OK: LevelSequence",
+                "OK: EditorUtilitySubsystem",
+            ],
+        )
+        self.assertNotIn("OK: Camera Calibration", label_texts)
+        self.assertEqual(
+            nodes_by_name["prereq_summary"]["properties"]["Text"],
+            "5 / 5 OK",
+        )
 
     def test_figma_spec_prerequisite_dots_are_round(self):
         nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
         for index in range(5):
             dot = nodes_by_name[f"lbl_prereq_dot_{index}_img"]
             self.assertEqual(dot["properties"].get("DrawAs"), "RoundedBox")
+
+    def test_figma_spec_excludes_coordinate_verification_section(self):
+        names = {node["name"] for node in self._walk_nodes(self.spec)}
+        removed_names = {
+            "lbl_card_coord_verify",
+            "spn_frame",
+            "txt_frame_hint",
+            "txt_designer_pos",
+            "txt_designer_rot",
+            "txt_ue_pos",
+            "txt_ue_rot",
+            "btn_spawn_cam",
+        }
+        self.assertTrue(names.isdisjoint(removed_names), names & removed_names)
+
+    def test_figma_spec_cards_and_controls_have_outlines(self):
+        nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
+        for name in (
+            "lbl_card_prereq",
+            "lbl_card_csv_file",
+            "lbl_card_csv_preview",
+            "lbl_card_axis",
+            "lbl_card_actions",
+        ):
+            self.assertEqual(
+                nodes_by_name[name]["properties"]["OutlineSettings"]["Width"],
+                1,
+            )
+        self.assertEqual(
+            nodes_by_name["btn_browse"]["properties"]["OutlineSettings"]["Width"],
+            1,
+        )
+        self.assertEqual(
+            nodes_by_name["btn_import"]["properties"]["OutlineSettings"]
+            ["CornerRadius"],
+            4,
+        )
+        self.assertEqual(
+            nodes_by_name["box_txt_results"]["properties"]["OutlineSettings"]
+            ["Width"],
+            1,
+        )
+        self.assertEqual(
+            nodes_by_name["spn_fps"]["properties"]["FigmaInputStyle"]
+            ["OutlineSettings"]["Width"],
+            1,
+        )
 
 
 if __name__ == "__main__":

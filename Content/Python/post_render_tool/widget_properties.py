@@ -74,6 +74,21 @@ def _vec2(xy) -> "unreal.Vector2D":
     return unreal.Vector2D(float(xy[0]), float(xy[1]))
 
 
+def _vec4(values) -> object:
+    vals = list(values)
+    vals = (vals + [vals[-1] if vals else 0.0] * 4)[:4]
+    cls = getattr(unreal, "Vector4", None) or getattr(unreal, "Vector4f", None)
+    if cls is not None:
+        try:
+            return cls(*(float(v) for v in vals))
+        except TypeError:
+            value = cls()
+            for prop, component in zip(("x", "y", "z", "w"), vals):
+                value.set_editor_property(prop, float(component))
+            return value
+    return tuple(float(v) for v in vals)
+
+
 def _brush_vec2(xy):
     # FSlateBrush.ImageSize is FDeprecateSlateVector2D in UE 5.7. It cannot be
     # constructed from positional args or nativized from Vector2D, but Python can
@@ -137,13 +152,50 @@ def _draw_type(value: str):
     return mapping.get(value, unreal.SlateBrushDrawType.IMAGE)
 
 
-def _solid_brush(rgba=None, image_size=None, draw_as: str = "Box"):
+def _rounding_type(value: str):
+    enum = getattr(unreal, "SlateBrushRoundingType", None)
+    if enum is None:
+        return value
+    mapping = {
+        "FixedRadius": "FIXED_RADIUS",
+        "HalfHeightRadius": "HALF_HEIGHT_RADIUS",
+    }
+    return getattr(enum, mapping.get(str(value), str(value)), value)
+
+
+def _outline_settings(value: dict):
+    outline = unreal.SlateBrushOutlineSettings()
+    radius = value.get("CornerRadius", value.get("CornerRadii", 0.0))
+    radii = [radius] * 4 if isinstance(radius, (int, float)) else radius
+    outline.set_editor_property("corner_radii", _vec4(radii))
+    if "Color" in value:
+        outline.set_editor_property("color", _slate_color(value["Color"]))
+    if "Width" in value:
+        outline.set_editor_property("width", float(value["Width"]))
+    outline.set_editor_property(
+        "rounding_type",
+        _rounding_type(value.get("RoundingType", "FixedRadius")),
+    )
+    outline.set_editor_property(
+        "use_brush_transparency",
+        bool(value.get("UseBrushTransparency", False)),
+    )
+    return outline
+
+
+def _solid_brush(rgba=None, image_size=None, draw_as: str = "Box", outline=None):
     brush = unreal.SlateBrush()
-    _configure_brush(brush, rgba=rgba, image_size=image_size, draw_as=draw_as)
+    _configure_brush(
+        brush,
+        rgba=rgba,
+        image_size=image_size,
+        draw_as=draw_as,
+        outline=outline,
+    )
     return brush
 
 
-def _configure_brush(brush, *, rgba=None, image_size=None, draw_as=None):
+def _configure_brush(brush, *, rgba=None, image_size=None, draw_as=None, outline=None):
     texture = _white_square_texture()
     if texture is not None:
         try:
@@ -158,7 +210,32 @@ def _configure_brush(brush, *, rgba=None, image_size=None, draw_as=None):
         brush.set_editor_property("image_size", _brush_vec2(image_size))
     if draw_as is not None:
         brush.set_editor_property("draw_as", _draw_type(draw_as))
+    if outline is not None:
+        if draw_as is None:
+            brush.set_editor_property("draw_as", _draw_type("RoundedBox"))
+        brush.set_editor_property("outline_settings", _outline_settings(outline))
     return brush
+
+
+def _get_border_brush(w):
+    for prop_name in ("background", "brush"):
+        try:
+            brush = w.get_editor_property(prop_name)
+        except Exception:  # noqa: BLE001
+            brush = None
+        if brush is not None:
+            return brush
+    return unreal.SlateBrush()
+
+
+def _set_border_brush(w, brush) -> bool:
+    for prop_name in ("background", "brush"):
+        try:
+            w.set_editor_property(prop_name, brush)
+            return True
+        except Exception:  # noqa: BLE001
+            continue
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -184,15 +261,7 @@ def _apply_border_brush_color(w, v):
     # as the brush resource and put the actual color in BrushColor.
     w.set_editor_property("brush_color", _linear_color(v))
     brush = _solid_brush([1.0, 1.0, 1.0, 1.0], draw_as="Box")
-    applied = False
-    for prop_name in ("background", "brush"):
-        try:
-            w.set_editor_property(prop_name, brush)
-            applied = True
-            break
-        except Exception:  # noqa: BLE001
-            continue
-    if not applied:
+    if not _set_border_brush(w, brush):
         unreal.log_warning(
             f"[widget_properties] could not set solid brush on {type(w).__name__}"
         )
@@ -219,6 +288,38 @@ def _apply_image_size(w, v):
 def _apply_image_draw_as(w, v):
     brush = w.get_editor_property("brush") or unreal.SlateBrush()
     _configure_brush(brush, draw_as=v)
+    w.set_editor_property("brush", brush)
+
+
+def _apply_button_outline_settings(w, v):
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    for brush_name in ("normal", "hovered", "pressed", "disabled"):
+        try:
+            brush = style.get_editor_property(brush_name) or unreal.SlateBrush()
+            _configure_brush(brush, draw_as="RoundedBox", outline=v)
+            style.set_editor_property(brush_name, brush)
+        except Exception:  # noqa: BLE001
+            continue
+    w.set_editor_property("widget_style", style)
+
+
+def _apply_outline_settings(w, v):
+    if isinstance(w, unreal.Button):
+        _apply_button_outline_settings(w, v)
+        return
+    if isinstance(w, unreal.Border):
+        brush = _get_border_brush(w)
+        _configure_brush(brush, draw_as="RoundedBox", outline=v)
+        if not _set_border_brush(w, brush):
+            unreal.log_warning(
+                f"[widget_properties] could not set outline brush on "
+                f"{type(w).__name__}"
+            )
+        return
+    brush = w.get_editor_property("brush") or unreal.SlateBrush()
+    _configure_brush(brush, draw_as="RoundedBox", outline=v)
     w.set_editor_property("brush", brush)
 
 
@@ -456,6 +557,8 @@ def _style_spinbox(w, v):
     hover = v.get("HoverColor", bg)
     active = v.get("ActiveColor", bg)
     fill = v.get("FillColor", [0.18, 0.18, 0.18, 1.0])
+    outline = v.get("OutlineSettings")
+    draw_as = "RoundedBox" if outline else "Box"
     for name, color in (
         ("background_brush", bg),
         ("hovered_background_brush", hover),
@@ -465,7 +568,10 @@ def _style_spinbox(w, v):
         ("active_fill_brush", fill),
     ):
         try:
-            style.set_editor_property(name, _solid_brush(color, draw_as="Box"))
+            style.set_editor_property(
+                name,
+                _solid_brush(color, draw_as=draw_as, outline=outline),
+            )
         except Exception:  # noqa: BLE001
             continue
     try:
@@ -496,6 +602,8 @@ def _style_combobox(w, v):
     bg = v.get("BackgroundColor", [0.102, 0.102, 0.102, 1.0])
     hover = v.get("HoverColor", bg)
     pressed = v.get("PressedColor", bg)
+    outline = v.get("OutlineSettings")
+    draw_as = "RoundedBox" if outline else "Box"
     try:
         combo_button_style = style.get_editor_property("combo_button_style")
         button_style = combo_button_style.get_editor_property("button_style")
@@ -506,7 +614,7 @@ def _style_combobox(w, v):
             ("disabled", bg),
         ):
             button_style.set_editor_property(
-                name, _solid_brush(color, draw_as="Box")
+                name, _solid_brush(color, draw_as=draw_as, outline=outline)
             )
         combo_button_style.set_editor_property("button_style", button_style)
         if "ContentPadding" in v:
@@ -517,7 +625,9 @@ def _style_combobox(w, v):
     except Exception as exc:  # noqa: BLE001
         unreal.log_warning(f"[widget_properties] ComboBoxString style failed: {exc}")
     try:
-        style.set_editor_property("menu_border_brush", _solid_brush(bg, draw_as="Box"))
+        style.set_editor_property(
+            "menu_border_brush", _solid_brush(bg, draw_as=draw_as, outline=outline)
+        )
     except Exception:  # noqa: BLE001
         pass
     w.set_editor_property("widget_style", style)
@@ -576,6 +686,7 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "Tint": _apply_image_tint,
     "ImageSize": _apply_image_size,
     "DrawAs": _apply_image_draw_as,
+    "OutlineSettings": _apply_outline_settings,
     "Padding": _apply_border_padding,
     "WidthOverride": _apply_sizebox_width,
     "HeightOverride": _apply_sizebox_height,

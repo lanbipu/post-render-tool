@@ -49,6 +49,11 @@ class _StubVector2D:
         self.xy = (x, y)
 
 
+class _StubVector4:
+    def __init__(self, x: float, y: float, z: float, w: float) -> None:
+        self.xyzw = (x, y, z, w)
+
+
 class _StubMargin:
     def __init__(self, l: float, t: float, r: float, b: float) -> None:
         self.ltrb = (l, t, r, b)
@@ -64,6 +69,15 @@ class _StubSlateBrush:
 
 
 class _StubSlateColor:
+    def __init__(self) -> None:
+        self.props = {}
+    def set_editor_property(self, name: str, value: Any) -> None:
+        self.props[name] = value
+    def get_editor_property(self, name: str) -> Any:
+        return self.props.get(name)
+
+
+class _StubSlateBrushOutlineSettings:
     def __init__(self) -> None:
         self.props = {}
     def set_editor_property(self, name: str, value: Any) -> None:
@@ -114,7 +128,52 @@ class _StubTextBlock(_StubWidgetBase):
         _R.record("TextBlock.set_text", t.to_string())
 
 
+class _StubComboButtonStyle:
+    def __init__(self) -> None:
+        self.props = {
+            "button_style": _StubButtonStyle(),
+        }
+    def set_editor_property(self, name: str, value: Any) -> None:
+        self.props[name] = value
+    def get_editor_property(self, name: str) -> Any:
+        return self.props.get(name)
+
+
+class _StubComboBoxStyle:
+    def __init__(self) -> None:
+        self.props = {"combo_button_style": _StubComboButtonStyle()}
+    def set_editor_property(self, name: str, value: Any) -> None:
+        self.props[name] = value
+    def get_editor_property(self, name: str) -> Any:
+        return self.props.get(name)
+
+
+class _StubSpinBoxStyle:
+    def __init__(self) -> None:
+        self.props = {}
+    def set_editor_property(self, name: str, value: Any) -> None:
+        self.props[name] = value
+    def get_editor_property(self, name: str) -> Any:
+        return self.props.get(name)
+
+
+class _StubButton(_StubWidgetBase):
+    def __init__(self) -> None:
+        super().__init__()
+        self.properties["widget_style"] = _StubButtonStyle()
+
+
+class _StubSpinBox(_StubWidgetBase):
+    def __init__(self) -> None:
+        super().__init__()
+        self.properties["widget_style"] = _StubSpinBoxStyle()
+
+
 class _StubComboBoxString(_StubWidgetBase):
+    def __init__(self) -> None:
+        super().__init__()
+        self.properties["widget_style"] = _StubComboBoxStyle()
+
     def add_option(self, o: str) -> None:
         self.properties.setdefault("options", []).append(o)
         _R.record("ComboBoxString.add_option", o)
@@ -143,19 +202,21 @@ class _StubSizeBox(_StubWidgetBase):
 _unreal_stub.Text = _StubText
 _unreal_stub.LinearColor = _StubLinearColor
 _unreal_stub.Vector2D = _StubVector2D
+_unreal_stub.Vector4 = _StubVector4
 _unreal_stub.Margin = _StubMargin
 _unreal_stub.SlateBrush = _StubSlateBrush
 _unreal_stub.SlateColor = _StubSlateColor
+_unreal_stub.SlateBrushOutlineSettings = _StubSlateBrushOutlineSettings
 _unreal_stub.Name = lambda s: s  # FName stub — pass-through string
 _unreal_stub.Anchors = lambda minimum, maximum: (minimum, maximum)
 
 _unreal_stub.TextBlock = _StubTextBlock
 _unreal_stub.ComboBoxString = _StubComboBoxString
-_unreal_stub.Button = type("Button", (_StubWidgetBase,), {})
+_unreal_stub.Button = _StubButton
 _unreal_stub.Image = type("Image", (_StubWidgetBase,), {})
 _unreal_stub.Border = type("Border", (_StubWidgetBase,), {})
 _unreal_stub.SizeBox = _StubSizeBox
-_unreal_stub.SpinBox = type("SpinBox", (_StubWidgetBase,), {})
+_unreal_stub.SpinBox = _StubSpinBox
 _unreal_stub.MultiLineEditableText = type("MultiLineEditableText", (_StubWidgetBase,), {})
 _unreal_stub.Spacer = type("Spacer", (_StubWidgetBase,), {})
 _unreal_stub.VerticalBox = type("VerticalBox", (_StubWidgetBase,), {})
@@ -179,7 +240,10 @@ _unreal_stub.StretchDirection = types.SimpleNamespace(
 )
 
 _unreal_stub.SlateBrushDrawType = types.SimpleNamespace(
-    BOX="Box", IMAGE="Image", NO_DRAW_TYPE="NoDrawType"
+    BOX="Box", IMAGE="Image", NO_DRAW_TYPE="NoDrawType", ROUNDED_BOX="RoundedBox"
+)
+_unreal_stub.SlateBrushRoundingType = types.SimpleNamespace(
+    FIXED_RADIUS="FixedRadius", HALF_HEIGHT_RADIUS="HalfHeightRadius"
 )
 _unreal_stub.HorizontalAlignment = types.SimpleNamespace(
     H_ALIGN_LEFT="Left", H_ALIGN_CENTER="Center",
@@ -258,6 +322,44 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
         self.assertAlmostEqual(g, 0.214041, places=5)
         self.assertAlmostEqual(b, 0.214041, places=5)
         self.assertEqual(a, 1.0)
+
+    def test_apply_outline_settings_on_border(self):
+        w = _unreal_stub.Border()
+        widget_properties.apply_widget_properties(
+            w,
+            {
+                "BrushColor": [0.141, 0.141, 0.141, 1.0],
+                "OutlineSettings": {
+                    "CornerRadius": 4,
+                    "Color": [0.2, 0.2, 0.2, 1.0],
+                    "Width": 1,
+                },
+            },
+        )
+        brush = w.properties["background"]
+        self.assertEqual(brush.props["draw_as"], "RoundedBox")
+        outline = brush.props["outline_settings"]
+        self.assertEqual(outline.props["corner_radii"].xyzw, (4.0, 4.0, 4.0, 4.0))
+        self.assertEqual(outline.props["width"], 1.0)
+
+    def test_apply_outline_settings_on_button_style(self):
+        w = _unreal_stub.Button()
+        widget_properties.apply_widget_properties(
+            w,
+            {
+                "BackgroundColor": [0.18, 0.18, 0.18, 1.0],
+                "OutlineSettings": {
+                    "CornerRadius": 4,
+                    "Color": [0.267, 0.267, 0.267, 1.0],
+                    "Width": 1,
+                },
+            },
+        )
+        style = w.properties["widget_style"]
+        for brush_name in ("normal", "hovered", "pressed", "disabled"):
+            brush = style.props[brush_name]
+            self.assertEqual(brush.props["draw_as"], "RoundedBox")
+            self.assertIn("outline_settings", brush.props)
 
     def test_apply_tint_on_image(self):
         w = _unreal_stub.Image()
