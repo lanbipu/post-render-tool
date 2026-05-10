@@ -14,6 +14,7 @@ import unreal
 WIDGET_CLASS_MAP: Dict[str, type] = {
     "CanvasPanel": unreal.CanvasPanel,
     "ScrollBox": unreal.ScrollBox,
+    "EditorUtilityScrollBox": unreal.EditorUtilityScrollBox,
     "VerticalBox": unreal.VerticalBox,
     "HorizontalBox": unreal.HorizontalBox,
     "Border": unreal.Border,
@@ -297,6 +298,30 @@ def _apply_scrollbox_always_show_scrollbar(w, v):
     w.set_editor_property("always_show_scrollbar", bool(v))
 
 
+def _apply_scrollbox_always_show_scrollbar_track(w, v):
+    w.set_editor_property("always_show_scrollbar_track", bool(v))
+
+
+def _apply_scrollbar_thickness(w, v):
+    w.set_editor_property("scrollbar_thickness", _vec2(v))
+
+
+def _apply_wheel_scroll_multiplier(w, v):
+    w.set_editor_property("wheel_scroll_multiplier", float(v))
+
+
+def _apply_visibility(w, v):
+    mapping = {
+        "Visible": "VISIBLE",
+        "Collapsed": "COLLAPSED",
+        "Hidden": "HIDDEN",
+        "HitTestInvisible": "HIT_TEST_INVISIBLE",
+        "SelfHitTestInvisible": "SELF_HIT_TEST_INVISIBLE",
+    }
+    enum_name = mapping.get(str(v), "VISIBLE")
+    w.set_editor_property("visibility", getattr(unreal.SlateVisibility, enum_name))
+
+
 def _apply_spacer_size(w, v):
     w.set_editor_property("size", _vec2(v))
 
@@ -564,6 +589,10 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "HintText": _apply_multiline_hint,
     "Orientation": _apply_scrollbox_orientation,
     "AlwaysShowScrollbar": _apply_scrollbox_always_show_scrollbar,
+    "AlwaysShowScrollbarTrack": _apply_scrollbox_always_show_scrollbar_track,
+    "ScrollbarThickness": _apply_scrollbar_thickness,
+    "WheelScrollMultiplier": _apply_wheel_scroll_multiplier,
+    "Visibility": _apply_visibility,
     "Size": _apply_spacer_size,
     "Font": _apply_textblock_font,
     "ForegroundColor": _apply_foreground_color,

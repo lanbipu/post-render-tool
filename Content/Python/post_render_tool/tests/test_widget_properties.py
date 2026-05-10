@@ -161,6 +161,9 @@ _unreal_stub.Spacer = type("Spacer", (_StubWidgetBase,), {})
 _unreal_stub.VerticalBox = type("VerticalBox", (_StubWidgetBase,), {})
 _unreal_stub.HorizontalBox = type("HorizontalBox", (_StubWidgetBase,), {})
 _unreal_stub.ScrollBox = type("ScrollBox", (_StubWidgetBase,), {})
+_unreal_stub.EditorUtilityScrollBox = type(
+    "EditorUtilityScrollBox", (_StubWidgetBase,), {}
+)
 _unreal_stub.CanvasPanel = type("CanvasPanel", (_StubWidgetBase,), {})
 _unreal_stub.ExpandableArea = type("ExpandableArea", (_StubWidgetBase,), {})
 _unreal_stub.ScaleBox = type("ScaleBox", (_StubWidgetBase,), {})
@@ -187,7 +190,13 @@ _unreal_stub.VerticalAlignment = types.SimpleNamespace(
     V_ALIGN_BOTTOM="Bottom", V_ALIGN_FILL="Fill",
 )
 _unreal_stub.SlateSizeRule = types.SimpleNamespace(AUTOMATIC="Auto", FILL="Fill")
-_unreal_stub.SlateVisibility = types.SimpleNamespace(VISIBLE="Visible")
+_unreal_stub.SlateVisibility = types.SimpleNamespace(
+    VISIBLE="Visible",
+    COLLAPSED="Collapsed",
+    HIDDEN="Hidden",
+    HIT_TEST_INVISIBLE="HitTestInvisible",
+    SELF_HIT_TEST_INVISIBLE="SelfHitTestInvisible",
+)
 _unreal_stub.Orientation = types.SimpleNamespace(
     ORIENT_VERTICAL="Vertical", ORIENT_HORIZONTAL="Horizontal",
 )
@@ -311,6 +320,27 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
         w = _unreal_stub.ScrollBox()
         widget_properties.apply_widget_properties(w, {"AlwaysShowScrollbar": True})
         self.assertIs(w.properties["always_show_scrollbar"], True)
+
+    def test_apply_visibility(self):
+        w = _unreal_stub.Border()
+        widget_properties.apply_widget_properties(
+            w, {"Visibility": "SelfHitTestInvisible"}
+        )
+        self.assertEqual(w.properties["visibility"], "SelfHitTestInvisible")
+
+    def test_apply_scrollbar_thickness(self):
+        w = _unreal_stub.EditorUtilityScrollBox()
+        widget_properties.apply_widget_properties(
+            w,
+            {
+                "AlwaysShowScrollbarTrack": True,
+                "ScrollbarThickness": [12, 12],
+                "WheelScrollMultiplier": 1.0,
+            },
+        )
+        self.assertIs(w.properties["always_show_scrollbar_track"], True)
+        self.assertEqual(w.properties["scrollbar_thickness"].xy, (12.0, 12.0))
+        self.assertEqual(w.properties["wheel_scroll_multiplier"], 1.0)
 
 
 class TestSlotPropertyApplicators(unittest.TestCase):

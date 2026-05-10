@@ -64,6 +64,7 @@ _REQUIRED_CONTROLS = (
 # rebuild_from_spec() to add them, otherwise edits ROTATION_OFFSET_DEG
 # directly in config.py.
 _OPTIONAL_CONTROLS = (
+    "lbl_root_scroll",
     "prereq_label_0", "prereq_label_1", "prereq_label_2",
     "prereq_label_3", "prereq_label_4", "prereq_label_5",
     "prereq_summary",

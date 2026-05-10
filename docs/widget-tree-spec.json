@@ -50,7 +50,7 @@
             {
               "type": "ScrollBox",
               "name": "lbl_root_scroll",
-              "role": "decorative",
+              "role": "optional",
               "properties": {
                 "Orientation": "Vertical"
               },
@@ -984,7 +984,7 @@
                               "name": "lbl_pos_subheader",
                               "role": "decorative",
                               "properties": {
-                                "Text": "POSITION (m → cm)",
+                                "Text": "POSITION (m \u2192 cm)",
                                 "ColorAndOpacity": [
                                   0.7,
                                   0.7,
@@ -1033,7 +1033,7 @@
                                       "name": "lbl_ue_x_arrow",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "←"
+                                        "Text": "\u2190"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1058,7 +1058,7 @@
                                       "name": "lbl_ue_x_mul",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "×"
+                                        "Text": "\u00d7"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1107,7 +1107,7 @@
                                       "name": "lbl_ue_y_arrow",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "←"
+                                        "Text": "\u2190"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1132,7 +1132,7 @@
                                       "name": "lbl_ue_y_mul",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "×"
+                                        "Text": "\u00d7"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1181,7 +1181,7 @@
                                       "name": "lbl_ue_z_arrow",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "←"
+                                        "Text": "\u2190"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1206,7 +1206,7 @@
                                       "name": "lbl_ue_z_mul",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "×"
+                                        "Text": "\u00d7"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1284,7 +1284,7 @@
                                       "name": "lbl_pitch_arrow",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "←"
+                                        "Text": "\u2190"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1309,7 +1309,7 @@
                                       "name": "lbl_pitch_mul",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "×"
+                                        "Text": "\u00d7"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1358,7 +1358,7 @@
                                       "name": "lbl_yaw_arrow",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "←"
+                                        "Text": "\u2190"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1383,7 +1383,7 @@
                                       "name": "lbl_yaw_mul",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "×"
+                                        "Text": "\u00d7"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1432,7 +1432,7 @@
                                       "name": "lbl_roll_arrow",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "←"
+                                        "Text": "\u2190"
                                       },
                                       "slot": {
                                         "padding": [
@@ -1457,7 +1457,7 @@
                                       "name": "lbl_roll_mul",
                                       "role": "decorative",
                                       "properties": {
-                                        "Text": "×"
+                                        "Text": "\u00d7"
                                       },
                                       "slot": {
                                         "padding": [

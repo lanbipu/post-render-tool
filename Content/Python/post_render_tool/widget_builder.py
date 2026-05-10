@@ -335,6 +335,22 @@ def delete_figma_widget() -> bool:
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] delete Figma asset failed: {exc}")
         return False
+    try:
+        unreal.SystemLibrary.collect_garbage()
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(f"[widget_builder] collect_garbage after delete failed: {exc}")
+    try:
+        still_exists = bool(
+            unreal.EditorAssetLibrary.does_asset_exist(FIGMA_WIDGET_ASSET_PATH)
+        )
+    except Exception:  # noqa: BLE001
+        still_exists = False
+    if still_exists:
+        unreal.log_warning(
+            f"[widget_builder] delete Figma asset did not unload/remove: "
+            f"{FIGMA_WIDGET_ASSET_PATH}"
+        )
+        return False
     if not deleted and widget_bp is not None:
         unreal.log_warning(
             f"[widget_builder] delete Figma asset returned false: {FIGMA_WIDGET_ASSET_PATH}"

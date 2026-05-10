@@ -104,12 +104,13 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 | Actions | `btn_open_mrq` | `UButton` |
 | Actions | `txt_results` | `UMultiLineEditableText` |
 
-### 3.2 可选控件（10 个）
+### 3.2 可选控件（11 个）
 
 使用 `meta=(BindWidgetOptional)` —— 缺失不会导致 BP 编译失败，但对应 Python 功能**静默降级**。
 
 | 名称 | 类型 | 所在 Section | 缺失时的降级表现 |
 |---|---|---|---|
+| `lbl_root_scroll` | `UScrollBox` | Root scroll viewport | C++ `NativeOnMouseWheel` 不会主动转发滚轮；旧 Blueprint 仍按自身 scroll 行为工作 |
 | `prereq_label_0` ~ `prereq_label_5` | `UTextBlock` | Section 1 内容区 | 6 条插件状态行不显示（汇总计数仍工作） |
 | `prereq_summary` | `UTextBlock` | Section 1 折叠头 | "N / 6 OK" 徽章不显示 |
 | `spn_rot_pitch_offset` | `USpinBox` | Section 4 Rotation Offset | UI 里不可调该轴 offset；`_read_mapping_from_ui` 回落到 `config.ROTATION_OFFSET_DEG["pitch"]`，Apply/Save 保留现有值不清零 |
@@ -121,7 +122,7 @@ C++ / Designer Palette / Python 三套命名指向同一个类，反射系统自
 `widget.py` 声明了两个 tuple，与 C++ 侧一一对应：
 
 - `_REQUIRED_CONTROLS` —— 26 个条目，对应 [3.1](#31-必需控件26-个)
-- `_OPTIONAL_CONTROLS` —— 10 个条目，对应 [3.2](#32-可选控件10-个)
+- `_OPTIONAL_CONTROLS` —— 11 个条目，对应 [3.2](#32-可选控件11-个)
 
 如果 Python 侧的 tuple 与 C++ 声明漂移（drift），`get_editor_property()` 对缺失名称返回 `None`，binder 打印 warning 继续执行。**三方必须始终同步**。
 
@@ -432,7 +433,7 @@ Border                                 [装饰] lbl_card_actions
 
 ### 6.4 阶段 4 —— 加可选控件（Section 1 的 `prereq_label_0..5` 等）
 
-当必需控件已稳定后再补 [§3.2](#32-可选控件7-个) 的 7 个可选控件。命名必须对上 `_OPTIONAL_CONTROLS`。
+当必需控件已稳定后再补 [§3.2](#32-可选控件11-个) 的 11 个可选控件。命名必须对上 `_OPTIONAL_CONTROLS`。
 
 ### 6.5 热重载
 

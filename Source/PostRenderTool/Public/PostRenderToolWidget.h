@@ -11,6 +11,7 @@ class USpinBox;
 class UComboBoxString;
 class UTextBlock;
 class UMultiLineEditableText;
+class UScrollBox;
 
 /**
  * Editor Utility Widget for the VP Post-Render Tool.
@@ -30,6 +31,9 @@ class POSTRENDERTOOL_API UPostRenderToolWidget : public UEditorUtilityWidget
     GENERATED_BODY()
 
 public:
+    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UScrollBox* lbl_root_scroll;
+
     // ======================================================================
     // Section 1: Prerequisites
     // ======================================================================
@@ -178,4 +182,8 @@ public:
 
 protected:
     virtual void NativeConstruct() override;
+    virtual FReply NativeOnMouseWheel(
+        const FGeometry& InGeometry,
+        const FPointerEvent& InMouseEvent
+    ) override;
 };

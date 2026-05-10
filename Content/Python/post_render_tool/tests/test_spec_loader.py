@@ -31,6 +31,7 @@ REQUIRED_NAMES = {
     "btn_import", "btn_open_seq", "btn_open_mrq", "txt_results",
 }
 OPTIONAL_NAMES = {
+    "lbl_root_scroll",
     "prereq_label_0", "prereq_label_1", "prereq_label_2",
     "prereq_label_3", "prereq_label_4", "prereq_label_5",
     "prereq_summary",
