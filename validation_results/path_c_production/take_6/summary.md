@@ -12,9 +12,9 @@
 - **2026-05-09 中段降级**: 发现 `LS_test_take_6_dense.0001.png` 上 + 右边缘比 Disguise 少约 10 px 内容,降级 PARTIAL/BLOCKED
 - **2026-05-09 修复**: commit `69a9bea` 把 `centerShift` 从 shader UV 平移迁到 `CineCameraComponent.Filmback.SensorHorizontalOffset/Vertical`(走 `OffCenterProjectionOffset`),sign 取负(`= -cs_*_mm`),frustum 在渲染时已对到 principal point。用户在 lanPC 重渲后实测验证通过 → 升 PASS
 - **2026-05-10 update #3**: take_7 加大 distortion 暴露 commit `43173c4` (overscan 接入)+ commit `c3ccabb` (shader frustum 归一化)的 regression 测试 — take_6 重渲跟之前 PASS 状态一致,无回退
-- 修复方案 + 推理证据:`docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md` + `docs/superpowers/plans/2026-05-09-overscan-support.md`
+- 修复方案 + 推理证据:见 commit `69a9bea` + `43173c4` + `c3ccabb` message
 
-> **0001.png 是旧 shader-translation 公式产物**(2026-05-08 渲),保留作历史对照,**不是当前 PASS 的 evidence**。新 render evidence 待 lanPC sync 回 mac 后补到本目录。
+> **0001.png 是旧 shader-translation 公式产物**(2026-05-08 渲),保留作历史对照,**不是当前 PASS 的 evidence**。
 
 ## 测试条件
 
@@ -27,7 +27,7 @@
 | Disguise reference | `screen_mr_set_1_00001.exr`(Sequence Shot screenshot, linear EXR) |
 | UE render(2026-05-08 第一版 bug) | `LS_test_take_6_dense.0002.exr` |
 | UE render(中段 partial — 旧 shader translation) | `LS_test_take_6_dense.0001.png`(中心通过 / frustum 缺) |
-| UE render(2026-05-09 修复后 PASS) | 待 sync(commit `69a9bea` 后用户实测验证) |
+| UE render(2026-05-09 修复后 PASS) | commit `69a9bea` 后用户在 lanPC 实测验证通过 |
 | 帧映射 | 机位静态 → ref 任一帧 ≡ UE 任一帧 |
 
 ## 跟 take_5 对比的意义

@@ -32,6 +32,8 @@ below for sync/restore commands when the asset is missing or corrupt.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import unreal
 
 # Asset location inside the PostRenderTool plugin's Content folder.
@@ -40,6 +42,16 @@ WIDGET_PACKAGE_PATH = "/PostRenderTool/Blueprints"
 WIDGET_ASSET_NAME = "BP_PostRenderToolWidget"
 WIDGET_FULL_PATH = f"{WIDGET_PACKAGE_PATH}/{WIDGET_ASSET_NAME}"
 WIDGET_ASSET_PATH = f"{WIDGET_FULL_PATH}.{WIDGET_ASSET_NAME}"
+
+FIGMA_WIDGET_ASSET_NAME = "BP_PostRenderToolWidget_Figma"
+FIGMA_WIDGET_FULL_PATH = f"{WIDGET_PACKAGE_PATH}/{FIGMA_WIDGET_ASSET_NAME}"
+FIGMA_WIDGET_ASSET_PATH = f"{FIGMA_WIDGET_FULL_PATH}.{FIGMA_WIDGET_ASSET_NAME}"
+FIGMA_SPEC_PATH = "docs/widget-tree-spec-figma-v2.json"
+
+
+def _plugin_root() -> Path:
+    here = Path(__file__).resolve().parent
+    return here.parent.parent.parent
 
 TEMPLATE_SETUP_INSTRUCTIONS = f"""
 Blueprint asset not found: {WIDGET_ASSET_PATH}
@@ -132,7 +144,36 @@ def load_widget():
     return loaded
 
 
-def _inject_ui(widget_bp) -> None:
+def load_figma_widget():
+    """Load the experimental Figma-authored widget Blueprint."""
+    loaded = None
+    try:
+        loaded = unreal.EditorAssetLibrary.load_asset(FIGMA_WIDGET_ASSET_PATH)
+    except Exception as exc:
+        raise RuntimeError(
+            f"load_asset failed for {FIGMA_WIDGET_ASSET_PATH}: {exc}\n\n"
+            "Run rebuild_figma_from_spec() to generate the asset from "
+            f"{FIGMA_SPEC_PATH}."
+        )
+    if loaded is None:
+        raise RuntimeError(
+            f"Blueprint asset not found: {FIGMA_WIDGET_ASSET_PATH}\n\n"
+            "Run:\n"
+            "  from post_render_tool.widget_builder import rebuild_figma_from_spec\n"
+            "  rebuild_figma_from_spec(force_reapply=True)\n"
+        )
+    unreal.log(f"[widget_builder] Loaded Figma template: {FIGMA_WIDGET_ASSET_PATH}")
+    return loaded
+
+
+def _make_ui(widget, ui_class_name: str):
+    from . import widget as widget_module
+
+    ui_cls = getattr(widget_module, ui_class_name)
+    return ui_cls(widget)
+
+
+def _inject_ui(widget_bp, *, ui_class_name: str = "PostRenderToolUI") -> None:
     """Find the spawned widget instance and build UI into it."""
     global _active_ui
 
@@ -148,8 +189,7 @@ def _inject_ui(widget_bp) -> None:
 
     if widget is not None:
         try:
-            from .widget import PostRenderToolUI
-            _active_ui = PostRenderToolUI(widget)
+            _active_ui = _make_ui(widget, ui_class_name)
             unreal.log("[widget_builder] UI injected into widget.")
             return
         except Exception as exc:
@@ -172,8 +212,7 @@ def _inject_ui(widget_bp) -> None:
 
         if w is not None:
             try:
-                from .widget import PostRenderToolUI
-                _active_ui = PostRenderToolUI(w)
+                _active_ui = _make_ui(w, ui_class_name)
                 unreal.log("[widget_builder] UI injected (deferred).")
                 unreal.unregister_slate_post_tick_callback(handle_holder[0])
                 return
@@ -213,6 +252,26 @@ def open_widget() -> None:
             return
 
     _inject_ui(widget_bp)
+
+
+def open_figma_widget() -> None:
+    """Open BP_PostRenderToolWidget_Figma without touching the legacy widget."""
+    widget_bp = load_figma_widget()
+
+    try:
+        subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+        subsystem.spawn_and_register_tab(widget_bp)
+        unreal.log("[widget_builder] Figma widget tab opened.")
+    except Exception as exc:
+        unreal.log_error(f"[widget_builder] Failed to open Figma widget tab: {exc}")
+        try:
+            unreal.EditorUtilityLibrary.run_editor_utility_widget(widget_bp)
+            unreal.log("[widget_builder] Figma widget opened via fallback.")
+        except Exception as exc2:
+            unreal.log_error(f"[widget_builder] Figma fallback also failed: {exc2}.")
+            return
+
+    _inject_ui(widget_bp, ui_class_name="PostRenderToolFigmaUI")
 
 
 def delete_widget() -> bool:
@@ -286,4 +345,19 @@ def rebuild_from_spec(*, force_reapply: bool = False) -> object:
     from . import build_widget_blueprint
     bp = build_widget_blueprint.run_build(force_reapply=force_reapply)
     rebuild_widget()
+    return bp
+
+
+def rebuild_figma_from_spec(*, force_reapply: bool = True) -> object:
+    """Build/open the separate Figma widget Blueprint from its own spec file."""
+    from . import build_widget_blueprint
+
+    bp = build_widget_blueprint.run_build(
+        spec_path=str(_plugin_root() / FIGMA_SPEC_PATH),
+        create_if_missing=True,
+        force_reapply=force_reapply,
+    )
+    global _active_ui
+    _active_ui = None
+    open_figma_widget()
     return bp

@@ -38,9 +38,5 @@ take_7 故意把 distortion 量级拉大,目的是:
 
 ## 修复方案 + 推理
 
-- `docs/superpowers/plans/2026-05-09-overscan-support.md`(overscan 整体方案 + Phase 0/1/2 验证清单)
+- 见 commit `69a9bea` + `43173c4` + `c3ccabb` message
 - `CLAUDE.md` 顶部 2026-05-10 update #3 段(shader 归一化 + 部署步骤)
-
-## Render evidence
-
-新 render PNG 待从 lanPC sync 到 Mac 后补到 `validation_results/path_c_production/take_7/ue_out/`。

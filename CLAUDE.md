@@ -27,8 +27,7 @@
 > `OffCenterProjectionOffset`),shader 只剩 radial term,radial 中心 = 图心
 > (0.5, 0.5)。SHADER_VERSION → `2026-05-09-centershift-via-projection-offset`,
 > 部署后必须重跑 `build_distortion_material.run_build()` 才能通过 metadata-tag
-> 校验。详见
-> `docs/superpowers/plans/2026-05-09-centershift-via-projection-offset.md`。
+> 校验。详见 commit `69a9bea`。
 >
 > **2026-05-09 update #2 (overscan)**: take_7 加大 distortion 暴露
 > 边缘黑边 — 因为 UE 之前一直没用 CSV 自带的 overscan 字段(1.3334),
@@ -41,8 +40,7 @@
 > `OffCenterProjectionOffset`(`CameraStackTypes.cpp:528`),引擎自己
 > 处理两个修复的交互。Custom PP material 在 crop 之前
 > (`PostProcessing.cpp:3270` BL pass 在 `:3340` SecondaryUpscale 之前),
-> blendable location 不需要改。详见
-> `docs/superpowers/plans/2026-05-09-overscan-support.md`。
+> blendable location 不需要改。详见 commit `43173c4` + `c3ccabb`。
 >
 > **2026-05-10 update #3 (overscan shader frustum 归一化)**: commit
 > 43173c4 (overscan support)实测 take_7 渲染 distortion 形状完全错 —

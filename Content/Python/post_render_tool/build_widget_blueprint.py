@@ -45,9 +45,68 @@ def _resolve_spec_path(spec_path: Optional[str]) -> str:
     return str(_plugin_root() / DEFAULT_SPEC_PATH)
 
 
-def _load_blueprint(asset_path: str) -> "unreal.WidgetBlueprint":
+def _resolve_parent_class(parent_class_path: str):
+    parent_class = unreal.load_class(None, parent_class_path)
+    if parent_class is not None:
+        return parent_class
+
+    # Python exposes native classes without the module prefix, e.g.
+    # /Script/PostRenderTool.PostRenderToolWidget -> unreal.PostRenderToolWidget.
+    class_name = parent_class_path.rsplit(".", 1)[-1]
+    return getattr(unreal, class_name, None)
+
+
+def _create_blueprint(asset_path: str, parent_class_path: str) -> "unreal.WidgetBlueprint":
+    asset_name = asset_path.rsplit("/", 1)[-1]
+    package_path = asset_path.rsplit("/", 1)[0]
+    parent_class = _resolve_parent_class(parent_class_path)
+    if parent_class is None:
+        raise RuntimeError(f"Cannot resolve parent class '{parent_class_path}'.")
+
+    if not unreal.EditorAssetLibrary.does_directory_exist(package_path):
+        unreal.EditorAssetLibrary.make_directory(package_path)
+
+    factory = unreal.EditorUtilityWidgetBlueprintFactory()
+    try:
+        factory.set_editor_property("parent_class", parent_class)
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(
+            "[build_widget_blueprint] could not set factory parent_class "
+            f"for {asset_name}: {exc}; will try reparent after creation"
+        )
+
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    bp = asset_tools.create_asset(asset_name, package_path, None, factory)
+    if bp is None:
+        raise RuntimeError(f"create_asset failed for '{asset_path}'.")
+
+    try:
+        current_parent = bp.get_editor_property("parent_class")
+    except Exception:  # noqa: BLE001
+        current_parent = None
+    if current_parent != parent_class:
+        try:
+            unreal.BlueprintEditorLibrary.reparent_blueprint(bp, parent_class)
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(
+                f"Created '{asset_path}', but failed to reparent to "
+                f"'{parent_class_path}': {exc}"
+            ) from exc
+
+    unreal.log(f"[build_widget_blueprint] created widget blueprint {asset_path}")
+    return bp
+
+
+def _load_blueprint(
+    asset_path: str,
+    parent_class_path: str,
+    *,
+    create_if_missing: bool = False,
+) -> "unreal.WidgetBlueprint":
     bp = unreal.EditorAssetLibrary.load_asset(asset_path)
     if bp is None:
+        if create_if_missing:
+            return _create_blueprint(asset_path, parent_class_path)
         raise RuntimeError(
             f"Cannot load widget blueprint at '{asset_path}'. "
             "Create it first via Content Browser → Blueprint Class → "
@@ -228,6 +287,7 @@ def run_build(
     save: bool = True,
     compile_bp: bool = True,
     force_reapply: bool = False,
+    create_if_missing: bool = False,
 ) -> "unreal.WidgetBlueprint":
     """Top-level entry — load spec, walk tree, compile + save BP.
 
@@ -244,7 +304,12 @@ def run_build(
         raise RuntimeError("Spec validation failed:\n" + "\n".join(errors))
 
     asset_path = spec["blueprint"]["asset_path"]
-    bp = _load_blueprint(asset_path)
+    parent_class_path = spec["blueprint"]["parent_class"]
+    bp = _load_blueprint(
+        asset_path,
+        parent_class_path,
+        create_if_missing=create_if_missing,
+    )
 
     # Ensure root panel.
     root_panel_spec = spec["blueprint"]["root_panel"]

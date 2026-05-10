@@ -146,5 +146,37 @@ class TestRealSpecFile(unittest.TestCase):
         self.assertEqual(opt, OPTIONAL_NAMES, f"Optional mismatch: {opt ^ OPTIONAL_NAMES}")
 
 
+class TestFigmaSpecFile(unittest.TestCase):
+    """Validate the side-by-side Figma widget spec without changing legacy drift rules."""
+
+    @classmethod
+    def setUpClass(cls):
+        repo_root = Path(__file__).resolve().parents[4]
+        cls.spec_path = repo_root / "docs" / "widget-tree-spec-figma-v2.json"
+        if not cls.spec_path.exists():
+            raise unittest.SkipTest("widget-tree-spec-figma-v2.json not yet authored")
+        cls.spec = load_spec(str(cls.spec_path))
+
+    def test_figma_spec_file_is_valid(self):
+        errs = validate_spec(self.spec)
+        self.assertEqual(errs, [], "Figma spec has errors:\n" + "\n".join(errs))
+
+    def test_figma_spec_targets_separate_blueprint(self):
+        self.assertEqual(
+            self.spec["blueprint"]["asset_path"],
+            "/PostRenderTool/Blueprints/BP_PostRenderToolWidget_Figma",
+        )
+        self.assertEqual(
+            self.spec["blueprint"]["parent_class"],
+            "/Script/PostRenderTool.PostRenderToolWidget",
+        )
+
+    def test_figma_spec_keeps_legacy_required_contract(self):
+        req, opt, _dec = collect_contract_names(self.spec)
+        self.assertEqual(req, REQUIRED_NAMES)
+        self.assertIn("spn_frame", opt)
+        self.assertIn("btn_spawn_cam", opt)
+
+
 if __name__ == "__main__":
     unittest.main()

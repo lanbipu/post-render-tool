@@ -20,6 +20,11 @@ from typing import Optional
 import unreal
 
 from . import config
+from .coordinate_transform import (
+    transform_focus_distance,
+    transform_position,
+    transform_rotation,
+)
 from .csv_parser import CsvParseError, parse_csv_dense
 from .pipeline import PipelineResult, run_import
 from .ui_interface import (
@@ -65,6 +70,12 @@ _OPTIONAL_CONTROLS = (
     "spn_rot_pitch_offset", "spn_rot_yaw_offset", "spn_rot_roll_offset",
 )
 
+_FIGMA_OPTIONAL_CONTROLS = (
+    "spn_frame", "txt_frame_hint",
+    "txt_designer_pos", "txt_designer_rot", "txt_ue_pos", "txt_ue_rot",
+    "btn_spawn_cam",
+)
+
 
 class PostRenderToolUI:
     """Binds the Designer-authored BP_PostRenderToolWidget to Python logic."""
@@ -74,6 +85,7 @@ class PostRenderToolUI:
 
         # State
         self._csv_path: str = ""
+        self._csv_result = None
         self._fps: float = 0.0
         self._last_result: Optional[PipelineResult] = None
 
@@ -232,6 +244,12 @@ class PostRenderToolUI:
             return
         ctrl.set_text(unreal.Text(message))
 
+    def _on_csv_preview_loaded(self, _result):
+        """Extension hook for alternate UI layouts."""
+
+    def _on_mapping_applied(self):
+        """Extension hook for alternate UI layouts."""
+
     # ------------------------------------------------------------------
     # Prerequisites
     # ------------------------------------------------------------------
@@ -279,14 +297,19 @@ class PostRenderToolUI:
         try:
             result = parse_csv_dense(csv_path)
         except CsvParseError as exc:
+            self._csv_result = None
+            self._on_csv_preview_loaded(None)
             self._set_results(f"CSV Error: {exc}")
             unreal.log_warning(f"[widget] CSV parse error: {exc}")
             return
         except Exception as exc:  # noqa: BLE001
+            self._csv_result = None
+            self._on_csv_preview_loaded(None)
             self._set_results(f"Error: {exc}")
             unreal.log_error(f"[widget] Preview error: {exc}")
             return
 
+        self._csv_result = result
         fl_min, fl_max = result.focal_length_range
         self._set_text("txt_frame_count", f"Frames: {result.frame_count}")
         self._set_text(
@@ -301,6 +324,7 @@ class PostRenderToolUI:
             "txt_sensor_width",
             f"Sensor Width: {result.sensor_width_mm:.2f} mm",
         )
+        self._on_csv_preview_loaded(result)
 
         unreal.log(f"[widget] CSV preview loaded: {csv_path}")
 
@@ -403,6 +427,7 @@ class PostRenderToolUI:
         self._set_results(
             "Axis mapping + rotation offset applied (in memory)."
         )
+        self._on_mapping_applied()
         unreal.log("[widget] Axis mapping + rotation offset applied in memory.")
 
     def _on_save_mapping(self):
@@ -474,3 +499,163 @@ class PostRenderToolUI:
         if ctrl is None:
             return
         ctrl.set_text(unreal.Text(message))
+
+
+class PostRenderToolFigmaUI(PostRenderToolUI):
+    """Optional bindings for BP_PostRenderToolWidget_Figma.
+
+    The Figma layout includes a Coordinate Verification section that is not
+    part of the legacy ``UPostRenderToolWidget`` required contract. These
+    widgets are generated as Blueprint variables by the spec builder, so Python
+    can access them opportunistically without changing the old BP asset.
+    """
+
+    def _acquire_all_controls(self):
+        super()._acquire_all_controls()
+        for name in _FIGMA_OPTIONAL_CONTROLS:
+            self._acquire(name, optional=True)
+
+    def _push_initial_mapping_values(self):
+        super()._push_initial_mapping_values()
+        spn_frame = self._get("spn_frame")
+        if spn_frame is not None:
+            spn_frame.set_editor_property("min_value", 0.0)
+            spn_frame.set_editor_property("max_value", 0.0)
+            spn_frame.set_editor_property("value", 0.0)
+            spn_frame.set_editor_property("min_fractional_digits", 0)
+        self._reset_coordinate_preview()
+
+    def _bind_events(self):
+        super()._bind_events()
+        self._bind_value_changed("spn_frame", self._on_frame_changed)
+        self._bind_click("btn_spawn_cam", self._on_spawn_test_camera)
+
+    def _reset_coordinate_preview(self):
+        self._set_text("txt_frame_hint", "0 / 0")
+        self._set_text("txt_designer_pos", "Pos  -")
+        self._set_text("txt_designer_rot", "Rot  -")
+        self._set_text("txt_ue_pos", "Pos  -")
+        self._set_text("txt_ue_rot", "Rot  -")
+
+    def _selected_frame_index(self) -> int:
+        if self._csv_result is None or not self._csv_result.frames:
+            return 0
+        spn = self._get("spn_frame")
+        value = spn.get_editor_property("value") if spn is not None else 0.0
+        max_index = len(self._csv_result.frames) - 1
+        return max(0, min(int(round(float(value))), max_index))
+
+    def _update_frame_spin_range(self):
+        spn = self._get("spn_frame")
+        if spn is None:
+            return
+        max_index = (
+            len(self._csv_result.frames) - 1
+            if self._csv_result is not None and self._csv_result.frames
+            else 0
+        )
+        spn.set_editor_property("min_value", 0.0)
+        spn.set_editor_property("max_value", float(max_index))
+        spn.set_editor_property("value", 0.0)
+
+    def _update_coordinate_preview(self):
+        if self._csv_result is None or not self._csv_result.frames:
+            self._reset_coordinate_preview()
+            return
+
+        index = self._selected_frame_index()
+        frame = self._csv_result.frames[index]
+        max_index = len(self._csv_result.frames) - 1
+        ue_x, ue_y, ue_z = transform_position(
+            frame.offset_x, frame.offset_y, frame.offset_z
+        )
+        ue_pitch, ue_yaw, ue_roll = transform_rotation(
+            frame.rotation_x, frame.rotation_y, frame.rotation_z
+        )
+
+        self._set_text("txt_frame_hint", f"{index} / {max_index}")
+        self._set_text(
+            "txt_designer_pos",
+            f"Pos  ({frame.offset_x:.4f}, {frame.offset_y:.4f}, "
+            f"{frame.offset_z:.4f}) m",
+        )
+        self._set_text(
+            "txt_designer_rot",
+            f"Rot  ({frame.rotation_x:.2f}, {frame.rotation_y:.2f}, "
+            f"{frame.rotation_z:.2f})°",
+        )
+        self._set_text(
+            "txt_ue_pos",
+            f"Pos  ({ue_x:.1f}, {ue_y:.1f}, {ue_z:.1f}) cm",
+        )
+        self._set_text(
+            "txt_ue_rot",
+            f"Rot  P={ue_pitch:.2f}  Y={ue_yaw:.2f}  R={ue_roll:.2f}°",
+        )
+
+    def _on_csv_preview_loaded(self, _result):
+        self._update_frame_spin_range()
+        self._update_coordinate_preview()
+
+    def _on_mapping_applied(self):
+        self._update_coordinate_preview()
+
+    def _on_frame_changed(self, _value: float):
+        self._update_coordinate_preview()
+
+    def _on_spawn_test_camera(self):
+        if self._csv_result is None or not self._csv_result.frames:
+            self._set_results("Cannot spawn test camera: no CSV preview loaded.")
+            return
+
+        index = self._selected_frame_index()
+        frame = self._csv_result.frames[index]
+        ue_x, ue_y, ue_z = transform_position(
+            frame.offset_x, frame.offset_y, frame.offset_z
+        )
+        ue_pitch, ue_yaw, ue_roll = transform_rotation(
+            frame.rotation_x, frame.rotation_y, frame.rotation_z
+        )
+        sensor_height = (
+            frame.sensor_width_mm / frame.aspect_ratio
+            if frame.aspect_ratio
+            else frame.sensor_width_mm
+        )
+
+        try:
+            from .camera_builder import build_camera
+
+            camera = build_camera(
+                frame.sensor_width_mm,
+                sensor_height,
+                actor_label="CineCamera_PostRender_Preview",
+            )
+            camera.set_actor_location(unreal.Vector(ue_x, ue_y, ue_z), False, False)
+            camera.set_actor_rotation(
+                unreal.Rotator(ue_pitch, ue_yaw, ue_roll),
+                False,
+            )
+            comp = camera.get_cine_camera_component()
+            comp.set_editor_property("current_focal_length", frame.focal_length_mm)
+            try:
+                focus_settings = comp.get_editor_property("focus_settings")
+                focus_settings.set_editor_property(
+                    "manual_focus_distance",
+                    transform_focus_distance(frame.focus_distance),
+                )
+                comp.set_editor_property("focus_settings", focus_settings)
+            except Exception as focus_exc:  # noqa: BLE001
+                unreal.log_warning(
+                    "[widget] Preview camera focus distance was not set: "
+                    f"{focus_exc}"
+                )
+            self._set_results(
+                f"Spawned preview camera at frame {index}: "
+                f"{camera.get_actor_label()}"
+            )
+            unreal.log(
+                f"[widget] Spawned preview camera for CSV frame index {index}."
+            )
+        except Exception as exc:  # noqa: BLE001
+            self._set_results(f"Failed to spawn test camera: {exc}")
+            unreal.log_error(f"[widget] Spawn test camera error: {exc}")
