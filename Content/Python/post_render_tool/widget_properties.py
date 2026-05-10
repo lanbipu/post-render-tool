@@ -30,10 +30,23 @@ WIDGET_CLASS_MAP: Dict[str, type] = {
 }
 
 
+def _srgb_channel_to_linear(value: float) -> float:
+    """Convert Figma/CSS sRGB channel values to UE LinearColor channels."""
+    value = float(value)
+    if value <= 0.04045:
+        return value / 12.92
+    return ((value + 0.055) / 1.055) ** 2.4
+
+
 def _linear_color(rgba) -> "unreal.LinearColor":
     r, g, b, *rest = list(rgba)
     a = rest[0] if rest else 1.0
-    return unreal.LinearColor(r, g, b, a)
+    return unreal.LinearColor(
+        _srgb_channel_to_linear(r),
+        _srgb_channel_to_linear(g),
+        _srgb_channel_to_linear(b),
+        float(a),
+    )
 
 
 def _slate_color(rgba) -> "unreal.SlateColor":
@@ -213,11 +226,27 @@ def _apply_border_padding(w, v):
 
 
 def _apply_sizebox_width(w, v):
-    w.set_editor_property("width_override", float(v))
+    if hasattr(w, "set_width_override"):
+        w.set_width_override(float(v))
+    else:
+        w.set_editor_property("width_override", float(v))
 
 
 def _apply_sizebox_height(w, v):
-    w.set_editor_property("height_override", float(v))
+    if hasattr(w, "set_height_override"):
+        w.set_height_override(float(v))
+    else:
+        w.set_editor_property("height_override", float(v))
+
+
+def _apply_sizebox_clear_width(w, v):
+    if bool(v) and hasattr(w, "clear_width_override"):
+        w.clear_width_override()
+
+
+def _apply_sizebox_clear_height(w, v):
+    if bool(v) and hasattr(w, "clear_height_override"):
+        w.clear_height_override()
 
 
 def _apply_spinbox_min(w, v):
@@ -262,6 +291,10 @@ def _apply_scrollbox_orientation(w, v):
     w.set_editor_property(
         "orientation", mapping.get(v, unreal.Orientation.ORIENT_VERTICAL)
     )
+
+
+def _apply_scrollbox_always_show_scrollbar(w, v):
+    w.set_editor_property("always_show_scrollbar", bool(v))
 
 
 def _apply_spacer_size(w, v):
@@ -520,6 +553,8 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "Padding": _apply_border_padding,
     "WidthOverride": _apply_sizebox_width,
     "HeightOverride": _apply_sizebox_height,
+    "ClearWidthOverride": _apply_sizebox_clear_width,
+    "ClearHeightOverride": _apply_sizebox_clear_height,
     "MinValue": _apply_spinbox_min,
     "MaxValue": _apply_spinbox_max,
     "Value": _apply_spinbox_value,
@@ -528,6 +563,7 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "IsReadOnly": _apply_multiline_readonly,
     "HintText": _apply_multiline_hint,
     "Orientation": _apply_scrollbox_orientation,
+    "AlwaysShowScrollbar": _apply_scrollbox_always_show_scrollbar,
     "Size": _apply_spacer_size,
     "Font": _apply_textblock_font,
     "ForegroundColor": _apply_foreground_color,

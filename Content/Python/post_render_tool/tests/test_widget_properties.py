@@ -120,6 +120,26 @@ class _StubComboBoxString(_StubWidgetBase):
         _R.record("ComboBoxString.add_option", o)
 
 
+class _StubSizeBox(_StubWidgetBase):
+    def set_width_override(self, value: float) -> None:
+        self.properties["width_override"] = value
+        self.properties["width_override_enabled"] = True
+        _R.record("SizeBox.set_width_override", value)
+
+    def set_height_override(self, value: float) -> None:
+        self.properties["height_override"] = value
+        self.properties["height_override_enabled"] = True
+        _R.record("SizeBox.set_height_override", value)
+
+    def clear_width_override(self) -> None:
+        self.properties["width_override_cleared"] = True
+        _R.record("SizeBox.clear_width_override")
+
+    def clear_height_override(self) -> None:
+        self.properties["height_override_cleared"] = True
+        _R.record("SizeBox.clear_height_override")
+
+
 _unreal_stub.Text = _StubText
 _unreal_stub.LinearColor = _StubLinearColor
 _unreal_stub.Vector2D = _StubVector2D
@@ -133,7 +153,7 @@ _unreal_stub.ComboBoxString = _StubComboBoxString
 _unreal_stub.Button = type("Button", (_StubWidgetBase,), {})
 _unreal_stub.Image = type("Image", (_StubWidgetBase,), {})
 _unreal_stub.Border = type("Border", (_StubWidgetBase,), {})
-_unreal_stub.SizeBox = type("SizeBox", (_StubWidgetBase,), {})
+_unreal_stub.SizeBox = _StubSizeBox
 _unreal_stub.SpinBox = type("SpinBox", (_StubWidgetBase,), {})
 _unreal_stub.MultiLineEditableText = type("MultiLineEditableText", (_StubWidgetBase,), {})
 _unreal_stub.Spacer = type("Spacer", (_StubWidgetBase,), {})
@@ -218,6 +238,17 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
             for c in _R.calls
         ), _R.calls)
 
+    def test_apply_brush_color_converts_srgb_to_linear(self):
+        w = _unreal_stub.Border()
+        widget_properties.apply_widget_properties(
+            w, {"BrushColor": [0.5, 0.5, 0.5, 1.0]}
+        )
+        r, g, b, a = w.properties["brush_color"].rgba
+        self.assertAlmostEqual(r, 0.214041, places=5)
+        self.assertAlmostEqual(g, 0.214041, places=5)
+        self.assertAlmostEqual(b, 0.214041, places=5)
+        self.assertEqual(a, 1.0)
+
     def test_apply_tint_on_image(self):
         w = _unreal_stub.Image()
         widget_properties.apply_widget_properties(
@@ -236,6 +267,13 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
         )
         self.assertEqual(w.properties["width_override"], 3)
         self.assertEqual(w.properties["height_override"], 13)
+        self.assertTrue(w.properties["width_override_enabled"])
+        self.assertTrue(w.properties["height_override_enabled"])
+
+    def test_apply_sizebox_clear_height_override(self):
+        w = _unreal_stub.SizeBox()
+        widget_properties.apply_widget_properties(w, {"ClearHeightOverride": True})
+        self.assertTrue(w.properties["height_override_cleared"])
 
     def test_apply_spinbox_range(self):
         w = _unreal_stub.SpinBox()
@@ -267,6 +305,11 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
             w, {"DefaultOptions": ["X (0)", "Y (1)", "Z (2)"]}
         )
         self.assertEqual(w.properties["options"], ["X (0)", "Y (1)", "Z (2)"])
+
+    def test_apply_scrollbox_always_show_scrollbar(self):
+        w = _unreal_stub.ScrollBox()
+        widget_properties.apply_widget_properties(w, {"AlwaysShowScrollbar": True})
+        self.assertIs(w.properties["always_show_scrollbar"], True)
 
 
 class TestSlotPropertyApplicators(unittest.TestCase):
