@@ -41,10 +41,10 @@
           "properties": {
             "Orientation": "Vertical",
             "AlwaysShowScrollbar": true,
-            "AlwaysShowScrollbarTrack": true,
+            "AlwaysShowScrollbarTrack": false,
             "ScrollbarThickness": [
-              12,
-              12
+              6,
+              6
             ],
             "WheelScrollMultiplier": 1.0
           },
@@ -1808,7 +1808,8 @@
                               10,
                               0,
                               0
-                            ]
+                            ],
+                            "h_align": "Left"
                           }
                         }
                       ],
@@ -2091,7 +2092,7 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": false
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2369,7 +2370,7 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": false
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2647,7 +2648,7 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": false
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -2962,7 +2963,7 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": false
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3240,7 +3241,7 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": false
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3518,7 +3519,7 @@
                                             8,
                                             6
                                           ],
-                                          "HasDownArrow": true
+                                          "HasDownArrow": false
                                         },
                                         "ForegroundColor": [
                                           0.878,
@@ -3659,403 +3660,6 @@
                               "properties": {
                                 "Visibility": "SelfHitTestInvisible"
                               }
-                            }
-                          ],
-                          "properties": {
-                            "Visibility": "SelfHitTestInvisible"
-                          }
-                        },
-                        {
-                          "type": "TextBlock",
-                          "name": "lbl_rot_offset_subheader",
-                          "role": "decorative",
-                          "properties": {
-                            "Text": "ROTATION OFFSET (deg)",
-                            "ColorAndOpacity": [
-                              0.502,
-                              0.502,
-                              0.502,
-                              1.0
-                            ],
-                            "Font": {
-                              "size": 10,
-                              "type_face": "Bold"
-                            },
-                            "Visibility": "SelfHitTestInvisible"
-                          },
-                          "slot": {
-                            "padding": [
-                              0,
-                              12,
-                              0,
-                              4
-                            ]
-                          }
-                        },
-                        {
-                          "type": "HorizontalBox",
-                          "name": "lbl_rot_offset_row",
-                          "role": "decorative",
-                          "children": [
-                            {
-                              "type": "TextBlock",
-                              "name": "lbl_rot_pitch_offset_label",
-                              "role": "decorative",
-                              "properties": {
-                                "Text": "Pitch",
-                                "ColorAndOpacity": [
-                                  0.878,
-                                  0.878,
-                                  0.878,
-                                  1.0
-                                ],
-                                "Font": {
-                                  "size": 12,
-                                  "type_face": "Regular"
-                                },
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "padding": [
-                                  0,
-                                  6,
-                                  8,
-                                  6
-                                ],
-                                "v_align": "Center"
-                              }
-                            },
-                            {
-                              "type": "SizeBox",
-                              "name": "sz_spn_rot_pitch_offset",
-                              "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 54,
-                                "HeightOverride": 26,
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "children": [
-                                {
-                                  "type": "SpinBox",
-                                  "name": "spn_rot_pitch_offset",
-                                  "role": "optional",
-                                  "properties": {
-                                    "Value": 0.0,
-                                    "FigmaInputStyle": {
-                                      "BackgroundColor": [
-                                        0.102,
-                                        0.102,
-                                        0.102,
-                                        1.0
-                                      ],
-                                      "HoverColor": [
-                                        0.12,
-                                        0.12,
-                                        0.12,
-                                        1.0
-                                      ],
-                                      "PressedColor": [
-                                        0.08,
-                                        0.08,
-                                        0.08,
-                                        1.0
-                                      ],
-                                      "FillColor": [
-                                        0.18,
-                                        0.18,
-                                        0.18,
-                                        1.0
-                                      ],
-                                      "TextColor": [
-                                        0.878,
-                                        0.878,
-                                        0.878,
-                                        1.0
-                                      ],
-                                      "ArrowColor": [
-                                        0.5,
-                                        0.5,
-                                        0.5,
-                                        1.0
-                                      ],
-                                      "Font": {
-                                        "size": 12,
-                                        "type_face": "Regular"
-                                      },
-                                      "TextPadding": [
-                                        8,
-                                        3,
-                                        6,
-                                        3
-                                      ],
-                                      "InsetPadding": [
-                                        0,
-                                        0,
-                                        0,
-                                        0
-                                      ],
-                                      "ContentPadding": [
-                                        10,
-                                        6,
-                                        8,
-                                        6
-                                      ],
-                                      "HasDownArrow": true
-                                    },
-                                    "ForegroundColor": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "MinDesiredWidth": 54
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "TextBlock",
-                              "name": "lbl_rot_yaw_offset_label",
-                              "role": "decorative",
-                              "properties": {
-                                "Text": "Yaw",
-                                "ColorAndOpacity": [
-                                  0.878,
-                                  0.878,
-                                  0.878,
-                                  1.0
-                                ],
-                                "Font": {
-                                  "size": 12,
-                                  "type_face": "Regular"
-                                },
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "padding": [
-                                  16,
-                                  6,
-                                  8,
-                                  6
-                                ],
-                                "v_align": "Center"
-                              }
-                            },
-                            {
-                              "type": "SizeBox",
-                              "name": "sz_spn_rot_yaw_offset",
-                              "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 54,
-                                "HeightOverride": 26,
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "children": [
-                                {
-                                  "type": "SpinBox",
-                                  "name": "spn_rot_yaw_offset",
-                                  "role": "optional",
-                                  "properties": {
-                                    "Value": 0.0,
-                                    "FigmaInputStyle": {
-                                      "BackgroundColor": [
-                                        0.102,
-                                        0.102,
-                                        0.102,
-                                        1.0
-                                      ],
-                                      "HoverColor": [
-                                        0.12,
-                                        0.12,
-                                        0.12,
-                                        1.0
-                                      ],
-                                      "PressedColor": [
-                                        0.08,
-                                        0.08,
-                                        0.08,
-                                        1.0
-                                      ],
-                                      "FillColor": [
-                                        0.18,
-                                        0.18,
-                                        0.18,
-                                        1.0
-                                      ],
-                                      "TextColor": [
-                                        0.878,
-                                        0.878,
-                                        0.878,
-                                        1.0
-                                      ],
-                                      "ArrowColor": [
-                                        0.5,
-                                        0.5,
-                                        0.5,
-                                        1.0
-                                      ],
-                                      "Font": {
-                                        "size": 12,
-                                        "type_face": "Regular"
-                                      },
-                                      "TextPadding": [
-                                        8,
-                                        3,
-                                        6,
-                                        3
-                                      ],
-                                      "InsetPadding": [
-                                        0,
-                                        0,
-                                        0,
-                                        0
-                                      ],
-                                      "ContentPadding": [
-                                        10,
-                                        6,
-                                        8,
-                                        6
-                                      ],
-                                      "HasDownArrow": true
-                                    },
-                                    "ForegroundColor": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "MinDesiredWidth": 54
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "TextBlock",
-                              "name": "lbl_rot_roll_offset_label",
-                              "role": "decorative",
-                              "properties": {
-                                "Text": "Roll",
-                                "ColorAndOpacity": [
-                                  0.878,
-                                  0.878,
-                                  0.878,
-                                  1.0
-                                ],
-                                "Font": {
-                                  "size": 12,
-                                  "type_face": "Regular"
-                                },
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "slot": {
-                                "padding": [
-                                  16,
-                                  6,
-                                  8,
-                                  6
-                                ],
-                                "v_align": "Center"
-                              }
-                            },
-                            {
-                              "type": "SizeBox",
-                              "name": "sz_spn_rot_roll_offset",
-                              "role": "decorative",
-                              "properties": {
-                                "WidthOverride": 54,
-                                "HeightOverride": 26,
-                                "Visibility": "SelfHitTestInvisible"
-                              },
-                              "children": [
-                                {
-                                  "type": "SpinBox",
-                                  "name": "spn_rot_roll_offset",
-                                  "role": "optional",
-                                  "properties": {
-                                    "Value": 0.0,
-                                    "FigmaInputStyle": {
-                                      "BackgroundColor": [
-                                        0.102,
-                                        0.102,
-                                        0.102,
-                                        1.0
-                                      ],
-                                      "HoverColor": [
-                                        0.12,
-                                        0.12,
-                                        0.12,
-                                        1.0
-                                      ],
-                                      "PressedColor": [
-                                        0.08,
-                                        0.08,
-                                        0.08,
-                                        1.0
-                                      ],
-                                      "FillColor": [
-                                        0.18,
-                                        0.18,
-                                        0.18,
-                                        1.0
-                                      ],
-                                      "TextColor": [
-                                        0.878,
-                                        0.878,
-                                        0.878,
-                                        1.0
-                                      ],
-                                      "ArrowColor": [
-                                        0.5,
-                                        0.5,
-                                        0.5,
-                                        1.0
-                                      ],
-                                      "Font": {
-                                        "size": 12,
-                                        "type_face": "Regular"
-                                      },
-                                      "TextPadding": [
-                                        8,
-                                        3,
-                                        6,
-                                        3
-                                      ],
-                                      "InsetPadding": [
-                                        0,
-                                        0,
-                                        0,
-                                        0
-                                      ],
-                                      "ContentPadding": [
-                                        10,
-                                        6,
-                                        8,
-                                        6
-                                      ],
-                                      "HasDownArrow": true
-                                    },
-                                    "ForegroundColor": [
-                                      0.878,
-                                      0.878,
-                                      0.878,
-                                      1.0
-                                    ],
-                                    "Font": {
-                                      "size": 12,
-                                      "type_face": "Regular"
-                                    },
-                                    "MinDesiredWidth": 54
-                                  }
-                                }
-                              ]
                             }
                           ],
                           "properties": {
@@ -4531,10 +4135,11 @@
                                         1.0
                                       ],
                                       "Font": {
-                                        "size": 11,
+                                        "size": 10,
                                         "type_face": "Regular"
                                       }
-                                    }
+                                    },
+                                    "AutoWrapText": false
                                   }
                                 }
                               ]

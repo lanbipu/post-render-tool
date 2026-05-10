@@ -301,6 +301,11 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
         )
         self.assertIs(w.properties["is_read_only"], True)
 
+    def test_apply_multiline_auto_wrap(self):
+        w = _unreal_stub.MultiLineEditableText()
+        widget_properties.apply_widget_properties(w, {"AutoWrapText": False})
+        self.assertIs(w.properties["auto_wrap_text"], False)
+
     def test_apply_unknown_property_logs_but_does_not_raise(self):
         w = _StubTextBlock()
         # Must not raise:

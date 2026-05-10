@@ -283,6 +283,10 @@ def _apply_multiline_hint(w, v):
     w.set_editor_property("hint_text", unreal.Text(str(v)))
 
 
+def _apply_multiline_auto_wrap(w, v):
+    w.set_editor_property("auto_wrap_text", bool(v))
+
+
 def _apply_scrollbox_orientation(w, v):
     # ScrollBox.Orientation is TEnumAsByte<EOrientation>; cannot accept a string.
     mapping = {
@@ -452,7 +456,6 @@ def _style_spinbox(w, v):
     hover = v.get("HoverColor", bg)
     active = v.get("ActiveColor", bg)
     fill = v.get("FillColor", [0.18, 0.18, 0.18, 1.0])
-    arrow = v.get("ArrowColor", [0.5, 0.5, 0.5, 1.0])
     for name, color in (
         ("background_brush", bg),
         ("hovered_background_brush", hover),
@@ -462,11 +465,13 @@ def _style_spinbox(w, v):
         ("active_fill_brush", fill),
     ):
         try:
-            style.set_editor_property(name, _solid_brush(color, draw_as="RoundedBox"))
+            style.set_editor_property(name, _solid_brush(color, draw_as="Box"))
         except Exception:  # noqa: BLE001
             continue
     try:
-        style.set_editor_property("arrows_image", _solid_brush(arrow, draw_as="Image"))
+        style.set_editor_property(
+            "arrows_image", _solid_brush([0.0, 0.0, 0.0, 0.0], draw_as="NoDrawType")
+        )
     except Exception:  # noqa: BLE001
         pass
     if "TextPadding" in v:
@@ -491,7 +496,6 @@ def _style_combobox(w, v):
     bg = v.get("BackgroundColor", [0.102, 0.102, 0.102, 1.0])
     hover = v.get("HoverColor", bg)
     pressed = v.get("PressedColor", bg)
-    arrow = v.get("ArrowColor", [0.5, 0.5, 0.5, 1.0])
     try:
         combo_button_style = style.get_editor_property("combo_button_style")
         button_style = combo_button_style.get_editor_property("button_style")
@@ -502,12 +506,9 @@ def _style_combobox(w, v):
             ("disabled", bg),
         ):
             button_style.set_editor_property(
-                name, _solid_brush(color, draw_as="RoundedBox")
+                name, _solid_brush(color, draw_as="Box")
             )
         combo_button_style.set_editor_property("button_style", button_style)
-        combo_button_style.set_editor_property(
-            "down_arrow_image", _solid_brush(arrow, image_size=[8, 8], draw_as="Image")
-        )
         if "ContentPadding" in v:
             combo_button_style.set_editor_property(
                 "content_padding", _margin(v["ContentPadding"])
@@ -587,6 +588,7 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "DefaultOptions": _apply_combo_default_options,
     "IsReadOnly": _apply_multiline_readonly,
     "HintText": _apply_multiline_hint,
+    "AutoWrapText": _apply_multiline_auto_wrap,
     "Orientation": _apply_scrollbox_orientation,
     "AlwaysShowScrollbar": _apply_scrollbox_always_show_scrollbar,
     "AlwaysShowScrollbarTrack": _apply_scrollbox_always_show_scrollbar_track,
