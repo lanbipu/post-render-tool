@@ -147,15 +147,15 @@ class TestRealSpecFile(unittest.TestCase):
         self.assertEqual(opt, OPTIONAL_NAMES, f"Optional mismatch: {opt ^ OPTIONAL_NAMES}")
 
 
-class TestFigmaSpecFile(unittest.TestCase):
-    """Validate the side-by-side Figma widget spec without changing legacy drift rules."""
+class TestProductionVisualSpecFile(unittest.TestCase):
+    """Validate the production visual widget spec."""
 
     @classmethod
     def setUpClass(cls):
         repo_root = Path(__file__).resolve().parents[4]
-        cls.spec_path = repo_root / "docs" / "widget-tree-spec-figma-v2.json"
+        cls.spec_path = repo_root / "docs" / "widget-tree-spec.json"
         if not cls.spec_path.exists():
-            raise unittest.SkipTest("widget-tree-spec-figma-v2.json not yet authored")
+            raise unittest.SkipTest("widget-tree-spec.json not authored")
         cls.spec = load_spec(str(cls.spec_path))
 
     @staticmethod
@@ -166,35 +166,41 @@ class TestFigmaSpecFile(unittest.TestCase):
             yield node
             stack.extend(node.get("children") or [])
 
-    def test_figma_spec_file_is_valid(self):
+    def test_production_spec_file_is_valid(self):
         errs = validate_spec(self.spec)
-        self.assertEqual(errs, [], "Figma spec has errors:\n" + "\n".join(errs))
+        self.assertEqual(errs, [], "Production spec has errors:\n" + "\n".join(errs))
 
-    def test_figma_spec_targets_separate_blueprint(self):
+    def test_production_spec_targets_primary_blueprint(self):
         self.assertEqual(
             self.spec["blueprint"]["asset_path"],
-            "/PostRenderTool/Blueprints/BP_PostRenderToolWidget_Figma",
+            "/PostRenderTool/Blueprints/BP_PostRenderToolWidget",
         )
         self.assertEqual(
             self.spec["blueprint"]["parent_class"],
             "/Script/PostRenderTool.PostRenderToolWidget",
         )
 
-    def test_figma_spec_keeps_legacy_required_contract(self):
+    def test_production_spec_keeps_required_contract(self):
         req, opt, _dec = collect_contract_names(self.spec)
         self.assertEqual(req, REQUIRED_NAMES)
         self.assertNotIn("spn_frame", opt)
         self.assertNotIn("btn_spawn_cam", opt)
 
-    def test_figma_spec_prerequisites_render_five_rows(self):
+    def test_production_spec_prerequisites_render_five_rows(self):
         nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
         names = set(nodes_by_name)
         self.assertEqual(
             {name for name in names if name.startswith("lbl_prereq_row_")},
             {f"lbl_prereq_row_{i}" for i in range(5)},
         )
+        visible_prereq_labels = {
+            name
+            for name in names
+            if name.startswith("prereq_label_")
+            and nodes_by_name[name].get("properties", {}).get("Visibility") != "Collapsed"
+        }
         self.assertEqual(
-            {name for name in names if name.startswith("prereq_label_")},
+            visible_prereq_labels,
             {f"prereq_label_{i}" for i in range(5)},
         )
         label_texts = [
@@ -217,13 +223,13 @@ class TestFigmaSpecFile(unittest.TestCase):
             "5 / 5 OK",
         )
 
-    def test_figma_spec_prerequisite_dots_are_round(self):
+    def test_production_spec_prerequisite_dots_are_round(self):
         nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
         for index in range(5):
             dot = nodes_by_name[f"lbl_prereq_dot_{index}_img"]
             self.assertEqual(dot["properties"].get("DrawAs"), "RoundedBox")
 
-    def test_figma_spec_excludes_coordinate_verification_section(self):
+    def test_production_spec_excludes_coordinate_verification_section(self):
         names = {node["name"] for node in self._walk_nodes(self.spec)}
         removed_names = {
             "lbl_card_coord_verify",
@@ -237,7 +243,7 @@ class TestFigmaSpecFile(unittest.TestCase):
         }
         self.assertTrue(names.isdisjoint(removed_names), names & removed_names)
 
-    def test_figma_spec_cards_and_controls_have_outlines(self):
+    def test_production_spec_cards_and_controls_have_outlines(self):
         nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
         for name in (
             "lbl_card_prereq",

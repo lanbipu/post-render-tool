@@ -488,9 +488,3 @@ class PostRenderToolUI:
         if ctrl is None:
             return
         ctrl.set_text(unreal.Text(message))
-
-
-class PostRenderToolFigmaUI(PostRenderToolUI):
-    """Figma asset binder kept as a stable widget_builder injection target."""
-
-    pass
