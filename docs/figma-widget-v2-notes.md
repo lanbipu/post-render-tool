@@ -15,8 +15,9 @@
 - The Figma-only Coordinate Verification controls are Blueprint variables in the new widget. They are not added to the legacy required `BindWidget` contract.
 - Solid-color `Border`, `Image`, and `Button` brushes use `/Engine/EngineResources/WhiteSquareTexture` as a tint base. Empty `SlateBrush` resources render as UE's dashed invalid-resource placeholder.
 - Figma color values in the JSON spec are sRGB/CSS channels. `widget_properties.py` converts RGB channels to UE `LinearColor` channels before applying them, otherwise the panel renders too gray/bright in the Editor.
-- The Figma widget root uses `Border` -> `ScrollBox` -> fixed-width `SizeBox`. The `ScrollBox` owns the Editor tab viewport; the `SizeBox` only fixes the 400px content width and explicitly clears `HeightOverride`.
+- The Figma widget root uses `CanvasPanel` -> `Border` -> `ScrollBox` -> `VerticalBox`. The `CanvasPanel` child is anchored to the full Editor Utility Widget viewport, so the `ScrollBox` gets a real constrained height and the content can stretch horizontally when the tab is wider than the 400px Figma reference.
 - UE `SizeBox` dimensions are applied through `set_width_override()` / `set_height_override()` and cleared through `clear_*_override()`. Directly setting `width_override` / `height_override` updates only the stored number and does not enable the layout override flag.
+- `rebuild_figma_from_spec(recreate=True)` closes/unregisters the Figma Editor Utility tab before deleting the generated Blueprint asset. Otherwise UE can keep the asset loaded and the builder may silently reuse stale widget-tree branches.
 
 ## UE Build Command
 

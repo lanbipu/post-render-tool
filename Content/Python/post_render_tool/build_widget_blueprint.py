@@ -318,7 +318,7 @@ def run_build(
 
     # Ensure root panel.
     root_panel_spec = spec["blueprint"]["root_panel"]
-    root_cls_obj = _resolve_widget_uclass(root_panel_spec["type"])
+    root_py_cls, root_cls_obj = _resolve_widget_classes(root_panel_spec["type"])
     if root_cls_obj is None:
         raise RuntimeError(
             f"Unknown root panel type {root_panel_spec['type']!r} — "
@@ -331,6 +331,12 @@ def run_build(
         raise RuntimeError(
             "Could not ensure root panel — see UE Output Log for the "
             "root-widget-type-mismatch warning."
+        )
+    if root_py_cls is not None and not isinstance(root, root_py_cls):
+        raise RuntimeError(
+            f"Root panel type mismatch for '{asset_path}': spec wants "
+            f"{root_panel_spec['type']}, asset has {type(root).__name__}. "
+            "Recreate the generated widget asset before rebuilding."
         )
 
     # Walk root_children under the root panel.

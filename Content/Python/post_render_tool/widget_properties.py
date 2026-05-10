@@ -648,10 +648,10 @@ def apply_slot_properties(slot, props: Dict[str, Any]) -> None:
     if "padding" in props:
         _try_set(slot, "padding", _margin(props["padding"]))
 
-    if "h_align" in props:
+    if "h_align" in props and _slot_has(slot, "horizontal_alignment"):
         _try_set(slot, "horizontal_alignment", _resolve_h_align(props["h_align"]))
 
-    if "v_align" in props:
+    if "v_align" in props and _slot_has(slot, "vertical_alignment"):
         _try_set(slot, "vertical_alignment", _resolve_v_align(props["v_align"]))
 
     if "fill_size" in props or "size_rule" in props:
@@ -680,21 +680,33 @@ def apply_slot_properties(slot, props: Dict[str, Any]) -> None:
             _try_set(slot, "size", size)
 
     # CanvasPanelSlot-specific
-    if "anchors_min" in props or "anchors_max" in props:
+    if ("anchors_min" in props or "anchors_max" in props) and hasattr(slot, "set_anchors"):
         try:
             anchors = unreal.Anchors(
-                props.get("anchors_min", [0, 0]),
-                props.get("anchors_max", [1, 1]),
+                _vec2(props.get("anchors_min", [0, 0])),
+                _vec2(props.get("anchors_max", [1, 1])),
             )
-            _try_set(slot, "anchors", anchors)
+            slot.set_anchors(anchors)
         except Exception as exc:  # noqa: BLE001
             unreal.log_warning(f"[widget_properties] anchors set failed: {exc}")
 
     if "offsets" in props:
-        _try_set(slot, "offsets", _margin(props["offsets"]))
+        if hasattr(slot, "set_offsets"):
+            try:
+                slot.set_offsets(_margin(props["offsets"]))
+            except Exception as exc:  # noqa: BLE001
+                unreal.log_warning(f"[widget_properties] offsets set failed: {exc}")
+        else:
+            _try_set(slot, "offsets", _margin(props["offsets"]))
 
     if "z_order" in props:
-        _try_set(slot, "z_order", int(props["z_order"]))
+        if hasattr(slot, "set_z_order"):
+            try:
+                slot.set_z_order(int(props["z_order"]))
+            except Exception as exc:  # noqa: BLE001
+                unreal.log_warning(f"[widget_properties] z_order set failed: {exc}")
+        else:
+            _try_set(slot, "z_order", int(props["z_order"]))
 
 
 def _slot_has(slot, key: str) -> bool:

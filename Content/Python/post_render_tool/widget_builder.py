@@ -109,6 +109,7 @@ so future regenerations stay automated.
 
 # Module-level reference — prevents GC of the UI builder and its callbacks.
 _active_ui = None
+_active_figma_tab_id = None
 
 
 def load_widget():
@@ -256,16 +257,22 @@ def open_widget() -> None:
 
 def open_figma_widget() -> None:
     """Open BP_PostRenderToolWidget_Figma without touching the legacy widget."""
+    global _active_figma_tab_id
     widget_bp = load_figma_widget()
 
     try:
         subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
-        subsystem.spawn_and_register_tab(widget_bp)
+        result = subsystem.spawn_and_register_tab_and_get_id(widget_bp)
+        if isinstance(result, tuple):
+            _active_figma_tab_id = result[-1]
+        else:
+            _active_figma_tab_id = None
         unreal.log("[widget_builder] Figma widget tab opened.")
     except Exception as exc:
         unreal.log_error(f"[widget_builder] Failed to open Figma widget tab: {exc}")
         try:
             unreal.EditorUtilityLibrary.run_editor_utility_widget(widget_bp)
+            _active_figma_tab_id = None
             unreal.log("[widget_builder] Figma widget opened via fallback.")
         except Exception as exc2:
             unreal.log_error(f"[widget_builder] Figma fallback also failed: {exc2}.")
@@ -274,15 +281,65 @@ def open_figma_widget() -> None:
     _inject_ui(widget_bp, ui_class_name="PostRenderToolFigmaUI")
 
 
+def _close_figma_tab(widget_bp) -> None:
+    """Best-effort close/release before deleting the generated Figma asset."""
+    global _active_figma_tab_id
+    subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+
+    tab_ids = []
+    if _active_figma_tab_id is not None:
+        tab_ids.append(_active_figma_tab_id)
+
+    try:
+        tab_ids.append(subsystem.register_tab_and_get_id(widget_bp))
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(f"[widget_builder] Figma register_tab_and_get_id failed: {exc}")
+
+    seen = set()
+    for tab_id in tab_ids:
+        key = str(tab_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            subsystem.close_tab_by_id(tab_id)
+        except Exception as exc:  # noqa: BLE001
+            unreal.log_warning(f"[widget_builder] Figma close_tab_by_id failed: {exc}")
+        try:
+            subsystem.unregister_tab_by_id(tab_id)
+        except Exception as exc:  # noqa: BLE001
+            unreal.log_warning(
+                f"[widget_builder] Figma unregister_tab_by_id failed: {exc}"
+            )
+
+    try:
+        subsystem.release_instance_of_asset(widget_bp)
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(f"[widget_builder] Figma release_instance_of_asset failed: {exc}")
+    _active_figma_tab_id = None
+
+
 def delete_figma_widget() -> bool:
     """Delete only the generated Figma widget asset; legacy widget is untouched."""
     global _active_ui
     _active_ui = None
+    widget_bp = None
     try:
-        return bool(unreal.EditorAssetLibrary.delete_asset(FIGMA_WIDGET_ASSET_PATH))
+        widget_bp = unreal.EditorAssetLibrary.load_asset(FIGMA_WIDGET_ASSET_PATH)
+    except Exception:
+        widget_bp = None
+    if widget_bp is not None:
+        _close_figma_tab(widget_bp)
+    try:
+        deleted = bool(unreal.EditorAssetLibrary.delete_asset(FIGMA_WIDGET_FULL_PATH))
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] delete Figma asset failed: {exc}")
         return False
+    if not deleted and widget_bp is not None:
+        unreal.log_warning(
+            f"[widget_builder] delete Figma asset returned false: {FIGMA_WIDGET_ASSET_PATH}"
+        )
+    return deleted or widget_bp is None
 
 
 def delete_widget() -> bool:
@@ -310,7 +367,7 @@ def delete_widget() -> bool:
     global _active_ui
     _active_ui = None
     try:
-        deleted = unreal.EditorAssetLibrary.delete_asset(WIDGET_ASSET_PATH)
+        deleted = unreal.EditorAssetLibrary.delete_asset(WIDGET_FULL_PATH)
     except Exception as exc:
         unreal.log_warning(f"[widget_builder] delete_asset failed: {exc}")
         return False
@@ -373,7 +430,10 @@ def rebuild_figma_from_spec(
     from . import build_widget_blueprint
 
     if recreate:
-        delete_figma_widget()
+        if not delete_figma_widget():
+            raise RuntimeError(
+                f"Could not delete generated Figma widget asset: {FIGMA_WIDGET_ASSET_PATH}"
+            )
 
     bp = build_widget_blueprint.run_build(
         spec_path=str(_plugin_root() / FIGMA_SPEC_PATH),

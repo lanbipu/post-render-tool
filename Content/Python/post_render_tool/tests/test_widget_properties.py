@@ -147,6 +147,7 @@ _unreal_stub.Margin = _StubMargin
 _unreal_stub.SlateBrush = _StubSlateBrush
 _unreal_stub.SlateColor = _StubSlateColor
 _unreal_stub.Name = lambda s: s  # FName stub — pass-through string
+_unreal_stub.Anchors = lambda minimum, maximum: (minimum, maximum)
 
 _unreal_stub.TextBlock = _StubTextBlock
 _unreal_stub.ComboBoxString = _StubComboBoxString
@@ -330,6 +331,35 @@ class TestSlotPropertyApplicators(unittest.TestCase):
         slot = _Slot()
         widget_properties.apply_slot_properties(slot, {"padding": [10, 6, 0, 6]})
         self.assertIn("padding", slot.props)
+
+    def test_apply_canvas_slot_anchor_methods(self):
+        class _CanvasSlot:
+            def __init__(self):
+                self.props = {}
+
+            def get_editor_property(self, k):
+                raise Exception(k)
+
+            def set_anchors(self, value):
+                self.props["anchors"] = value
+
+            def set_offsets(self, value):
+                self.props["offsets"] = value
+
+        slot = _CanvasSlot()
+        widget_properties.apply_slot_properties(
+            slot,
+            {
+                "anchors_min": [0, 0],
+                "anchors_max": [1, 1],
+                "offsets": [0, 0, 0, 0],
+                "h_align": "Fill",
+                "v_align": "Fill",
+            },
+        )
+        self.assertEqual(slot.props["anchors"][0].xy, (0.0, 0.0))
+        self.assertEqual(slot.props["anchors"][1].xy, (1.0, 1.0))
+        self.assertEqual(slot.props["offsets"].ltrb, (0.0, 0.0, 0.0, 0.0))
 
 
 class TestClassMapCompleteness(unittest.TestCase):
