@@ -158,6 +158,14 @@ class TestFigmaSpecFile(unittest.TestCase):
             raise unittest.SkipTest("widget-tree-spec-figma-v2.json not yet authored")
         cls.spec = load_spec(str(cls.spec_path))
 
+    @staticmethod
+    def _walk_nodes(spec):
+        stack = list(spec.get("root_children", []))
+        while stack:
+            node = stack.pop()
+            yield node
+            stack.extend(node.get("children") or [])
+
     def test_figma_spec_file_is_valid(self):
         errs = validate_spec(self.spec)
         self.assertEqual(errs, [], "Figma spec has errors:\n" + "\n".join(errs))
@@ -177,6 +185,23 @@ class TestFigmaSpecFile(unittest.TestCase):
         self.assertEqual(req, REQUIRED_NAMES)
         self.assertIn("spn_frame", opt)
         self.assertIn("btn_spawn_cam", opt)
+
+    def test_figma_spec_prerequisites_render_five_rows(self):
+        names = {node["name"] for node in self._walk_nodes(self.spec)}
+        self.assertEqual(
+            {name for name in names if name.startswith("lbl_prereq_row_")},
+            {f"lbl_prereq_row_{i}" for i in range(5)},
+        )
+        self.assertEqual(
+            {name for name in names if name.startswith("prereq_label_")},
+            {f"prereq_label_{i}" for i in range(5)},
+        )
+
+    def test_figma_spec_prerequisite_dots_are_round(self):
+        nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
+        for index in range(5):
+            dot = nodes_by_name[f"lbl_prereq_dot_{index}_img"]
+            self.assertEqual(dot["properties"].get("DrawAs"), "RoundedBox")
 
 
 if __name__ == "__main__":

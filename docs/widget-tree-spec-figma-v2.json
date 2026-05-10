@@ -268,6 +268,7 @@
                                               8,
                                               8
                                             ],
+                                            "DrawAs": "RoundedBox",
                                             "Visibility": "SelfHitTestInvisible"
                                           }
                                         }
@@ -336,6 +337,7 @@
                                               8,
                                               8
                                             ],
+                                            "DrawAs": "RoundedBox",
                                             "Visibility": "SelfHitTestInvisible"
                                           }
                                         }
@@ -404,6 +406,7 @@
                                               8,
                                               8
                                             ],
+                                            "DrawAs": "RoundedBox",
                                             "Visibility": "SelfHitTestInvisible"
                                           }
                                         }
@@ -472,6 +475,7 @@
                                               8,
                                               8
                                             ],
+                                            "DrawAs": "RoundedBox",
                                             "Visibility": "SelfHitTestInvisible"
                                           }
                                         }
@@ -540,6 +544,7 @@
                                               8,
                                               8
                                             ],
+                                            "DrawAs": "RoundedBox",
                                             "Visibility": "SelfHitTestInvisible"
                                           }
                                         }
@@ -551,74 +556,6 @@
                                       "role": "optional",
                                       "properties": {
                                         "Text": "OK: LevelSequence",
-                                        "ColorAndOpacity": [
-                                          0.878,
-                                          0.878,
-                                          0.878,
-                                          1.0
-                                        ],
-                                        "Font": {
-                                          "size": 12,
-                                          "type_face": "Regular"
-                                        },
-                                        "Visibility": "SelfHitTestInvisible"
-                                      }
-                                    }
-                                  ],
-                                  "properties": {
-                                    "Visibility": "SelfHitTestInvisible"
-                                  }
-                                },
-                                {
-                                  "type": "HorizontalBox",
-                                  "name": "lbl_prereq_row_5",
-                                  "role": "decorative",
-                                  "children": [
-                                    {
-                                      "type": "SizeBox",
-                                      "name": "lbl_prereq_dot_5",
-                                      "role": "decorative",
-                                      "properties": {
-                                        "WidthOverride": 8,
-                                        "HeightOverride": 8,
-                                        "Visibility": "SelfHitTestInvisible"
-                                      },
-                                      "slot": {
-                                        "padding": [
-                                          0,
-                                          0,
-                                          8,
-                                          0
-                                        ],
-                                        "v_align": "Center"
-                                      },
-                                      "children": [
-                                        {
-                                          "type": "Image",
-                                          "name": "lbl_prereq_dot_5_img",
-                                          "role": "decorative",
-                                          "properties": {
-                                            "Tint": [
-                                              0.298,
-                                              0.686,
-                                              0.314,
-                                              1.0
-                                            ],
-                                            "ImageSize": [
-                                              8,
-                                              8
-                                            ],
-                                            "Visibility": "SelfHitTestInvisible"
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "TextBlock",
-                                      "name": "prereq_label_5",
-                                      "role": "optional",
-                                      "properties": {
-                                        "Text": "OK: EditorUtilitySubsystem",
                                         "ColorAndOpacity": [
                                           0.878,
                                           0.878,
