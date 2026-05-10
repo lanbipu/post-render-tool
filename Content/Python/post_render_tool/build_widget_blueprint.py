@@ -157,6 +157,11 @@ def _apply_spec_props(widget, slot, node, force_reapply: bool, is_newly_created:
     if props:
         widget_properties.apply_widget_properties(widget, props)
     slot_props = node.get("slot") or {}
+    if slot is None and force_reapply:
+        try:
+            slot = widget.get_editor_property("slot")
+        except Exception:  # noqa: BLE001
+            slot = None
     if slot_props and slot is not None:
         widget_properties.apply_slot_properties(slot, slot_props)
 

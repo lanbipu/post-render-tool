@@ -274,6 +274,17 @@ def open_figma_widget() -> None:
     _inject_ui(widget_bp, ui_class_name="PostRenderToolFigmaUI")
 
 
+def delete_figma_widget() -> bool:
+    """Delete only the generated Figma widget asset; legacy widget is untouched."""
+    global _active_ui
+    _active_ui = None
+    try:
+        return bool(unreal.EditorAssetLibrary.delete_asset(FIGMA_WIDGET_ASSET_PATH))
+    except Exception as exc:
+        unreal.log_warning(f"[widget_builder] delete Figma asset failed: {exc}")
+        return False
+
+
 def delete_widget() -> bool:
     """Delete the deployment-authored Blueprint asset from disk.
 
@@ -348,9 +359,21 @@ def rebuild_from_spec(*, force_reapply: bool = False) -> object:
     return bp
 
 
-def rebuild_figma_from_spec(*, force_reapply: bool = True) -> object:
-    """Build/open the separate Figma widget Blueprint from its own spec file."""
+def rebuild_figma_from_spec(
+    *,
+    force_reapply: bool = True,
+    recreate: bool = False,
+) -> object:
+    """Build/open the separate Figma widget Blueprint from its own spec file.
+
+    ``recreate=True`` deletes only ``BP_PostRenderToolWidget_Figma`` first. Use
+    it after structural spec changes such as adding wrapper ``SizeBox`` widgets.
+    The legacy ``BP_PostRenderToolWidget`` asset is never deleted here.
+    """
     from . import build_widget_blueprint
+
+    if recreate:
+        delete_figma_widget()
 
     bp = build_widget_blueprint.run_build(
         spec_path=str(_plugin_root() / FIGMA_SPEC_PATH),

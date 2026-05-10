@@ -33,3 +33,10 @@ Convenience path:
 from post_render_tool.widget_builder import rebuild_figma_from_spec
 rebuild_figma_from_spec(force_reapply=True)
 ```
+
+After structural spec changes, recreate only the generated Figma widget:
+
+```python
+from post_render_tool.widget_builder import rebuild_figma_from_spec
+rebuild_figma_from_spec(force_reapply=True, recreate=True)
+```

@@ -60,6 +60,19 @@ def _vec2(xy) -> "unreal.Vector2D":
     return unreal.Vector2D(float(xy[0]), float(xy[1]))
 
 
+def _brush_vec2(xy):
+    # FSlateBrush.ImageSize is FDeprecateSlateVector2D in UE 5.7. It cannot be
+    # constructed from positional args or nativized from Vector2D, but Python can
+    # set its x/y editor properties after default construction.
+    cls = getattr(unreal, "DeprecateSlateVector2D", None)
+    if cls is None:
+        return _vec2(xy)
+    value = cls()
+    value.set_editor_property("x", float(xy[0]))
+    value.set_editor_property("y", float(xy[1]))
+    return value
+
+
 def _margin(ltrb) -> "unreal.Margin":
     values = list(ltrb) + [0.0] * (4 - len(ltrb))
     l, t, r, b = values[:4]
@@ -104,6 +117,9 @@ def _draw_type(value: str):
         "Image": unreal.SlateBrushDrawType.IMAGE,
         "NoDrawType": unreal.SlateBrushDrawType.NO_DRAW_TYPE,
     }
+    rounded = getattr(unreal.SlateBrushDrawType, "ROUNDED_BOX", None)
+    if rounded is not None:
+        mapping["RoundedBox"] = rounded
     return mapping.get(value, unreal.SlateBrushDrawType.IMAGE)
 
 
@@ -125,7 +141,7 @@ def _configure_brush(brush, *, rgba=None, image_size=None, draw_as=None):
     if rgba is not None:
         brush.set_editor_property("tint_color", _slate_color(rgba))
     if image_size is not None:
-        brush.set_editor_property("image_size", _vec2(image_size))
+        brush.set_editor_property("image_size", _brush_vec2(image_size))
     if draw_as is not None:
         brush.set_editor_property("draw_as", _draw_type(draw_as))
     return brush
@@ -304,12 +320,15 @@ def _apply_scalebox_user_scale(w, v):
 
 
 def _apply_textblock_font(w, v):
-    """Mutate the TextBlock's FSlateFontInfo in place.
+    """Mutate a widget's FSlateFontInfo in place when it exposes ``font``.
 
     v is {"size": int, "type_face": "Regular"|"Bold"|"Light"|"Mono"|...}.
     Unknown type_face falls through to whatever the default font provides.
     """
-    font = w.get_editor_property("font")
+    try:
+        font = w.get_editor_property("font")
+    except Exception:  # noqa: BLE001
+        font = None
     if font is None:
         return
     if "size" in v:
@@ -319,6 +338,148 @@ def _apply_textblock_font(w, v):
             "typeface_font_name", unreal.Name(str(v["type_face"]))
         )
     w.set_editor_property("font", font)
+
+
+def _apply_foreground_color(w, v):
+    w.set_editor_property("foreground_color", _slate_color(v))
+
+
+def _apply_min_desired_width(w, v):
+    for prop_name in ("min_desired_width", "minimum_desired_width"):
+        try:
+            w.set_editor_property(prop_name, float(v))
+            return
+        except Exception:  # noqa: BLE001
+            continue
+
+
+def _apply_content_padding(w, v):
+    w.set_editor_property("content_padding", _margin(v))
+
+
+def _apply_has_down_arrow(w, v):
+    w.set_editor_property("has_down_arrow", bool(v))
+
+
+def _set_text_style(style, *, color=None, font=None):
+    if color is not None:
+        style.set_editor_property("color_and_opacity", _slate_color(color))
+    if font:
+        try:
+            font_info = style.get_editor_property("font")
+            if "size" in font:
+                font_info.set_editor_property("size", int(font["size"]))
+            if "type_face" in font:
+                font_info.set_editor_property(
+                    "typeface_font_name", unreal.Name(str(font["type_face"]))
+                )
+            style.set_editor_property("font", font_info)
+        except Exception as exc:  # noqa: BLE001
+            unreal.log_warning(f"[widget_properties] text style font failed: {exc}")
+
+
+def _apply_text_style(w, v):
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    _set_text_style(style, color=v.get("Color"), font=v.get("Font"))
+    w.set_editor_property("widget_style", style)
+
+
+def _style_spinbox(w, v):
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    bg = v.get("BackgroundColor", [0.102, 0.102, 0.102, 1.0])
+    hover = v.get("HoverColor", bg)
+    active = v.get("ActiveColor", bg)
+    fill = v.get("FillColor", [0.18, 0.18, 0.18, 1.0])
+    arrow = v.get("ArrowColor", [0.5, 0.5, 0.5, 1.0])
+    for name, color in (
+        ("background_brush", bg),
+        ("hovered_background_brush", hover),
+        ("active_background_brush", active),
+        ("inactive_fill_brush", bg),
+        ("hovered_fill_brush", fill),
+        ("active_fill_brush", fill),
+    ):
+        try:
+            style.set_editor_property(name, _solid_brush(color, draw_as="RoundedBox"))
+        except Exception:  # noqa: BLE001
+            continue
+    try:
+        style.set_editor_property("arrows_image", _solid_brush(arrow, draw_as="Image"))
+    except Exception:  # noqa: BLE001
+        pass
+    if "TextPadding" in v:
+        try:
+            style.set_editor_property("text_padding", _margin(v["TextPadding"]))
+        except Exception:  # noqa: BLE001
+            pass
+    if "InsetPadding" in v:
+        try:
+            style.set_editor_property("inset_padding", _margin(v["InsetPadding"]))
+        except Exception:  # noqa: BLE001
+            pass
+    w.set_editor_property("widget_style", style)
+    if "TextColor" in v:
+        _apply_foreground_color(w, v["TextColor"])
+
+
+def _style_combobox(w, v):
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    bg = v.get("BackgroundColor", [0.102, 0.102, 0.102, 1.0])
+    hover = v.get("HoverColor", bg)
+    pressed = v.get("PressedColor", bg)
+    arrow = v.get("ArrowColor", [0.5, 0.5, 0.5, 1.0])
+    try:
+        combo_button_style = style.get_editor_property("combo_button_style")
+        button_style = combo_button_style.get_editor_property("button_style")
+        for name, color in (
+            ("normal", bg),
+            ("hovered", hover),
+            ("pressed", pressed),
+            ("disabled", bg),
+        ):
+            button_style.set_editor_property(
+                name, _solid_brush(color, draw_as="RoundedBox")
+            )
+        combo_button_style.set_editor_property("button_style", button_style)
+        combo_button_style.set_editor_property(
+            "down_arrow_image", _solid_brush(arrow, image_size=[8, 8], draw_as="Image")
+        )
+        if "ContentPadding" in v:
+            combo_button_style.set_editor_property(
+                "content_padding", _margin(v["ContentPadding"])
+            )
+        style.set_editor_property("combo_button_style", combo_button_style)
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(f"[widget_properties] ComboBoxString style failed: {exc}")
+    try:
+        style.set_editor_property("menu_border_brush", _solid_brush(bg, draw_as="Box"))
+    except Exception:  # noqa: BLE001
+        pass
+    w.set_editor_property("widget_style", style)
+    if "TextColor" in v:
+        _apply_foreground_color(w, v["TextColor"])
+    if "Font" in v:
+        _apply_textblock_font(w, v["Font"])
+    if "ContentPadding" in v:
+        _apply_content_padding(w, v["ContentPadding"])
+    if "HasDownArrow" in v:
+        _apply_has_down_arrow(w, v["HasDownArrow"])
+
+
+def _apply_figma_input_style(w, v):
+    if isinstance(w, unreal.SpinBox):
+        _style_spinbox(w, v)
+    elif isinstance(w, unreal.ComboBoxString):
+        _style_combobox(w, v)
+    else:
+        if "TextColor" in v:
+            _apply_foreground_color(w, v["TextColor"])
 
 
 def _apply_button_background_color(w, v):
@@ -369,6 +530,12 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "Orientation": _apply_scrollbox_orientation,
     "Size": _apply_spacer_size,
     "Font": _apply_textblock_font,
+    "ForegroundColor": _apply_foreground_color,
+    "MinDesiredWidth": _apply_min_desired_width,
+    "ContentPadding": _apply_content_padding,
+    "HasDownArrow": _apply_has_down_arrow,
+    "TextStyle": _apply_text_style,
+    "FigmaInputStyle": _apply_figma_input_style,
     "IsExpanded": _apply_expandable_is_expanded,
     "HeaderPadding": _apply_expandable_header_padding,
     "AreaPadding": _apply_expandable_area_padding,
