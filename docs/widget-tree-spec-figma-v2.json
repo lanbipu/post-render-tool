@@ -13,7 +13,7 @@
       "name": "lbl_stage_scale",
       "role": "decorative",
       "properties": {
-        "Stretch": "ScaleToFit",
+        "Stretch": "None",
         "StretchDirection": "Both",
         "UserSpecifiedScale": 1.0
       },

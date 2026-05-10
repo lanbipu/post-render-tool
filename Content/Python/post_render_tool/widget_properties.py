@@ -66,6 +66,71 @@ def _margin(ltrb) -> "unreal.Margin":
     return unreal.Margin(float(l), float(t), float(r), float(b))
 
 
+_WHITE_TEXTURE = None
+
+
+def _white_square_texture():
+    """Return a real 1x1-ish white texture for tint-only Slate brushes.
+
+    Empty ``FSlateBrush`` resources render as UE's dashed invalid-resource
+    placeholder. The Figma spec uses many tint-only rectangles, so bind them to
+    Engine's bundled white square texture and tint the brush instead.
+    """
+    global _WHITE_TEXTURE
+    if _WHITE_TEXTURE is not None:
+        return _WHITE_TEXTURE
+
+    asset_library = getattr(unreal, "EditorAssetLibrary", None)
+    if asset_library is None:
+        return None
+
+    for asset_path in (
+        "/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture",
+        "/Engine/EngineResources/WhiteSquareTexture",
+    ):
+        try:
+            texture = asset_library.load_asset(asset_path)
+        except Exception:  # noqa: BLE001
+            texture = None
+        if texture is not None:
+            _WHITE_TEXTURE = texture
+            return _WHITE_TEXTURE
+    return None
+
+
+def _draw_type(value: str):
+    mapping = {
+        "Box": unreal.SlateBrushDrawType.BOX,
+        "Image": unreal.SlateBrushDrawType.IMAGE,
+        "NoDrawType": unreal.SlateBrushDrawType.NO_DRAW_TYPE,
+    }
+    return mapping.get(value, unreal.SlateBrushDrawType.IMAGE)
+
+
+def _solid_brush(rgba=None, image_size=None, draw_as: str = "Box"):
+    brush = unreal.SlateBrush()
+    _configure_brush(brush, rgba=rgba, image_size=image_size, draw_as=draw_as)
+    return brush
+
+
+def _configure_brush(brush, *, rgba=None, image_size=None, draw_as=None):
+    texture = _white_square_texture()
+    if texture is not None:
+        try:
+            brush.set_editor_property("resource_object", texture)
+        except Exception as exc:  # noqa: BLE001
+            unreal.log_warning(
+                f"[widget_properties] brush resource_object set failed: {exc}"
+            )
+    if rgba is not None:
+        brush.set_editor_property("tint_color", _slate_color(rgba))
+    if image_size is not None:
+        brush.set_editor_property("image_size", _vec2(image_size))
+    if draw_as is not None:
+        brush.set_editor_property("draw_as", _draw_type(draw_as))
+    return brush
+
+
 # ---------------------------------------------------------------------------
 # Per-property applicators
 # Key = property name in spec JSON, value = callable(widget, value).
@@ -84,6 +149,25 @@ def _apply_color_prop(prop_name: str):
     return _apply
 
 
+def _apply_border_brush_color(w, v):
+    # UBorder multiplies BrushColor by the Background brush. Use a white texture
+    # as the brush resource and put the actual color in BrushColor.
+    w.set_editor_property("brush_color", _linear_color(v))
+    brush = _solid_brush([1.0, 1.0, 1.0, 1.0], draw_as="Box")
+    applied = False
+    for prop_name in ("background", "brush"):
+        try:
+            w.set_editor_property(prop_name, brush)
+            applied = True
+            break
+        except Exception:  # noqa: BLE001
+            continue
+    if not applied:
+        unreal.log_warning(
+            f"[widget_properties] could not set solid brush on {type(w).__name__}"
+        )
+
+
 def _apply_textblock_color_and_opacity(w, v):
     # UTextBlock.ColorAndOpacity is FSlateColor, not FLinearColor.
     w.set_editor_property("color_and_opacity", _slate_color(v))
@@ -92,24 +176,19 @@ def _apply_textblock_color_and_opacity(w, v):
 def _apply_image_tint(w, v):
     # FSlateBrush.TintColor is FSlateColor.
     brush = w.get_editor_property("brush") or unreal.SlateBrush()
-    brush.set_editor_property("tint_color", _slate_color(v))
+    _configure_brush(brush, rgba=v, draw_as="Box")
     w.set_editor_property("brush", brush)
 
 
 def _apply_image_size(w, v):
     brush = w.get_editor_property("brush") or unreal.SlateBrush()
-    brush.set_editor_property("image_size", _vec2(v))
+    _configure_brush(brush, image_size=v)
     w.set_editor_property("brush", brush)
 
 
 def _apply_image_draw_as(w, v):
     brush = w.get_editor_property("brush") or unreal.SlateBrush()
-    mapping = {
-        "Box": unreal.SlateBrushDrawType.BOX,
-        "Image": unreal.SlateBrushDrawType.IMAGE,
-        "NoDrawType": unreal.SlateBrushDrawType.NO_DRAW_TYPE,
-    }
-    brush.set_editor_property("draw_as", mapping.get(v, unreal.SlateBrushDrawType.IMAGE))
+    _configure_brush(brush, draw_as=v)
     w.set_editor_property("brush", brush)
 
 
@@ -247,19 +326,17 @@ def _apply_button_background_color(w, v):
 
     UE Button has no direct `background_color` property — its fill comes from
     `WidgetStyle: FButtonStyle` which holds three FSlateBrush states (Normal,
-    Hovered, Pressed, Disabled). Tinting them all keeps the rounded-corner
-    default button texture but recolors it.
+    Hovered, Pressed, Disabled). Each state receives a real white texture
+    resource so UE does not render an invalid-resource dashed placeholder.
     """
-    slate = _slate_color(v)
     style = w.get_editor_property("widget_style")
     if style is None:
         return
-    for brush_name in ("normal", "hovered", "pressed"):
-        brush = style.get_editor_property(brush_name)
-        if brush is None:
+    for brush_name in ("normal", "hovered", "pressed", "disabled"):
+        try:
+            style.set_editor_property(brush_name, _solid_brush(v, draw_as="Box"))
+        except Exception:  # noqa: BLE001
             continue
-        brush.set_editor_property("tint_color", slate)
-        style.set_editor_property(brush_name, brush)
     w.set_editor_property("widget_style", style)
 
 
@@ -273,7 +350,7 @@ def _apply_background_color(w, v):
 
 _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "Text": _apply_textblock_text,
-    "BrushColor": _apply_color_prop("brush_color"),
+    "BrushColor": _apply_border_brush_color,
     "ColorAndOpacity": _apply_textblock_color_and_opacity,
     "BackgroundColor": _apply_background_color,
     "Tint": _apply_image_tint,

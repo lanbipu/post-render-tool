@@ -13,6 +13,8 @@
 - Figma dot SVG assets are represented by tinted `Image` widgets, avoiding short-lived remote asset URLs.
 - Figma's CSS borders are approximated by darker `Border` backgrounds and inner dividers because the current JSON property applicator does not set full `FSlateBrush` border margins.
 - The Figma-only Coordinate Verification controls are Blueprint variables in the new widget. They are not added to the legacy required `BindWidget` contract.
+- Solid-color `Border`, `Image`, and `Button` brushes use `/Engine/EngineResources/WhiteSquareTexture` as a tint base. Empty `SlateBrush` resources render as UE's dashed invalid-resource placeholder.
+- The root `ScaleBox` uses `Stretch=None` so the 400px Figma panel is not auto-shrunk to a narrow Editor tab; resize the tab wider or scroll rather than scaling the entire UI down.
 
 ## UE Build Command
 
