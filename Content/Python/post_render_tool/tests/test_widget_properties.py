@@ -361,6 +361,15 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
             self.assertEqual(brush.props["draw_as"], "RoundedBox")
             self.assertIn("outline_settings", brush.props)
 
+    def test_apply_content_padding_on_button_style(self):
+        w = _unreal_stub.Button()
+        widget_properties.apply_widget_properties(
+            w, {"ContentPadding": [14, 6, 14, 6]}
+        )
+        style = w.properties["widget_style"]
+        self.assertEqual(style.props["normal_padding"].ltrb, (14.0, 6.0, 14.0, 6.0))
+        self.assertEqual(style.props["pressed_padding"].ltrb, (14.0, 6.0, 14.0, 6.0))
+
     def test_apply_tint_on_image(self):
         w = _unreal_stub.Image()
         widget_properties.apply_widget_properties(

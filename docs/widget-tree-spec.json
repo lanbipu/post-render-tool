@@ -60,10 +60,22 @@
                   12,
                   12
                 ],
-                "h_align": "Fill",
+                "h_align": "Left",
                 "v_align": "Top"
               },
               "children": [
+                {
+                  "type": "Spacer",
+                  "name": "lbl_figma_width_spacer",
+                  "role": "decorative",
+                  "properties": {
+                    "Size": [
+                      376,
+                      0
+                    ],
+                    "Visibility": "SelfHitTestInvisible"
+                  }
+                },
                 {
                   "type": "Border",
                   "name": "lbl_card_prereq",
@@ -648,7 +660,13 @@
                                           ],
                                           "Width": 1,
                                           "RoundingType": "FixedRadius"
-                                        }
+                                        },
+                                        "ContentPadding": [
+                                          14,
+                                          6,
+                                          14,
+                                          6
+                                        ]
                                       }
                                     }
                                   ],
@@ -793,7 +811,7 @@
                           "slot": {
                             "padding": [
                               0,
-                              8,
+                              10,
                               0,
                               0
                             ]
@@ -849,7 +867,13 @@
                                   ],
                                   "Width": 1,
                                   "RoundingType": "FixedRadius"
-                                }
+                                },
+                                "ContentPadding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
                               }
                             },
                             {
@@ -1017,7 +1041,7 @@
                           "slot": {
                             "padding": [
                               0,
-                              8,
+                              10,
                               0,
                               0
                             ]
@@ -1151,7 +1175,7 @@
                               "role": "decorative",
                               "properties": {
                                 "WidthOverride": 92,
-                                "HeightOverride": 26,
+                                "HeightOverride": 28,
                                 "Visibility": "SelfHitTestInvisible"
                               },
                               "children": [
@@ -1400,7 +1424,7 @@
                           "slot": {
                             "padding": [
                               0,
-                              8,
+                              10,
                               0,
                               4
                             ]
@@ -1478,7 +1502,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 78,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 27,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -1608,7 +1632,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 96,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 28,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -1778,7 +1802,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 78,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 27,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -1908,7 +1932,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 96,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 28,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -2078,7 +2102,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 78,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 27,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -2208,7 +2232,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 96,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 28,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -2415,7 +2439,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 78,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 27,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -2545,7 +2569,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 96,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 28,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -2715,7 +2739,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 78,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 27,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -2845,7 +2869,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 96,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 28,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -3015,7 +3039,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 78,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 27,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -3145,7 +3169,7 @@
                                   "role": "decorative",
                                   "properties": {
                                     "WidthOverride": 96,
-                                    "HeightOverride": 26,
+                                    "HeightOverride": 28,
                                     "Visibility": "SelfHitTestInvisible"
                                   },
                                   "children": [
@@ -3324,7 +3348,13 @@
                                   ],
                                   "Width": 1,
                                   "RoundingType": "FixedRadius"
-                                }
+                                },
+                                "ContentPadding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
                               }
                             },
                             {
@@ -3377,7 +3407,13 @@
                                   ],
                                   "Width": 1,
                                   "RoundingType": "FixedRadius"
-                                }
+                                },
+                                "ContentPadding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
                               }
                             }
                           ],
@@ -3515,7 +3551,7 @@
                           "slot": {
                             "padding": [
                               0,
-                              8,
+                              10,
                               0,
                               0
                             ],
@@ -3568,7 +3604,13 @@
                               ],
                               "Width": 0,
                               "RoundingType": "FixedRadius"
-                            }
+                            },
+                            "ContentPadding": [
+                              20,
+                              10,
+                              20,
+                              10
+                            ]
                           }
                         },
                         {
@@ -3645,7 +3687,13 @@
                                   ],
                                   "Width": 1,
                                   "RoundingType": "FixedRadius"
-                                }
+                                },
+                                "ContentPadding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
                               }
                             },
                             {
@@ -3709,7 +3757,13 @@
                                   ],
                                   "Width": 1,
                                   "RoundingType": "FixedRadius"
-                                }
+                                },
+                                "ContentPadding": [
+                                  14,
+                                  6,
+                                  14,
+                                  6
+                                ]
                               }
                             }
                           ],
@@ -3799,7 +3853,7 @@
                                         1.0
                                       ],
                                       "Font": {
-                                        "size": 10,
+                                        "size": 11,
                                         "type_face": "Regular"
                                       }
                                     },

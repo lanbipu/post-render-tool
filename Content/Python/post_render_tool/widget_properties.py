@@ -516,7 +516,23 @@ def _apply_min_desired_width(w, v):
             continue
 
 
+def _apply_button_content_padding(w, v):
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    margin = _margin(v)
+    for prop_name in ("normal_padding", "pressed_padding"):
+        try:
+            style.set_editor_property(prop_name, margin)
+        except Exception:  # noqa: BLE001
+            continue
+    w.set_editor_property("widget_style", style)
+
+
 def _apply_content_padding(w, v):
+    if isinstance(w, unreal.Button):
+        _apply_button_content_padding(w, v)
+        return
     w.set_editor_property("content_padding", _margin(v))
 
 

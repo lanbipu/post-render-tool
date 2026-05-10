@@ -180,6 +180,18 @@ class TestProductionVisualSpecFile(unittest.TestCase):
             "/Script/PostRenderTool.PostRenderToolWidget",
         )
 
+    def test_production_spec_constrains_content_to_figma_width(self):
+        nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
+        sections = nodes_by_name["lbl_sections"]
+        self.assertEqual(sections["slot"]["h_align"], "Left")
+        width_spacer = nodes_by_name["lbl_figma_width_spacer"]
+        self.assertEqual(width_spacer["type"], "Spacer")
+        self.assertEqual(width_spacer["properties"]["Size"], [376, 0])
+        self.assertEqual(
+            sections["children"][0]["name"],
+            "lbl_figma_width_spacer",
+        )
+
     def test_production_spec_keeps_required_contract(self):
         req, opt, _dec = collect_contract_names(self.spec)
         self.assertEqual(req, REQUIRED_NAMES)
@@ -270,6 +282,47 @@ class TestProductionVisualSpecFile(unittest.TestCase):
             ["Width"],
             1,
         )
+
+    def test_production_spec_button_padding_matches_figma(self):
+        nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
+        for name in (
+            "btn_recheck",
+            "btn_browse",
+            "btn_apply_mapping",
+            "btn_save_mapping",
+            "btn_open_seq",
+            "btn_open_mrq",
+        ):
+            self.assertEqual(
+                nodes_by_name[name]["properties"]["ContentPadding"],
+                [14, 6, 14, 6],
+            )
+        self.assertEqual(
+            nodes_by_name["btn_import"]["properties"]["ContentPadding"],
+            [20, 10, 20, 10],
+        )
+
+    def test_production_spec_input_heights_match_figma(self):
+        nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
+        for name in (
+            "sz_spn_fps",
+            "sz_spn_pos_x_scale",
+            "sz_spn_pos_y_scale",
+            "sz_spn_pos_z_scale",
+            "sz_spn_rot_pitch_scale",
+            "sz_spn_rot_yaw_scale",
+            "sz_spn_rot_roll_scale",
+        ):
+            self.assertEqual(nodes_by_name[name]["properties"]["HeightOverride"], 28)
+        for name in (
+            "sz_cmb_pos_x_src",
+            "sz_cmb_pos_y_src",
+            "sz_cmb_pos_z_src",
+            "sz_cmb_rot_pitch_src",
+            "sz_cmb_rot_yaw_src",
+            "sz_cmb_rot_roll_src",
+        ):
+            self.assertEqual(nodes_by_name[name]["properties"]["HeightOverride"], 27)
         self.assertEqual(
             nodes_by_name["spn_fps"]["properties"]["FigmaInputStyle"]
             ["OutlineSettings"]["Width"],
