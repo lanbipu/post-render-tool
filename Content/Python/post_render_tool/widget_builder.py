@@ -1,8 +1,9 @@
 """Widget Builder — VP Post-Render Tool.
 
-Loads ``BP_PostRenderToolWidget`` from the plugin's virtual content root,
-spawns it as an editor tab via ``EditorUtilitySubsystem.spawn_and_register_tab``,
-and hands the live instance to ``widget.PostRenderToolUI``, which binds
+Loads the production Figma widget by default while keeping
+``BP_PostRenderToolWidget`` available as the legacy fallback. The selected
+Blueprint is spawned as an editor tab via ``EditorUtilitySubsystem``, then
+handed to ``widget.PostRenderToolUI`` / ``widget.PostRenderToolFigmaUI``, which bind
 Python callbacks to the widgets exposed by the BindWidget contract in
 ``UPostRenderToolWidget`` (C++).
 
@@ -235,8 +236,8 @@ def _inject_ui(widget_bp, *, ui_class_name: str = "PostRenderToolUI") -> None:
     handle_holder[0] = unreal.register_slate_post_tick_callback(_try_inject)
 
 
-def open_widget() -> None:
-    """Load the template, spawn the editor tab, inject UI."""
+def open_widget() -> bool:
+    """Load the legacy template, spawn the editor tab, inject UI."""
     widget_bp = load_widget()
 
     try:
@@ -250,12 +251,13 @@ def open_widget() -> None:
             unreal.log("[widget_builder] Widget opened via fallback.")
         except Exception as exc2:
             unreal.log_error(f"[widget_builder] Fallback also failed: {exc2}.")
-            return
+            return False
 
     _inject_ui(widget_bp)
+    return True
 
 
-def open_figma_widget() -> None:
+def open_figma_widget() -> bool:
     """Open BP_PostRenderToolWidget_Figma without touching the legacy widget."""
     global _active_figma_tab_id
     widget_bp = load_figma_widget()
@@ -276,9 +278,26 @@ def open_figma_widget() -> None:
             unreal.log("[widget_builder] Figma widget opened via fallback.")
         except Exception as exc2:
             unreal.log_error(f"[widget_builder] Figma fallback also failed: {exc2}.")
-            return
+            return False
 
     _inject_ui(widget_bp, ui_class_name="PostRenderToolFigmaUI")
+    return True
+
+
+def open_default_widget() -> None:
+    """Open the production widget, falling back to legacy if Figma is unavailable."""
+    try:
+        if open_figma_widget():
+            return
+        unreal.log_warning(
+            "[widget_builder] Figma widget failed to open; falling back to legacy widget."
+        )
+    except RuntimeError as exc:
+        unreal.log_warning(
+            "[widget_builder] Figma widget unavailable; falling back to legacy widget. "
+            f"{exc}"
+        )
+    open_widget()
 
 
 def _close_figma_tab(widget_bp) -> None:

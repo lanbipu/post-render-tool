@@ -50,9 +50,9 @@ def launch_tool():
     )
 
     if widget_deps_ok:
-        from post_render_tool.widget_builder import open_widget
+        from post_render_tool.widget_builder import open_default_widget
         unreal.log("Opening VP Post-Render Tool UI...")
-        open_widget()
+        open_default_widget()
     else:
         unreal.log_error(
             "Cannot open UI: EditorAssetLibrary or EditorUtilitySubsystem "
