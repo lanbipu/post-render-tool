@@ -1,121 +1,152 @@
-# Timecode Sync — Design Spec
+# Timecode Sync — Design Spec (v2)
 
 **Date**: 2026-05-13
-**Status**: Draft (awaiting user review)
+**Status**: Draft v2 (incorporated CodeX review fixes)
 **Topic**: Disguise CSV → UE rendered frames ↔ on-set footage 逐帧 SMPTE timecode 同步
+
+**v2 changes from v1**:
+- TimecodeSource 对象模型订正:写到 `UMovieSceneSection.TimecodeSource`,不是不存在的 `UMovieScene` setter
+- 加 50 fps 支持(当前 production take_4 实际帧率)
+- MRQ 文件名走原生 `UMoviePipelineOutputSetting.FrameNumberOffset`,删除"post-render rename"兜底
+- 取消 MRQ auto post-render hook(跟当前 UI 手动开 MRQ 流程冲突),改"渲完手动 Patch EXR Timecode"按钮
+- Reference Plate (G3) 拆到 P1/P2,加 `MediaCompositing/MediaAssets` plugin 依赖
+- EXR header writer 列三个候选,P1 spike 后选
+- 明确 `start_timecode` 是 `trim_static_padding` 之后的 trimmed render start
 
 ---
 
 ## 1. Problem
 
-PostRenderTool 当前把 Disguise CSV 转成 UE LevelSequence + Custom MovieScene Track + DataAsset 时,**丢掉了 CSV 自带的 SMPTE timecode**。具体表现:
+PostRenderTool 当前把 Disguise CSV 转成 UE LevelSequence + Custom MovieScene Track + DataAsset 时,**丢掉了 CSV 自带的 SMPTE timecode**:
 
-- `csv_parser.py` 把 `timestamp` 列(`09:44:23.22`)只存成 `CsvDenseResult.timecode_start/end: str`,未做结构化解析,逐帧 `FrameData` 无 timecode 字段
-- `sequence_builder.py:113-114` 把 LevelSequence playback range 设为 `[0, frame_span]`(归零),Camera Cut Section / UPostRenderCameraSection 也用 sequence-local `[0, frame_span]`
-- MovieScene 上没有 `EarliestTimecodeSource` 元数据
-- MRQ 渲出的 EXR 文件名带 `{frame_number}` token 但 = sequence-local 0..N,跟现场拍摄 timecode 没有任何关联
+- `csv_parser.py:85-86` 把 `timestamp` 列(`09:44:23.22`)只存成 `CsvDenseResult.timecode_start/end: str`,未做结构化解析,逐帧 `FrameData` 无 timecode 字段
+- `sequence_builder.py:113-114` 把 LevelSequence playback range 设为 `[0, frame_span]`(归零),Camera Cut Section / UPostRenderCameraSection 也用 sequence-local `[0, frame_span]`,且 section 上没设 `TimecodeSource`
+- MRQ 渲出的 EXR 文件名是 sequence-local 0..N,跟现场拍摄 timecode 没关联
 - EXR header 不携带 SMPTE timecode 标准属性
-- 没有现场实拍 plate 作为 sequence 内 visual reference,渲完才能发现错位
-- 没有 OTIO sidecar,下游 DI/合成 工具拿不到 conform 元数据
+- 没有现场实拍 plate 作为 sequence 内 visual reference
+- 没有 OTIO sidecar,下游 DI/合成 拿不到 conform 元数据
 
-结果:渲染出的序列帧无法跟现场带 timecode 的 ProRes/MOV 实拍视频做**逐帧对应**,合成/剪辑/校色 全部需要手工对帧。
+结果:渲出的序列帧无法跟现场带 timecode 的 ProRes/MOV 实拍视频做**逐帧对应**。
 
-## 2. Goals
+## 2. Goals(分 P0 / P1 / P2)
 
-最终交付一套 timecode 完整贯穿的流水线,**渲出的每一帧都能自动 conform 回现场实拍**:
+### P0 — MVP(必交付,覆盖核心痛点)
+- **G1** Sequencer UI 切到 Timecode 显示时,显示现场拍摄的 SMPTE timecode
+- **G5** MRQ 渲出的 EXR 文件名带 absolute CSV frame number(e.g. `render.0625914.exr`),下游可按文件名手动 conform
+- **G6** 链路 fail-fast 优先,在 asset mutation 之前完成所有校验
 
-- **G1** Sequencer UI 时间轴切到 Timecode 显示时,直接显示现场拍摄的 SMPTE timecode(如 `09:44:23:22`)
-- **G2** MRQ 渲出的 EXR 文件,每一帧 header 内嵌 OpenEXR 标准 `timeCode` + `framesPerSecond` 属性,DaVinci 19+ / Nuke / Resolve / Flame 自动识别
-- **G3** Sequencer 里可挂现场实拍视频作为 Media Track,按 embedded SMPTE timecode 自动对齐 sequence 时间轴,渲之前就能视觉验证对齐
-- **G4** 渲完后输出 OTIO sidecar(`.otio`),描述 CG render + reference plate + timecode 元数据,DaVinci/Nuke Studio 一次 import 完成 conform
-- **G5** EXR 文件名带 absolute CSV frame number(e.g. `render.0625914.exr`),作为人工对帧兜底
-- **G6** 整条链路 fail-fast 优先,在 asset mutation 之前完成所有校验
+### P1 — 自动 conform 升级
+- **G2** EXR header 内嵌 OpenEXR 标准 `timeCode` + `framesPerSecond` 属性,DaVinci 19+ / Nuke / Resolve 自动识别 timecode
+- **G4** 渲完后输出 OTIO sidecar(`.otio`),描述 CG render layer + timecode 元数据,下游一次 import 完成 conform
+
+### P2 — Visual verification
+- **G3** Sequencer 里挂现场实拍视频作为 MediaPlate,按 embedded SMPTE timecode 自动对齐,渲之前就能视觉验证对齐
 
 ## 3. Non-Goals
 
-- 不解决 Disguise 端的 LTC genlock 配置(plugin 只读 CSV 输出,不触达 Disguise project)
-- 不为现场视频做画面解码 / 时间码 OCR(burn-in 时间码不被支持,只读 embedded metadata)
-- 不改 Path C 的 distortion 算法 / DataAsset schema / Section template evaluator 逻辑
-- 不改 Sequencer-local playback range 形式(见 §4 关键洞察 — 用 MovieScene SourceTimecode 而不是改 playback range)
-- 暂不支持非 24/23.976/25/29.97/30/59.94/60 fps
+- 不解决 Disguise 端 LTC genlock 配置(plugin 只读 CSV)
+- 不为现场视频做画面解码 / 时间码 OCR(burn-in 不被支持,只读 embedded metadata)
+- 不改 Path C distortion 算法 / DataAsset schema / Section template evaluator 逻辑
+- 不改 LevelSequence playback range 形式(见 §4 — section 上挂 TimecodeSource,不动 playback range)
+- 不改变当前"plugin 预填 MRQ queue + 用户手动开 MRQ 渲"的流程;不引入 auto post-render hook
+- 暂只支持 `24 / 23.976 / 25 / 29.97 / 30 / 50 / 59.94 / 60` fps
 
-## 4. Key Insight — 不改 playback range,挂 SourceTimecode
+## 3.5 trim_static_padding 语义(影响所有 timecode 写入)
 
-读 `PostRenderCameraSectionTemplate.cpp:130-152` 后发现,evaluator 已经做了 sequence-local-frame ↔ absolute-CSV-frame 的双向映射:
+`pipeline.py:129` 在 build asset 之前调 `trim_static_padding(csv_result)`,会把首尾静止帧裁掉,**`csv_result.timecode_start/end` 同步指向 trimmed motion segment 的首尾**(`csv_parser.py:388-395`)。
+
+本 spec 所有 `start_timecode` / `start_csv_frame` / Section TimecodeSource / MRQ FrameNumberOffset / EXR timecode / OTIO start_frame **统一以 trimmed 之后的 `csv_result.frames[0]` 为锚点**。意味着:
+
+- 渲出的第一帧 = trimmed motion segment 的第一帧
+- Sequencer 时间轴 frame 0 对应的 SMPTE = trimmed start 的 timecode
+- 现场视频如果包含 trim 掉的静止段,attach plate 时需要按 trimmed start 对齐(不是 raw CSV start)
+
+## 4. Key Insight — Section.TimecodeSource(订正 v1 错误)
+
+v1 spec 写错了:`UMovieScene` 没有 `SetEarliestTimecodeSource` setter。UE 5.7 `MovieScene.cpp:1854` 的 `GetEarliestTimecodeSource()` 是 getter,扫描所有 sections 取最小的 `TimecodeSource`。真正的字段在 `UMovieSceneSection`:
+
+- `MovieSceneSection.h:181-198`:`FMovieSceneTimecodeSource` USTRUCT,含 `FTimecode Timecode` + `int32 DeltaFrame`
+- `MovieSceneSection.h:790-793`:`UPROPERTY() FMovieSceneTimecodeSource TimecodeSource;` 在每个 Section 上
+
+**修正方案**:在 sequence_builder 创建完 Camera Cut Section + UPostRenderCameraSection 后,通过 C++ wrapper 设这两个 section 的 `TimecodeSource`:
 
 ```cpp
-LocalDisplayTime = DisplayTime - SectionStartDisplay;            // sequence-local frame
-AssetFrameOffset = LocalDisplayTime + SampleAsset->GetFirstFrame();  // ABSOLUTE CSV frame
-SampleAsset->FindBoundingIndices(FFrameNumber(AssetFrameOffset), ...);
+// PostRenderToolBuildHelper.h - 新 UFUNCTION
+UFUNCTION(BlueprintCallable, Category="PostRenderTool|Sequencer")
+static void SetSectionTimecodeSource(
+    UMovieSceneSection* Section,
+    int32 Hours, int32 Minutes, int32 Seconds, int32 Frames,
+    bool bDropFrame,
+    int32 DeltaFrame);
 ```
 
-`UPostRenderCameraSamples.SourceFrameNumbers` 已经是 absolute CSV frame(`pack_samples` 直接 append `frame.frame_number`)。
+Sequencer UI 读 `MovieScene::GetEarliestTimecodeSource()`,从 sections 聚合;只要每个 section 都设了同一个 TimecodeSource,UI 显示就对。
 
-**这意味着**:不需要把 LevelSequence playback range / Camera Cut Section / UPostRenderCameraSection 改成 absolute frame。只要在 `UMovieScene` 上挂 `EarliestTimecodeSource = csv_result.start_timecode`,Sequencer UI 切到 Timecode 显示模式时会自动把 sequence-local frame 0 渲染为 `09:44:23:22`。
-
-收益:
-- sequence_builder 改动量小 → take_4 production diff 回归风险低
-- Section template / Custom Track / DataAsset 全部不动
-- evaluator 行为不变
+evaluator 行为完全不变(TimecodeSource 只影响 UI 显示和 `GetEarliestTimecodeSource` 查询)。
 
 ## 5. Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Disguise CSV (timestamp HH:MM:SS:FF + frame 625914 + camera data)   │
+│ Disguise CSV (timestamp + frame_number + camera data)               │
 └────────────────────────┬────────────────────────────────────────────┘
                          ↓
 ┌────────────────────────┴────────────────────────────────────────────┐
 │ csv_parser (改造):                                                   │
-│   - Timecode dataclass + parse(s, fps)                              │
-│   - FrameData 加字段 timecode: Timecode                              │
-│   - CsvDenseResult 加 start_timecode/end_timecode/frame_rate         │
-│   - SMPTE 等价性校验 (timecode ↔ frame_number)                       │
+│   - Timecode dataclass + parse()                                    │
+│   - FrameData.timecode                                              │
+│   - CsvDenseResult.start_timecode/end_timecode/frame_rate (新增,    │
+│     与既有 timecode_start/end: str 并存以保兼容)                     │
+│   - SMPTE 等价性校验                                                 │
+│   - trim_static_padding 同步更新结构化 timecode                      │
 └────────────────────────┬────────────────────────────────────────────┘
                          ↓
-        ┌────────────────┼────────────────┬────────────────┐
-        ↓                ↓                ↓                ↓
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│ sequence_    │  │ media_track_ │  │ mrq_exr_     │  │ otio_export  │
-│ builder      │  │ builder (新) │  │ timecode_    │  │ (新)         │
-│ (小改)       │  │              │  │ writer (新)  │  │              │
-│              │  │ - ffprobe    │  │              │  │ - OpenTime-  │
-│ - MovieScene │  │   读现场视频 │  │ - MRQ post-  │  │   lineIO     │
-│   挂         │  │   embedded   │  │   render     │  │ - timeline   │
-│   SourceTC   │  │   timecode   │  │   hook       │  │   = CG render│
-│ - playback   │  │ - Media      │  │ - 给每帧 EXR │  │     layer +  │
-│   range 不变 │  │   Track 按   │  │   补 timeCode│  │     plate    │
-│              │  │   tc 对齐    │  │   attr       │  │     ref +    │
-│              │  │              │  │              │  │     metadata │
-└──────┬───────┘  └──────────────┘  └──────────────┘  └──────────────┘
+        ┌────────────────┼──────────────────┬───────────────────┐
+        ↓ P0             ↓ P0               ↓ P1                ↓ P2
+┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  ┌──────────────┐
+│ sequence_    │  │ ui_interface │  │ mrq_exr_         │  │ media_plate_ │
+│ builder      │  │ (小改)       │  │ timecode_writer  │  │ builder (新) │
+│ (小改)       │  │              │  │ (新)             │  │              │
+│              │  │ - MRQ job    │  │                  │  │ - MediaSource│
+│ - 每个 Section│  │   preset:    │  │ - 离线 patcher:  │  │ - MediaPlate │
+│   设          │  │   FrameNum-  │  │   读 dir + write │  │   或 Media   │
+│   Timecode-  │  │   berOffset  │  │   timeCode/      │  │   Track 按   │
+│   Source(    │  │   = first_   │  │   framesPerSec   │  │   embedded   │
+│   Camera Cut │  │   csv_frame  │  │   to EXR header  │  │   tc 对齐    │
+│   + UPostRen-│  │   FileNameF- │  │ - UI 按钮触发    │  │ - Build.cs加 │
+│   derCamera) │  │   ormat =    │  │   (不挂渲染 hook)│  │   Media-     │
+│              │  │   render.{   │  │                  │  │   Compositing│
+│ - playback   │  │   frame_     │  │                  │  │              │
+│   range 不变 │  │   number}    │  │                  │  │              │
+└──────┬───────┘  └──────────────┘  └──────────────────┘  └──────────────┘
+       ↓                                    ↓
+       │                            ┌──────────────────┐
+       │                            │ otio_export (新) │
+       │                            │ - P1             │
+       │                            │ - 离线 dump      │
+       │                            │   <shot>.otio    │
+       │                            └──────────────────┘
        ↓
 ┌──────────────────────────────────────────────────────────────────────┐
-│ LevelSequence 资产 + UPostRenderCameraSamples DataAsset               │
-│   (MovieScene 上挂 SourceTimecode = csv.start_timecode)              │
-│   Sequencer UI 时间轴显示 SMPTE timecode, CG cam + plate 同框可视化   │
+│ LevelSequence + UPostRenderCameraSamples DataAsset                    │
+│   每个 Section.TimecodeSource = trimmed start timecode               │
+│   Sequencer UI 时间轴显示 SMPTE; CG cam + (P2) plate 同框可视化       │
 └──────────────────────────────────────────────────────────────────────┘
-       ↓ MRQ render
+       ↓ MRQ render (用户手动开 MRQ 渲, plugin 不接 hook)
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 输出:                                                                 │
-│  - render.0625914.exr ...  (文件名带 absolute CSV frame number)      │
+│ 输出 (P0):                                                            │
+│  - render.0625914.exr ... (FrameNumberOffset 让文件名带 absolute     │
+│    CSV frame, ZeroPadFrameNumbers=7)                                 │
+│                                                                       │
+│ 输出 (P1, 用户点 "Patch EXR Timecode" 按钮):                          │
 │  - 每个 .exr header 内嵌 SMPTE timeCode + framesPerSecond            │
-│  - <shot>.otio sidecar (CG + plate + timecode timeline)              │
+│  - <shot>.otio sidecar                                               │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-**5 个新增/修改单元,boundary 解耦**:
-
-| 单元 | 职责 | 依赖 | 独立测试 |
-|---|---|---|---|
-| `csv_parser`(改) | Timecode 解析 + SMPTE 等价校验 | pure Python | ✓ unit test |
-| `sequence_builder`(小改) | MovieScene SourceTimecode 注入 + filename pattern 用 absolute frame | unreal + C++ wrapper(若需) | UE in-editor |
-| `media_track_builder`(新) | 现场视频按 embedded TC 自动对齐挂进 sequence | unreal + ffprobe | UE in-editor + ffprobe mock |
-| `mrq_exr_timecode_writer`(新) | MRQ render hook,EXR header 补 timeCode 属性 | unreal + PyPI OpenEXR | 离线对已渲目录跑 |
-| `otio_export`(新) | 渲完 dump `.otio` sidecar | PyPI OpenTimelineIO | unit test + DaVinci import |
-
 ## 6. Data Flow
 
-### 6.1 CSV → 内存 Timecode
+### 6.1 CSV → 内存 Timecode (P0)
 
 `csv_parser.py` 新增:
 
@@ -126,106 +157,99 @@ class Timecode:
     minutes: int
     seconds: int
     frames: int
-    drop_frame: bool          # 29.97 / 59.94 时 True
-    rate_num: int             # e.g. 24000
-    rate_den: int             # e.g. 1001
+    drop_frame: bool
+    rate_num: int
+    rate_den: int
 
     @classmethod
     def parse(cls, s: str, fps: float) -> "Timecode": ...
-    def to_frames(self) -> int:                   # 从 00:00:00:00 起算的总帧数
-    def __str__(self) -> str:                     # "09:44:23:22" or "09:44:23;22" (drop)
+    def to_frames(self) -> int:
+    def __str__(self) -> str:    # "09:44:23:22" or "09:44:23;22"
 ```
 
-`FrameData` 加字段 `timecode: Timecode`。`CsvDenseResult` 把现有的 `timecode_start: str / timecode_end: str` 替换为 `start_timecode: Timecode / end_timecode: Timecode`,加 `frame_rate: tuple[int, int]`。
+**字段策略**:
+- `FrameData` 加 `timecode: Timecode`(新)
+- `CsvDenseResult` **保留** `timecode_start: str / timecode_end: str`(向后兼容,有外部 import),**新增** `start_timecode: Timecode / end_timecode: Timecode / frame_rate: tuple[int, int]`
+- `trim_static_padding(csv_result)` 同步更新结构化字段:trim 后的 `start_timecode = trimmed[0].timecode`,`end_timecode = trimmed[-1].timecode`
 
-**等价性校验**:解析时验证 `frame.frame_number - first.frame_number == frame.timecode.to_frames() - first.timecode.to_frames()`。任何帧不一致 → `raise CsvTimecodeMismatch`,附帧号 + 实测值 + 期望值。
+**等价性校验**:解析时验证 `frame.frame_number - first.frame_number == frame.timecode.to_frames() - first.timecode.to_frames()`。不一致 → `raise CsvTimecodeMismatch`,附帧号 + 实测值 + 期望值。
 
-**Drop-frame 判定**:fps 落在 29.97 ± 0.01 / 59.94 ± 0.01 区间 → drop_frame=True,分隔符 `;`。其他 fps → drop_frame=False,分隔符 `:`。`_FRACTIONAL_FPS` 从 sequence_builder 提到 csv_parser 共享。
+**支持帧率**:`24 / 23.976 / 25 / 29.97 / 30 / 50 / 59.94 / 60`。
+- Drop-frame:`29.97 ± 0.01` 和 `59.94 ± 0.01` → `drop_frame=True`,分隔符 `;`
+- 其他(含 50 fps)→ `drop_frame=False`,分隔符 `:`
 
-### 6.2 LevelSequence → MovieScene SourceTimecode
+### 6.2 LevelSequence Sections → TimecodeSource (P0)
 
-`sequence_builder.py` 改造点(在 Step 2 设 frame rate 后,Step 3 设 playback range 前插入):
+`sequence_builder.py` 改造:
+
+- Camera Cut Section(Step 4 已建)创建后,加一步:
 
 ```python
-# Step 2.5: 注入 MovieScene Source Timecode (Sequencer UI 显示用)
-tc = csv_result.start_timecode
-unreal.PostRenderToolBuildHelper.set_movie_scene_source_timecode(
-    level_sequence,
+tc = csv_result.start_timecode  # trimmed
+unreal.PostRenderToolBuildHelper.set_section_timecode_source(
+    camera_cut_section,
     tc.hours, tc.minutes, tc.seconds, tc.frames,
     tc.drop_frame,
+    0,  # DeltaFrame = 0 (Section start frame in sequence-local = 0)
 )
 ```
 
-C++ 端 `PostRenderToolBuildHelper.cpp` 加一个 UFUNCTION wrapper(理由见 §8.1 — `UMovieScene::SetEarliestTimecodeSource` Python 暴露面待验证,wrapper 是保底):
+- UPostRenderCameraSection(Step 6 已建)创建后,同样调一次
 
-```cpp
-UFUNCTION(BlueprintCallable, Category="PostRenderTool|Sequencer")
-static void SetMovieSceneSourceTimecode(
-    ULevelSequence* LevelSequence,
-    int32 Hours, int32 Minutes, int32 Seconds, int32 Frames,
-    bool bDropFrame);
-```
+C++ 端 `PostRenderToolBuildHelper.h/.cpp` 加 UFUNCTION `SetSectionTimecodeSource(...)`(签名见 §4)。
 
-**Playback range / Camera Cut Section / UPostRenderCameraSection range 全部不动**(见 §4 关键洞察)。
+**Playback range / Camera Cut Section range / UPostRenderCameraSection range 全部不动**。
 
-### 6.3 现场视频 → Media Track 自动对齐
+### 6.3 MRQ 文件名 = absolute CSV frame (P0)
 
-`media_track_builder.py` 新模块:
+CodeX 验证:UE 5.7 `MoviePipelineOutputSetting.h:101` 有 `FrameNumberOffset: int32`,`MoviePipelineBlueprintLibrary.cpp:1059` 会把它加到 `{frame_number}` token。
+
+`ui_interface.open_movie_render_queue` 改造(已有 `create_job_from_sequence` + `ensure_job_has_default_settings`):
 
 ```python
-def attach_reference_plate(
-    level_sequence: unreal.LevelSequence,
-    video_path: str,
-    sequence_start_timecode: Timecode,
-    sequence_first_csv_frame: int,
-    fps: float,
-    *,
-    manual_offset_frames: Optional[int] = None,
-) -> unreal.MovieSceneMediaTrack:
-    """挂现场实拍视频,按 SMPTE timecode 自动对齐."""
+# 在 create_job_from_sequence 之后,改 job 的 output setting
+output_setting = job.get_configuration().find_or_add_setting_by_class(
+    unreal.MoviePipelineOutputSetting
+)
+output_setting.frame_number_offset = csv_result.frames[0].frame_number  # trimmed first
+output_setting.zero_pad_frame_numbers = 7
+output_setting.file_name_format = "render.{frame_number}"
+# 用户开 MRQ 改 output format 为 EXR, 渲完文件名 = render.0625914.exr
 ```
 
-实现步骤:
-1. 调 `ffprobe -v error -select_streams v:0 -show_entries stream_tags=timecode -of default=nw=1:nk=1 <video_path>` 读 embedded SMPTE timecode
-2. 若 stdout 空 → 若 `manual_offset_frames is None` → `raise NoEmbeddedTimecodeError`(UI 弹窗指引用户)
-3. 解析视频 timecode 字符串 → `Timecode`
-4. `offset_frames = video_tc.to_frames() - sequence_start_timecode.to_frames()`(可为负)
-5. 创建 `unreal.FileMediaSource`,`set_file_path(video_path)`,作为资产存到 `/Game/PostRender/RefPlates/<asset_name>`
-6. 加 `MovieSceneMediaTrack` + Section,section `set_range(offset_frames, offset_frames + video_frame_count)`
+**注意**:`csv_result` 在 MRQ 触发时已不在 scope(asset 已建完落盘)。要么把 `first_csv_frame` 持久化到 LevelSequence 或 DataAsset 上(已有 `UPostRenderCameraSamples.GetFirstFrame()`),要么 UI 触发 MRQ 时重读 sample asset。**走重读 sample asset 路径**,因为 `GetFirstFrame()` 是现成的且权威。
 
-**注意**:section start 是 sequence-local frame(因为 sequence playback range 仍归零)。offset 是负数也合法 — section 起点早于 sequence 起点,Sequencer 会自动 clip。
+### 6.4 EXR Header SMPTE Timecode (P1)
 
-### 6.4 MRQ EXR Per-Frame Timecode Metadata
+**先做 spike,再选 writer**。Spike 用一帧真实 MRQ 渲出来的 EXR,验证三个候选哪个能在写 `timeCode` + `framesPerSecond` 的同时,**完整保留** MRQ 写的 multipart / channels / compression / pixelAspectRatio 等属性:
 
-`mrq_exr_timecode_writer.py` 新模块。两个公开 API:
+| 候选 | 优点 | 风险 |
+|---|---|---|
+| (a) PyPI `OpenEXR` 包 | 纯 Python,跨平台 | 老的 binding 不支持 multipart,可能丢 channels |
+| (b) `oiiotool` CLI(OpenImageIO) | 业界标准,attribute 操作完整 | 系统依赖,Windows 安装不一定原生 |
+| (c) `UMoviePipelineImagePassBase` 自定义子类 | 渲染时一次性写对,无 post-process | 改 MRQ output path 复杂度高 |
+
+Spike 任务(implementation plan day-1):
+1. 用 MRQ 渲一帧 EXR
+2. 依次跑三个 writer 加 `timeCode` 属性
+3. 用 `oiiotool --info -v` 对比 header,看 channels / compression / multipart 是否完整
+4. 选最干净的方案
+
+**API surface 不变**,只是内部实现不同:
 
 ```python
-def write_timecode_to_exr_sequence(
+def patch_exr_timecode_in_dir(
     output_dir: str,
     filename_pattern: str,        # "render.{frame:07d}.exr"
-    start_csv_frame: int,         # absolute (e.g. 625914)
+    start_csv_frame: int,         # absolute,trimmed (= UPostRenderCameraSamples.GetFirstFrame())
     start_timecode: Timecode,
     fps: float,
-) -> int:
-    """离线对已渲完目录跑,返回处理的文件数."""
-
-def register_mrq_post_render_hook(
-    pipeline: unreal.MoviePipeline,
-    start_csv_frame: int,
-    start_timecode: Timecode,
-    fps: float,
-) -> None:
-    """MRQ pipeline 渲完 callback,自动跑 write_timecode_to_exr_sequence."""
+) -> int: ...
 ```
 
-**OpenEXR header 写入**(用 PyPI `OpenEXR` 包):
-- 属性 `timeCode`:OpenEXR 标准 SMPTE timecode 类型(time + user_data 两个 uint32)。具体 Python binding 类名(`Imath.TimeCode` 或 `OpenEXR.TimeCode`)在 implementation 阶段以装出来的版本为准
-- 属性 `framesPerSecond`:有理数类型(numerator / denominator)
-- 写之前 read header 现有属性,merge(不覆盖 MRQ 写的 `compression` / `pixelAspectRatio` 等)
+**UI 集成**:加一个 `btn_patch_exr_timecode` 按钮,用户在 MRQ 渲完后**手动**点。**不**注册 MRQ post-render auto hook(跟当前"plugin 预填 queue + 用户手动开 MRQ"流程冲突)。
 
-**MRQ filename pattern**:LevelSequence playback range 是 sequence-local 0..N,MRQ `{frame_number}` token 默认会输出 0..N。要让文件名是 absolute CSV frame,有两条路:(a) MRQ output config 用支持 frame offset 的 token,(b) post-render 步骤按 absolute CSV frame 重命名。具体选哪条取决于 MRQ 原生 token 调研结果(见 §11 Open Question #3)。
-
-### 6.5 OTIO Sidecar 输出
+### 6.5 OTIO Sidecar (P1)
 
 `otio_export.py` 新模块:
 
@@ -234,92 +258,92 @@ def export_sidecar(
     sidecar_path: str,
     shot_name: str,
     cg_render_dir: str,
-    cg_filename_pattern: str,    # "render.{frame:07d}.exr"
-    plate_video_path: Optional[str],
-    start_csv_frame: int,
+    cg_filename_pattern: str,
+    start_csv_frame: int,         # absolute, trimmed
     frame_count: int,
     start_timecode: Timecode,
     fps: float,
 ) -> None: ...
 ```
 
-输出 OTIO timeline 结构:
+**OTIO 字段语义先 DaVinci 实测**(CodeX 提示):
+- `ImageSequenceReference.start_frame = start_csv_frame` 必填
+- `available_range` vs `source_range` 起点用 `RationalTime(0, fps)` 还是 `RationalTime(start_csv_frame, fps)` 取决于 DaVinci 19+ import 行为
+- Implementation 阶段 spike:写两种变体,DaVinci 各 import 一次,看哪个能让 timecode 跟现场视频自动对齐
 
-```
-Timeline (rate = fps, global_start_time = start_timecode)
- ├─ Track "CG Render" (kind=Video)
- │    └─ Clip "shot_<name>_cg"
- │         media_reference = ImageSequenceReference(
- │            target_url_base, name_prefix="render.", name_suffix=".exr",
- │            start_frame=start_csv_frame, frame_zero_padding=7, rate=fps)
- │         source_range = TimeRange(
- │            start_time=RationalTime(start_csv_frame, fps),
- │            duration=RationalTime(frame_count, fps))
- └─ Track "Reference Plate" (kind=Video, 可选)
-      └─ Clip "shot_<name>_plate"
-           media_reference = ExternalReference(target_url=plate_video_path)
-           source_range = TimeRange(...)  # 按 video embedded TC 对齐
-```
+OTIO 不依赖 unreal,可 unit test 写 `RationalTime` 数学和 schema 正确性,DaVinci compatibility 走集成测试。
 
-依赖 PyPI `OpenTimelineIO`(pure Python wheel)。无 `unreal` 依赖,可 unit test。
+依赖 PyPI `OpenTimelineIO`(pure Python wheel)。
 
-### 6.6 编排层 `pipeline.py`
+### 6.6 Reference Plate(P2,有依赖前置条件)
 
-`run_import` 加可选参数:
+**前置条件**:plugin 必须加 Media plugin 依赖,**当前没有**(`PostRenderTool.Build.cs:21` 只有 `MovieSceneTracks`):
 
-```python
-def run_import(
-    csv_path: str,
-    fps: float,
-    *,
-    reference_plate_path: Optional[str] = None,
-    auto_export_otio: bool = False,
-    otio_output_dir: Optional[str] = None,
-) -> dict: ...
+```csharp
+// PostRenderTool.Build.cs 增加:
+"MediaAssets",        // FileMediaSource, MediaTexture
+"MediaCompositing",   // MovieSceneMediaTrack, MovieSceneMediaSection
 ```
 
-新增独立函数 `run_export_otio(level_sequence_path, output_dir)` 给 UI "渲完后导 OTIO" 按钮单独调。
+```ini
+# PostRenderTool.uplugin Plugins 数组增加:
+{ "Name": "MediaCompositing", "Enabled": true },
+{ "Name": "MediaPlate",       "Enabled": true }
+```
 
-### 6.7 UI(`widget.py` + `widget-tree-spec.json`)
+**P2 决策点**:G3 的"视觉对齐"是哪种形态?
+- (i) **Timeline metadata-only**:在 sequence 加 `MovieSceneMediaTrack + Section`,Section.MediaSource 指向现场视频,Sequencer **不渲染** plate 画面 — 只为 OTIO/conform 元数据完整
+- (ii) **Viewport visual overlay**:加 MediaPlate Actor 或 SceneCapture 后处理,在 viewport / preview 里能实际看到现场画面 + CG cam 叠合
 
-新增 3 个 widgets,同步到三处(`PostRenderToolWidget.h` UPROPERTY / `widget.py` `_REQUIRED_CONTROLS` / `widget-tree-spec.json`),由 `test_spec_drift` 兜底:
+(i) 工作量小但不解决"渲前视觉验证";(ii) 真正解决但需要决定渲染管线(MediaPlate vs Composure)。P2 阶段单独立 spec/plan。
 
-| widget name | type | 用途 |
-|---|---|---|
-| `txt_reference_plate_path` | `UEditableTextBox` | 现场视频路径 |
-| `btn_browse_plate` | `UButton` | 文件选择对话框 |
-| `btn_export_otio` | `UButton` | 触发 `run_export_otio` |
+### 6.7 编排层与 UI
+
+`pipeline.py` 改造:
+- `run_import` 签名不变(`csv_path`, `fps`)
+- 内部多走一遍 timecode 写入(由 sequence_builder 完成)
+- 新增 `run_patch_exr_timecode(output_dir, level_sequence_path)`:从 sequence 关联的 DataAsset 读 `GetFirstFrame()` + start timecode,触发 §6.4 writer
+- 新增 `run_export_otio(level_sequence_path, output_dir)`:同上拿元数据 + dump sidecar
+
+`widget.py` + `widget-tree-spec.json` 新增 widgets(同步到 `PostRenderToolWidget.h` UPROPERTY,`test_spec_drift` 兜底):
+
+| widget name | type | Phase | 用途 |
+|---|---|---|---|
+| `btn_patch_exr_timecode` | `UButton` | P1 | 触发 `run_patch_exr_timecode` |
+| `txt_render_output_dir` | `UEditableTextBox` | P1 | EXR 输出目录(给 patcher 用) |
+| `btn_export_otio` | `UButton` | P1 | 触发 `run_export_otio` |
+| `txt_reference_plate_path` | `UEditableTextBox` | P2 | 现场视频路径 |
+| `btn_attach_plate` | `UButton` | P2 | 触发 `attach_reference_plate` |
 
 ## 7. Components(接口契约一览)
 
-| 文件 | 状态 | 公开 API surface | 依赖 |
-|---|---|---|---|
-| `csv_parser.py` | 改造 | `Timecode` dataclass,`FrameData.timecode`,`CsvDenseResult.start_timecode/end_timecode/frame_rate` | pure Python |
-| `sequence_builder.py` | 小改 | API 签名不变,内部新增 Step 2.5(SourceTimecode) | unreal + C++ wrapper |
-| `media_track_builder.py` | 新 | `attach_reference_plate(...)` | unreal + ffprobe(系统 PATH) |
-| `mrq_exr_timecode_writer.py` | 新 | `write_timecode_to_exr_sequence(...)`,`register_mrq_post_render_hook(...)` | unreal + PyPI OpenEXR |
-| `otio_export.py` | 新 | `export_sidecar(...)` | PyPI OpenTimelineIO |
-| `pipeline.py` | 改 | `run_import(...)` 加 kwargs,新增 `run_export_otio(...)` | 同上聚合 |
-| `widget.py` + spec.json | 改 | 3 个新 widget,callback 桥接 | — |
-| `PostRenderToolBuildHelper.h/.cpp` | 改 | 新 UFUNCTION `SetMovieSceneSourceTimecode(...)`(若 Python 直接调不通) | UMG + LevelSequence + MovieScene |
+| 文件 | 状态 | Phase | 公开 API surface | 依赖 |
+|---|---|---|---|---|
+| `csv_parser.py` | 改造 | P0 | `Timecode`,`FrameData.timecode`,`CsvDenseResult.start_timecode/end_timecode/frame_rate`(并存旧 string 字段) | pure Python |
+| `sequence_builder.py` | 小改 | P0 | 内部 `set_section_timecode_source(...)` 调 2 次 | unreal + 新 UFUNCTION |
+| `ui_interface.py` | 小改 | P0 | `open_movie_render_queue` 预填 `FrameNumberOffset`/filename | unreal |
+| `PostRenderToolBuildHelper.h/.cpp` | 改 | P0 | 新 UFUNCTION `SetSectionTimecodeSource(...)` | MovieScene |
+| `mrq_exr_timecode_writer.py` | 新 | P1 | `patch_exr_timecode_in_dir(...)` | spike 后选 |
+| `otio_export.py` | 新 | P1 | `export_sidecar(...)` | PyPI OpenTimelineIO |
+| `pipeline.py` | 改 | P1 | `run_patch_exr_timecode(...)`,`run_export_otio(...)` | 聚合 |
+| `widget.py` + spec.json | 改 | P1+P2 | 5 个新 widget,callback 桥接 | — |
+| `media_plate_builder.py` | 新 | P2 | `attach_reference_plate(...)`(待 P2 spec) | unreal + ffprobe + Media plugins |
+| `PostRenderTool.Build.cs` + `.uplugin` | 改 | P2 | 加 `MediaAssets / MediaCompositing` + `MediaPlate` plugin | — |
 
 ## 8. Risk & Fallback
 
 ### 8.1 UE 5.7 Python API 暴露面(day-1 必验证)
 
-按 [[feedback_verify_ue_python_api]],写实现前必须先 grep `/Users/bip.lan/AIWorkspace/vp/UnrealEngine/` 引擎源,列证据。`scripts/probe_ue_timecode_api.py` 是 day-1 任务:
+按 [[feedback_verify_ue_python_api]],写实现前必须 grep `/Users/bip.lan/AIWorkspace/vp/UnrealEngine/` 引擎源给 `file:line` 证据:
 
 | 调用 | 验证状态 | 不可见时 fallback |
 |---|---|---|
-| `level_sequence.set_display_rate(FrameRate)` | ✓ 已在用 | — |
-| `UMovieScene::SetEarliestTimecodeSource(FMovieSceneTimecodeSource)` | ✗ 待 grep | C++ wrapper `PostRenderToolBuildHelper::SetMovieSceneSourceTimecode(平参数)` |
-| `unreal.Timecode` struct | ✗ 待 grep | 同上,wrapper 接平参数避免 struct 暴露问题 |
-| `unreal.FMovieSceneTimecodeSource` struct | ✗ 待 grep | 同上 |
-| `unreal.MovieSceneMediaTrack` + `MovieSceneMediaSection` | ✗ 待 grep | 降级 `MovieSceneCinematicShotTrack` 套外部 .uasset;最差砍 G3,保留 G1/G2/G4 |
-| `unreal.FileMediaSource` + `set_file_path` | ✗ 待 grep | `AssetTools.create_asset` + `set_editor_property("file_path", ...)` |
-| MRQ `on_pipeline_finished` callback Python 绑定 | ✗ 待 grep | 降级:不挂 hook,UI 加"渲完后 → 补 EXR timecode"按钮手动一键 |
-| `unreal.MoviePipelineExecutorBase` Python 子类 | ✓ 引擎文档有 | — |
-| MRQ filename token 支持 absolute CSV frame | ✗ 待查 MRQ doc | 降级:post-render 步骤改名(`render.{seq_local}.exr` → `render.{abs}.exr`) |
+| `MovieSceneSection.h:790-793 TimecodeSource` UPROPERTY | ✓ 引擎源已确认 | C++ wrapper(已规划) |
+| `unreal.FTimecode` / `unreal.FMovieSceneTimecodeSource` Python | ✗ 待 grep | C++ wrapper 接平参数,避免 struct 暴露问题 |
+| `MoviePipelineOutputSetting.frame_number_offset` Python | ✗ 待 grep | C++ wrapper or fallback:`set_editor_property` |
+| `unreal.MoviePipelineQueueSubsystem` / `create_job_from_sequence` | ✓ 已在用(`ui_interface.py:176-188`) | — |
+| MRQ EXR multipart 完整保留 | ✗ 待 spike | 见 §6.4 三个 writer 候选 |
+| `UMoviePipelineImagePassBase` Python 子类 | ✗ 仅 §6.4 候选(c)需要 | 候选(a)/(b) 不依赖 |
 
 ### 8.2 CSV 解析层(fail-fast 优先)
 
@@ -327,27 +351,26 @@ def run_import(
 |---|---|
 | timestamp 格式无法解析 | `raise CsvParseError`,附帧号 + 原始字符串 |
 | timestamp ↔ frame_number 不等价 | `raise CsvTimecodeMismatch`,列第一处不匹配帧 |
-| fps 不在已知表 | `raise UnsupportedFrameRate`,列当前已知值 |
-| 跨午夜 timecode(first=23:59:55, end=00:00:10) | 支持 + warning"sequence 跨午夜,建议拆 take" |
+| fps 不在支持表 | `raise UnsupportedFrameRate`,列当前支持的 8 个值 |
+| 跨午夜 timecode | 支持 + warning"sequence 跨午夜,建议拆 take" |
+| `trim_static_padding` 后 trimmed 帧数 < 2 | 维持现有 trim 逻辑的 fail-fast |
 
-### 8.3 Reference Plate 视频
-
-| 异常 | 处理 |
-|---|---|
-| 系统 PATH 无 `ffprobe` | UI 弹窗提示装 ffmpeg + 链接;不阻塞 sequence 主流程(plate 是可选) |
-| 视频文件不可读 | fail-fast |
-| 视频无 embedded SMPTE timecode | fail-fast,弹窗指引用户填手动 offset frame 或先用 ffmpeg 写入 timecode |
-| 视频 fps ≠ sequence fps | warning,允许继续 |
-| offset 异常大(±1 小时) | warning,允许继续 |
-
-### 8.4 EXR Timecode 写入
+### 8.3 MRQ FrameNumberOffset
 
 | 异常 | 处理 |
 |---|---|
-| `import OpenEXR` 失败 | plugin 启动检测,UI 顶部红条;不阻塞其他功能 |
-| post-render hook 抢锁 | 等 `on_pipeline_finished`,不是 `on_shot_finished` |
-| EXR header 已有 `timeCode` 属性 | overwrite + log |
-| 输出格式不是 EXR | 跳过 + warning(PNG/JPG 无 timecode metadata 标准) |
+| `frame_number_offset` Python 不可见 | C++ wrapper 套 `set_editor_property` |
+| 用户在 MRQ 改了 `FileNameFormat` 把 token 删了 | 文件名跟预设不一致,patcher 找不到 → fail-fast 提示用户保留 token |
+| MRQ output 格式不是 EXR(选了 PNG) | patcher 跳过 + warning(PNG 无 timecode standard) |
+
+### 8.4 EXR Timecode Patcher
+
+| 异常 | 处理 |
+|---|---|
+| 选定 writer 装不上(如 oiiotool 缺失) | UI 顶部红条 + 装 / 切 writer 指引 |
+| EXR header 已有 `timeCode` 属性(重复 patch) | overwrite + log |
+| Patcher 写入后丢 channel / 损坏 multipart | spike 阶段就拦截,选别的 writer;落地后定期回归一帧 |
+| Patcher 目录里混了非 sequence 的 EXR | 按 filename pattern regex 过滤,不匹配的跳过 + log |
 
 ### 8.5 OTIO Sidecar
 
@@ -355,89 +378,100 @@ def run_import(
 |---|---|
 | `import opentimelineio` 失败 | UI 顶部红条 |
 | 输出路径已存在 | overwrite + log |
-| 相对/绝对路径 | OTIO ExternalReference 用 `file://` 绝对路径,sidecar 注释说明如需移交跑 `otio.adapters` 重写 |
+| DaVinci import 不识别 source_range 起点 | spike 期间就定 — 走第二种 variant |
 
 ### 8.6 sequence_builder 改动回归
 
-最大风险:Step 2.5 注入 SourceTimecode 后,take_4 production diff 是否仍通过。
+最大风险:Section TimecodeSource 写入后,take_4 production diff 是否仍通过。
 
-**预期**:SourceTimecode 只影响 Sequencer UI 显示和 MovieScene 元数据,evaluator 用 `TickResolution / DisplayRate` 计算,与 SourceTimecode 无关 → 几何完全不变。
+**预期**:TimecodeSource 只影响 Sequencer UI 显示和 `GetEarliestTimecodeSource()` 查询,evaluator 用 `TickResolution / DisplayRate` 计算,与 TimecodeSource 无关 → 几何完全不变。
 
-**验证**:
-- take_4 完整 import + Sequencer scrub + MRQ 渲染 1 帧 静态 diff vs 现有 baseline,残差应在数值噪声范围
-- 若 fail → SourceTimecode 注入位置错(可能动到 frame rate / playback range 间接影响),回退到注入前检查
+**验证**:take_4 完整 import + Sequencer scrub + MRQ 渲一帧 静态 diff vs 现有 baseline,残差应在数值噪声范围。
 
 ### 8.7 状态污染防护
 
-延续现有"asset mutation 之前 fail-fast"原则:
+延续"asset mutation 之前 fail-fast"原则:
 
 ```
 Step 0  pre-validate overscan (已有)
-Step 0a pre-validate CSV timecode 等价性 ← 新增
-Step 0b pre-validate plate video readable + has embedded TC ← 新增 (若指定 plate)
+Step 0a pre-validate CSV timecode 等价性 ← 新增 (P0)
 Step 1  清空 + 重建 LevelSequence (asset mutation 开始)
 Step 2  Set frame rate
-Step 2.5 Inject MovieScene SourceTimecode ← 新增
-Step 3+ ...
+Step 3  Set playback range (不变)
+Step 4  Camera Cut Section
+Step 4a Set Camera Cut Section.TimecodeSource ← 新增 (P0)
+Step 5  Build sample DataAsset
+Step 6  UPostRenderCameraSection
+Step 6a Set UPostRenderCameraSection.TimecodeSource ← 新增 (P0)
+Step 7  Save
 ```
 
-Step 0/0a/0b 全过才能进 Step 1。
+trim 在 pipeline 层已经做,sequence_builder 拿到的 `csv_result` 是 trimmed,所有 timecode 写入用 `csv_result.frames[0]` 锚点即可。
 
 ## 9. Testing & Verification
 
-### 9.1 Unit tests(pure Python,无 UE)
+### 9.1 Unit tests(pure Python)
 
 新增 `tests/test_csv_parser_timecode.py`:
-- 24fps 非 drop-frame 解析(`09:44:23:22`)
-- 29.97 drop-frame 解析(`09:44:23;22`)
+- 24fps 非 drop / 25fps / **50fps**(production case) / 29.97 drop / 59.94 drop 解析
 - 跨午夜(`23:59:58:23` → `00:00:00:01`)
-- SMPTE 等价性失败 fail-fast(伪造 timestamp ↔ frame_number 不一致的 CSV)
-- 旧 schema(legacy `camera:cam 1.timestamp`)+ 新 schema(spatialmap)双兼容
+- SMPTE 等价性失败 fail-fast
+- 旧 schema(legacy) + 新 schema(spatialmap)双兼容
 - `Timecode.to_frames` 数学(drop-frame 帧数计算正确)
+- `trim_static_padding` 后 `start_timecode / end_timecode` 跟随 trimmed 首尾
 
 新增 `tests/test_otio_export.py`:
-- timeline 结构包含 CG track + plate track
-- ImageSequenceReference 起始帧 = absolute CSV frame
-- DaVinci-compatible(用 `otio.schema.Timeline.find_clips()` 校验)
+- timeline 结构(CG track)
+- `ImageSequenceReference.start_frame == absolute trimmed first frame`
+- 两种 source_range variant 都能 serialize(具体哪个 DaVinci 喜欢由集成测试定)
 
-新增 `tests/test_mrq_exr_writer.py`(离线模式,不依赖 unreal):
-- 渲一帧灰图 EXR(用 OpenEXR Python 自己写一张)→ 跑 `write_timecode_to_exr_sequence` → 读 header 验证 `timeCode` 属性存在且数值正确
-- drop-frame 时分隔符正确
+新增 `tests/test_exr_timecode_patcher.py`(离线):
+- 渲一帧灰图 EXR → patch → 读 header 验证 `timeCode` + `framesPerSecond` 数值正确
+- drop-frame / 50fps / 25fps 三种 case
+- Multipart EXR 重 patch 后所有 part 仍可读
 
 ### 9.2 UE in-editor 集成测试(lanPC)
 
-按 take_4 / take_5 baseline 跑:
+按 take_4(50 fps 实际 production case)+ take_5(回归)跑:
 
+**P0 验证**:
 1. **回归**:take_4 完整 import,MRQ 渲 1 帧 → diff vs baseline 残差 < 数值噪声
-2. **G1 验证**:Sequencer 打开 LevelSequence,View → Show Timecode 切到 SMPTE 显示,时间轴 frame 0 显示 `09:44:23:22`(或 CSV start timecode)
-3. **G2 验证**:MRQ 渲一帧 EXR → `oiiotool --info -v render.0625914.exr` 看 header,`timeCode` 属性 = `09:44:23:22`,`framesPerSecond` = `24/1`
-4. **G3 验证**:UI 选一个带 embedded timecode 的 ProRes 文件 → "Attach Reference Plate" → Sequencer 里看到 Media Track,scrub 时 plate 跟 CG 视觉对齐
-5. **G4 验证**:渲完点 "Export OTIO" → 用 `otio.adapters.read_from_file` parse 输出 → DaVinci 19+ 导入,timeline 自动 conform
-6. **G5 验证**:渲出文件名 `render.0625914.exr`(absolute CSV frame)
-7. **G6 验证**:制造 CSV timestamp ↔ frame mismatch / plate 视频无 embedded TC,确认 fail-fast 不动 asset
+2. **G1**:Sequencer 打开 LevelSequence,View → Show Timecode 切到 SMPTE 显示,时间轴 frame 0 显示 trimmed start timecode
+3. **G5**:MRQ 用预填 job 渲 1 帧 → 文件名 = `render.0625914.exr`(或 trimmed first frame number)
+4. **G6**:制造 CSV timestamp ↔ frame mismatch,确认 fail-fast 不动 asset
+
+**P1 验证**:
+5. **G2**:渲一帧 EXR → 点 "Patch EXR Timecode" → `oiiotool --info -v` 看 `timeCode` 属性 = trimmed start timecode,`framesPerSecond` = `50/1`
+6. **G2 multipart**:patch 后所有 channels / compression / pixelAspectRatio 仍可读
+7. **G4**:点 "Export OTIO" → DaVinci 19+ import,timeline 自动按 SMPTE timecode 对齐现场视频
+
+**P2 验证**(单独 spec/plan,本 spec 不展开)
 
 ### 9.3 Cross-system conform 验证
 
-最终接受标准:把渲出的 EXR sequence + 现场 ProRes 一起拖进 DaVinci 19+,**不指定任何 timecode 参数**,timeline 自动按 SMPTE timecode 对齐。逐帧 scrub 任意位置,CG 和 plate 的时间码一致。
+最终接受标准:把渲出的 EXR sequence + 现场 ProRes 一起拖进 DaVinci 19+,**不指定任何 timecode 参数**,timeline 自动按 SMPTE timecode 对齐。逐帧 scrub,CG 和 plate 时间码一致。
 
 ## 10. Rollout
+
+按 P0 / P1 / P2 三段交付。每段独立 mergeable,跑通才动下一段。
 
 不引入 feature flag(按 [[feedback_no_temporary_runtime_switches]])。直接替换。
 
 回退路径:
-- CSV 解析层改动有 unit test 覆盖,如 regression 直接 git revert
-- MovieScene SourceTimecode 注入是新增 Step 2.5,git revert 这一段即可
-- Media Track / EXR writer / OTIO 是全新模块,删除即恢复
+- csv_parser 改动 → git revert 即可,unit test 兜底
+- sequence_builder Section TimecodeSource → 单点 revert
+- ui_interface MRQ preset → 单点 revert
+- P1/P2 模块全是新文件,删除即恢复
 
 不向后兼容旧 LevelSequence 资产:重新 `run_import` 会清空 + 重建(已有逻辑)。
 
 ## 11. Open Questions(implementation plan 阶段调研)
 
-1. `UMovieScene::SetEarliestTimecodeSource` Python 暴露面 — grep 引擎源给 `file:line` 证据
-2. `unreal.MovieSceneMediaTrack` + `FileMediaSource` Python 暴露面 — 同上
-3. MRQ output filename token 是否原生支持 absolute CSV frame mapping,还是需要 post-render rename
-4. MRQ `on_pipeline_finished` Python callback 绑定具体写法 — UE 5.7 doc + 引擎源
-5. OpenEXR Python wheel 在 UE 内置 Python(3.11)的 macOS/Windows 安装路径
+1. `unreal.FTimecode` / `unreal.FMovieSceneTimecodeSource` Python 暴露面 grep 引擎源,给 `file:line` 证据
+2. `MoviePipelineOutputSetting.frame_number_offset` Python 是否可见,fallback 是 `set_editor_property` 还是 C++ wrapper
+3. EXR header writer 三个候选(OpenEXR python / oiiotool / MRQ output 自定义)spike 选哪个 — day-1 任务
+4. OTIO `source_range` 起点用 `RationalTime(0, fps)` 还是 `RationalTime(start_csv_frame, fps)` — DaVinci import 实测
+5. P2 阶段 Reference Plate 是 timeline metadata 还是 viewport visual overlay — P2 启动前单独决策
 
 ## 12. References
 
@@ -445,6 +479,14 @@ Step 0/0a/0b 全过才能进 Step 1。
 - DataAsset schema:`Source/PostRenderTool/Public/PostRenderCameraSamples.h`
 - Evaluator frame mapping:`Source/PostRenderTool/Private/PostRenderCameraSectionTemplate.cpp:107-152`
 - 现有 timecode 字段(string-only):`Content/Python/post_render_tool/csv_parser.py:85-86,394-395,576-577`
+- `trim_static_padding`:`Content/Python/post_render_tool/csv_parser.py:388`,调用点 `pipeline.py:129`
 - 现有 playback range 归零:`Content/Python/post_render_tool/sequence_builder.py:110-114`
-- OpenEXR timecode 标准:`https://openexr.com/en/latest/OpenEXRFileLayout.html#standard-attributes`
-- OpenTimelineIO ImageSequenceReference:`https://opentimelineio.readthedocs.io/en/stable/api/python/opentimelineio.schema.html#opentimelineio.schema.ImageSequenceReference`
+- MRQ 集成现状:`Content/Python/post_render_tool/ui_interface.py:167-188`
+- Plugin 依赖现状:`Source/PostRenderTool/PostRenderTool.Build.cs:21`,`PostRenderTool.uplugin`
+- UE 5.7 Section TimecodeSource 字段:`Engine/Source/Runtime/MovieScene/Public/MovieSceneSection.h:181-198,790-793`
+- UE 5.7 GetEarliestTimecodeSource getter:`Engine/Source/Runtime/MovieScene/Private/MovieScene.cpp:1854`
+- UE 5.7 MRQ FrameNumberOffset:`Engine/Plugins/MovieScene/MovieRenderPipeline/Source/MovieRenderPipelineCore/Public/MoviePipelineOutputSetting.h:101`
+- UE 5.7 MRQ filename token expansion:`Engine/Plugins/MovieScene/MovieRenderPipeline/Source/MovieRenderPipelineCore/Private/MoviePipelineBlueprintLibrary.cpp:1059`
+- OpenEXR standard attributes:`https://openexr.com/en/latest/StandardAttributes.html`
+- OpenTimelineIO ImageSequenceReference:`https://opentimelineio.readthedocs.io/en/latest/api/python/opentimelineio.schema.html`
+- take_4 production reference(50 fps + Free Run timecode):`docs/archive/path_c/d3-production-reference-request.md:38`
