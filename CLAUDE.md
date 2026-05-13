@@ -259,6 +259,16 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   CineCameraActor + DistortionController. 要看具体数值,Content Browser 打开
   Samples DataAsset 看 Details 面板. 旧 Float Track 路径在 git 历史里
   (commit `f6f71fb` 之前), 不归档到 archive/.
+- **如何 override 单帧/少量帧** (Custom MovieScene Track 之后的工作流).
+  Custom track 的 sample DataAsset 设计上是只读的 dense tracker 数据,
+  不能在 Sequencer 里直接调任意一帧. 如果需要修正几帧 (例如修一个
+  tracker glitch / 加 jitter / 手 key 一段 zoom),正确做法是在 **同一个
+  camera binding 上额外加一条 Transform Track 或 Float Track** 打 1-2 个
+  keyframe 做 additive override. Sequencer 评估顺序: Custom track 先把
+  base sample 写到 actor → Transform/Float track 后 evaluate 覆盖
+  对应通道. 几个 keyframe 不会引起任何卡顿 (旧的 68k 帧问题源头是
+  *dense* keyframes,不是 keyframes 本身). 不要重新 import CSV 修单帧 —
+  那样会重写整个 sample DataAsset,丢失之前的所有手动修正.
 - **Path A 史料归档位置.** Runtime 代码(下架前的最后版本)在
   `archive/path_a_runtime/`。公式拟合脚本 / UV probe 资产 / k1_sweep dataset 在
   `scripts/distortion_calibration/archive/` +

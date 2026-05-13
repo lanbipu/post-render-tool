@@ -4,6 +4,15 @@
 
 #include "Algo/BinarySearch.h"
 
+void UPostRenderCameraSamples::PostLoad()
+{
+    Super::PostLoad();
+    // bIsContiguous is a derived cache. Always recompute after load —
+    // assets serialized before this field was added (or hand-edited
+    // SourceFrameNumbers) could carry a stale value.
+    RecomputeContiguity();
+}
+
 void UPostRenderCameraSamples::RecomputeContiguity()
 {
     if (SourceFrameNumbers.Num() < 2)

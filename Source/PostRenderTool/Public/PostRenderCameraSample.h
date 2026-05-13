@@ -24,27 +24,27 @@ struct POSTRENDERTOOL_API FPostRenderCameraSample
     GENERATED_BODY()
 
     // ----- Transform (CineCameraActor) -----
-    UPROPERTY(BlueprintReadWrite) float LocationX = 0.f;
-    UPROPERTY(BlueprintReadWrite) float LocationY = 0.f;
-    UPROPERTY(BlueprintReadWrite) float LocationZ = 0.f;
-    UPROPERTY(BlueprintReadWrite) float RotationPitch = 0.f;
-    UPROPERTY(BlueprintReadWrite) float RotationYaw = 0.f;
-    UPROPERTY(BlueprintReadWrite) float RotationRoll = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Transform") float LocationX = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Transform") float LocationY = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Transform") float LocationZ = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Transform") float RotationPitch = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Transform") float RotationYaw = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Transform") float RotationRoll = 0.f;
 
     // ----- CineCameraComponent -----
-    UPROPERTY(BlueprintReadWrite) float FocalLengthMM = 35.f;
-    UPROPERTY(BlueprintReadWrite) float Aperture = 8.f;
-    UPROPERTY(BlueprintReadWrite) float FocusDistanceCM = 10000.f;
+    UPROPERTY(BlueprintReadWrite, Category="Camera") float FocalLengthMM = 35.f;
+    UPROPERTY(BlueprintReadWrite, Category="Camera") float Aperture = 8.f;
+    UPROPERTY(BlueprintReadWrite, Category="Camera") float FocusDistanceCM = 10000.f;
     /** mm — mirrors UE FCameraFilmbackSettings.SensorHorizontalOffset units. */
-    UPROPERTY(BlueprintReadWrite) float SensorHorizontalOffsetMM = 0.f;
-    UPROPERTY(BlueprintReadWrite) float SensorVerticalOffsetMM = 0.f;
-    UPROPERTY(BlueprintReadWrite) float Overscan = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Camera") float SensorHorizontalOffsetMM = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Camera") float SensorVerticalOffsetMM = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Camera") float Overscan = 0.f;
 
     // ----- PostRenderDistortionControllerComponent -----
-    UPROPERTY(BlueprintReadWrite) float K1 = 0.f;
-    UPROPERTY(BlueprintReadWrite) float K2 = 0.f;
-    UPROPERTY(BlueprintReadWrite) float K3 = 0.f;
-    UPROPERTY(BlueprintReadWrite) float Aspect = 1.7778f;
+    UPROPERTY(BlueprintReadWrite, Category="Distortion") float K1 = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Distortion") float K2 = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Distortion") float K3 = 0.f;
+    UPROPERTY(BlueprintReadWrite, Category="Distortion") float Aspect = 1.7778f;
 
     /** Component-wise linear interpolation between A and B at Alpha ∈ [0,1]. */
     static FPostRenderCameraSample Lerp(

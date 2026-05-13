@@ -84,4 +84,10 @@ public:
 
     /** Recompute bIsContiguous from SourceFrameNumbers. Call after any write. */
     void RecomputeContiguity();
+
+    // ----- UObject -----
+    // Refresh bIsContiguous on load. Old saved assets (or anyone editing
+    // SourceFrameNumbers outside WriteCameraSamples) could have stale
+    // contiguity flag; recomputing on PostLoad makes the cache self-healing.
+    virtual void PostLoad() override;
 };
