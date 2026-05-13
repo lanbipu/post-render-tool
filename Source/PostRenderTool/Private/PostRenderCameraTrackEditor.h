@@ -49,15 +49,13 @@ public:
  * horizontal bar (no per-frame keyframe markers — the dense data lives
  * in the linked DataAsset, not in the section itself).
  */
-class FPostRenderCameraSection : public ISequencerSection
+class FPostRenderCameraSection : public FSequencerSection
 {
 public:
     explicit FPostRenderCameraSection(UMovieSceneSection& InSection);
 
-    // ----- ISequencerSection (minimum overrides) -----
-    virtual UMovieSceneSection* GetSectionObject() override;
+    // FSequencerSection provides default OnPaintSection / GetSectionObject /
+    // IsReadOnly / DilateSection + holds WeakSection — override only what
+    // diverges from the default horizontal-bar visualization.
     virtual FText GetSectionTitle() const override;
-
-private:
-    TWeakObjectPtr<UMovieSceneSection> WeakSection;
 };

@@ -39,13 +39,8 @@ TSharedRef<ISequencerSection> FPostRenderCameraTrackEditor::MakeSectionInterface
 // ----- Section -----
 
 FPostRenderCameraSection::FPostRenderCameraSection(UMovieSceneSection& InSection)
-    : WeakSection(&InSection)
+    : FSequencerSection(InSection)
 {
-}
-
-UMovieSceneSection* FPostRenderCameraSection::GetSectionObject()
-{
-    return WeakSection.Get();
 }
 
 FText FPostRenderCameraSection::GetSectionTitle() const
