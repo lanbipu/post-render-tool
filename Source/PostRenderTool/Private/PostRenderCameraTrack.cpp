@@ -4,7 +4,8 @@
 #include "PostRenderCameraSection.h"
 #include "PostRenderCameraSectionTemplate.h"
 
-UPostRenderCameraTrack::UPostRenderCameraTrack()
+UPostRenderCameraTrack::UPostRenderCameraTrack(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
 {
 #if WITH_EDITORONLY_DATA
     TrackTint = FColor(70, 130, 180);  // steel blue — distinguishable in Sequencer

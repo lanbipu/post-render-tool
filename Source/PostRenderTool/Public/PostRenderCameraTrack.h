@@ -8,7 +8,7 @@
 #include "PostRenderCameraTrack.generated.h"
 
 class UMovieSceneSection;
-class FMovieSceneEvalTemplate;
+struct FMovieSceneEvalTemplate;
 
 /**
  * Single-section track bound to a CineCameraActor possessable. Replaces the
@@ -26,7 +26,7 @@ class UPostRenderCameraTrack
     GENERATED_BODY()
 
 public:
-    UPostRenderCameraTrack();
+    UPostRenderCameraTrack(const FObjectInitializer& ObjectInitializer);
 
     // ----- UMovieSceneTrack -----
     virtual UMovieSceneSection* CreateNewSection() override;
