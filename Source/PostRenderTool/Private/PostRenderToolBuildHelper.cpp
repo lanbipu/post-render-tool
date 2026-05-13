@@ -354,6 +354,28 @@ bool UPostRenderToolBuildHelper::WriteCameraSamples(
             FrameRateNumerator, FrameRateDenominator);
         return false;
     }
+    if (FrameNumbers.Num() == 0)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("[BuildHelper] WriteCameraSamples: FrameNumbers empty"));
+        return false;
+    }
+    // ----- Strict-ascending invariant for evaluator's Algo::UpperBound -----
+    // csv_parser preserves CSV row order and has no duplicate / out-of-order
+    // guard; without this check, a malformed CSV would save a "valid" asset
+    // and produce silent render corruption (interpolating between wrong
+    // sample indices). Fail-fast with offending index for diagnosis.
+    for (int32 i = 1; i < FrameNumbers.Num(); ++i)
+    {
+        if (FrameNumbers[i] <= FrameNumbers[i - 1])
+        {
+            UE_LOG(LogTemp, Error,
+                TEXT("[BuildHelper] WriteCameraSamples: FrameNumbers must be strictly "
+                     "ascending; index %d frame=%d not > index %d frame=%d"),
+                i, FrameNumbers[i], i - 1, FrameNumbers[i - 1]);
+            return false;
+        }
+    }
 
     SampleAsset->Modify();
     SampleAsset->SourceFrameNumbers = FrameNumbers;

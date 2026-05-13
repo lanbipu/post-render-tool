@@ -135,11 +135,17 @@ void FPostRenderCameraSectionTemplate::Evaluate(
     // Asset frame numbers are stored in CSV space (absolute, e.g. 1000..68199).
     // The section's "first asset frame" is whatever SampleAsset->GetFirstFrame()
     // returns; section-local display offset 0 maps to it.
+    //
+    // Use FloorToFrame (NOT RoundToInt32) for the base frame. RoundToInt32 on
+    // local time 10.75 returns 11, so the bounding pair becomes 11→12 with
+    // subframe 0.75 — one frame ahead of the correct 10→11. MRQ temporal
+    // samples / motion blur / subframe scrub all hit non-integer times,
+    // making this a silent render-corruption bug under rounding semantics.
+    const FFrameTime LocalDisplayTime = DisplayTime - SectionStartDisplay;
     const int32 AssetFrameOffset =
-        FMath::RoundToInt32((DisplayTime - SectionStartDisplay).AsDecimal())
+        LocalDisplayTime.FloorToFrame().Value
         + SampleAsset->GetFirstFrame();
-    const float SubFrame =
-        (DisplayTime - SectionStartDisplay).GetSubFrame();
+    const float SubFrame = LocalDisplayTime.GetSubFrame();
 
     int32 LowerIdx, UpperIdx;
     float Alpha;
