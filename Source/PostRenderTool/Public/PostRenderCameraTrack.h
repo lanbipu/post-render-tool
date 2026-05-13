@@ -29,6 +29,9 @@ public:
     UPostRenderCameraTrack(const FObjectInitializer& ObjectInitializer);
 
     // ----- UMovieSceneTrack -----
+#if WITH_EDITORONLY_DATA
+    virtual FText GetDisplayName() const override;
+#endif
     virtual UMovieSceneSection* CreateNewSection() override;
     virtual void AddSection(UMovieSceneSection& Section) override;
     virtual bool HasSection(const UMovieSceneSection& Section) const override;

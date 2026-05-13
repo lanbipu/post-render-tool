@@ -12,6 +12,13 @@ UPostRenderCameraTrack::UPostRenderCameraTrack(const FObjectInitializer& ObjectI
 #endif
 }
 
+#if WITH_EDITORONLY_DATA
+FText UPostRenderCameraTrack::GetDisplayName() const
+{
+    return NSLOCTEXT("PostRenderCameraTrack", "DisplayName", "Post-Render Camera Track");
+}
+#endif
+
 UMovieSceneSection* UPostRenderCameraTrack::CreateNewSection()
 {
     return NewObject<UPostRenderCameraSection>(this, NAME_None, RF_Transactional);
