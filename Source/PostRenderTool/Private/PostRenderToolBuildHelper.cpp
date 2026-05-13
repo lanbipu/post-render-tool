@@ -9,6 +9,14 @@
 #include "Components/ContentWidget.h"
 #include "Components/NamedSlotInterface.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "MovieScene.h"
+#include "MovieSceneSequence.h"
+#include "PostRenderCameraSample.h"
+#include "PostRenderCameraSamples.h"
+#include "PostRenderCameraSection.h"
+#include "PostRenderCameraTrack.h"
+#include "UObject/Package.h"
 
 namespace
 {
@@ -313,4 +321,128 @@ EEnsureWidgetResult UPostRenderToolBuildHelper::EnsureWidgetInNamedSlot(
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     OutWidget = NewWidget;
     return EEnsureWidgetResult::Created;
+}
+
+// ============================================================================
+// Custom MovieScene Track bridges
+// ============================================================================
+
+bool UPostRenderToolBuildHelper::WriteCameraSamples(
+    UPostRenderCameraSamples* SampleAsset,
+    const TArray<int32>& FrameNumbers,
+    const TArray<FPostRenderCameraSample>& Samples,
+    int32 FrameRateNumerator,
+    int32 FrameRateDenominator,
+    const FString& SourceCsvPath)
+{
+    if (!SampleAsset)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[BuildHelper] WriteCameraSamples: SampleAsset is null"));
+        return false;
+    }
+    if (FrameNumbers.Num() != Samples.Num())
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("[BuildHelper] WriteCameraSamples: length mismatch (frames=%d, samples=%d)"),
+            FrameNumbers.Num(), Samples.Num());
+        return false;
+    }
+    if (FrameRateNumerator <= 0 || FrameRateDenominator <= 0)
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("[BuildHelper] WriteCameraSamples: invalid frame rate %d/%d"),
+            FrameRateNumerator, FrameRateDenominator);
+        return false;
+    }
+
+    SampleAsset->Modify();
+    SampleAsset->SourceFrameNumbers = FrameNumbers;
+    SampleAsset->Samples            = Samples;
+    SampleAsset->FrameRateNumerator = FrameRateNumerator;
+    SampleAsset->FrameRateDenominator = FrameRateDenominator;
+    SampleAsset->SourceCsvPath      = SourceCsvPath;
+    SampleAsset->RecomputeContiguity();
+    SampleAsset->MarkPackageDirty();
+    return true;
+}
+
+UPostRenderCameraSection* UPostRenderToolBuildHelper::EnsurePostRenderCameraTrackOnBinding(
+    UMovieSceneSequence* Sequence,
+    const FGuid& BindingGuid,
+    int32 SectionStartFrame,
+    int32 SectionEndFrame)
+{
+    if (!Sequence) return nullptr;
+    UMovieScene* MovieScene = Sequence->GetMovieScene();
+    if (!MovieScene) return nullptr;
+
+    // ----- Find or create the track -----
+    UPostRenderCameraTrack* Track = nullptr;
+    for (UMovieSceneTrack* ExistingTrack : MovieScene->FindTracks(UPostRenderCameraTrack::StaticClass(), BindingGuid))
+    {
+        Track = Cast<UPostRenderCameraTrack>(ExistingTrack);
+        if (Track) break;
+    }
+    if (!Track)
+    {
+        Track = MovieScene->AddTrack<UPostRenderCameraTrack>(BindingGuid);
+        if (!Track) return nullptr;
+    }
+    else
+    {
+        Track->Modify();
+        Track->RemoveAllAnimationData();
+    }
+
+    // ----- Create the single section -----
+    UMovieSceneSection* NewSection = Track->CreateNewSection();
+    UPostRenderCameraSection* TypedSection = Cast<UPostRenderCameraSection>(NewSection);
+    if (!TypedSection) return nullptr;
+
+    // Convert display-rate frame numbers to tick-resolution range.
+    const FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+    const FFrameRate TickResolution = MovieScene->GetTickResolution();
+    const FFrameNumber StartTicks = FFrameRate::TransformTime(
+        FFrameTime(FFrameNumber(SectionStartFrame)), DisplayRate, TickResolution).FrameNumber;
+    const FFrameNumber EndTicks = FFrameRate::TransformTime(
+        FFrameTime(FFrameNumber(SectionEndFrame)), DisplayRate, TickResolution).FrameNumber;
+
+    TypedSection->SetRange(TRange<FFrameNumber>(StartTicks, EndTicks));
+    Track->AddSection(*TypedSection);
+    return TypedSection;
+}
+
+UPostRenderCameraSamples* UPostRenderToolBuildHelper::CreateOrLoadCameraSamplesAsset(
+    const FString& PackagePath,
+    const FString& AssetName)
+{
+    const FString FullPath = PackagePath / AssetName;
+
+    // Try load first (idempotent re-import).
+    UObject* Existing = StaticLoadObject(UPostRenderCameraSamples::StaticClass(),
+                                        nullptr, *FullPath);
+    if (Existing)
+    {
+        return Cast<UPostRenderCameraSamples>(Existing);
+    }
+
+    // Create a new package + DataAsset.
+    UPackage* NewPackage = CreatePackage(*FullPath);
+    if (!NewPackage)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[BuildHelper] CreatePackage failed: %s"), *FullPath);
+        return nullptr;
+    }
+    NewPackage->FullyLoad();
+
+    UPostRenderCameraSamples* NewAsset = NewObject<UPostRenderCameraSamples>(
+        NewPackage, *AssetName, RF_Public | RF_Standalone | RF_Transactional);
+    if (!NewAsset)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[BuildHelper] NewObject<UPostRenderCameraSamples> failed"));
+        return nullptr;
+    }
+    FAssetRegistryModule::AssetCreated(NewAsset);
+    NewAsset->MarkPackageDirty();
+    return NewAsset;
 }
