@@ -21,6 +21,7 @@ import unreal
 
 from . import config
 from .csv_parser import CsvParseError, parse_csv_dense
+from .path_display import format_middle_ellipsis_path
 from .pipeline import PipelineResult, run_import
 from .ui_interface import (
     browse_csv_file,
@@ -281,7 +282,7 @@ class PostRenderToolUI:
             return
 
         self._csv_path = csv_path
-        self._set_text("txt_file_path", csv_path)
+        self._set_text("txt_file_path", format_middle_ellipsis_path(csv_path))
 
         try:
             result = parse_csv_dense(csv_path)
