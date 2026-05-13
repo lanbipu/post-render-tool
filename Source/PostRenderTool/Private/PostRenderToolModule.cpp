@@ -6,6 +6,8 @@
 #include "IPythonScriptPlugin.h"
 #include "ToolMenus.h"
 #include "Framework/Commands/UICommandList.h"
+#include "ISequencerModule.h"
+#include "PostRenderCameraTrackEditor.h"
 
 #define LOCTEXT_NAMESPACE "FPostRenderToolModule"
 
@@ -34,10 +36,32 @@ void FPostRenderToolModule::StartupModule()
         ToolMenusStartupHandle = UToolMenus::RegisterStartupCallback(
             FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FPostRenderToolModule::RegisterMenus));
     }
+
+    // ====================================================================
+    // Sequencer custom-track registration. Without this, opening any
+    // LevelSequence that contains a UPostRenderCameraTrack crashes
+    // Sequencer (TSharedPtr null assert when probing the track for its
+    // editor representation).
+    // ====================================================================
+    ISequencerModule& SequencerModule = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer");
+    PostRenderCameraTrackEditorHandle = SequencerModule.RegisterTrackEditor(
+        FOnCreateTrackEditor::CreateStatic(&FPostRenderCameraTrackEditor::CreateTrackEditor));
+    UE_LOG(LogTemp, Log,
+        TEXT("[PostRenderTool] Registered FPostRenderCameraTrackEditor with Sequencer."));
 }
 
 void FPostRenderToolModule::ShutdownModule()
 {
+    // Sequencer track-editor unregistration. Guard by IsModuleLoaded:
+    // during editor shutdown the Sequencer module may already be torn
+    // down, in which case unregistering would crash.
+    if (FModuleManager::Get().IsModuleLoaded("Sequencer"))
+    {
+        ISequencerModule& SequencerModule = FModuleManager::GetModuleChecked<ISequencerModule>("Sequencer");
+        SequencerModule.UnRegisterTrackEditor(PostRenderCameraTrackEditorHandle);
+    }
+    PostRenderCameraTrackEditorHandle.Reset();
+
     if (ToolMenusStartupHandle.IsValid())
     {
         UToolMenus::UnRegisterStartupCallback(ToolMenusStartupHandle);

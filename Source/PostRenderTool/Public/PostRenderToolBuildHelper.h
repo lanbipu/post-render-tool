@@ -10,6 +10,10 @@ class UWidgetBlueprint;
 class UWidget;
 class UPanelWidget;
 class UPanelSlot;
+class UPostRenderCameraSamples;
+class UPostRenderCameraSection;
+class UMovieSceneSequence;
+struct FPostRenderCameraSample;
 
 UENUM(BlueprintType)
 enum class EEnsureWidgetResult : uint8
@@ -116,4 +120,57 @@ public:
                                                       UWidget* NamedSlotParent,
                                                       FName SlotName,
                                                       UWidget*& OutWidget);
+
+    // ====================================================================
+    // Custom MovieScene Track bridges
+    // ====================================================================
+
+    /**
+     * One-shot write of all dense per-frame measurements into a
+     * UPostRenderCameraSamples DataAsset. Replaces 130 万 Python add_key
+     * calls with a single C++-side TArray assignment.
+     *
+     * Validates: FrameNumbers.Num() == Samples.Num() (raises log error +
+     * returns false otherwise). Calls SampleAsset->Modify() once and
+     * RecomputeContiguity() before saving.
+     */
+    UFUNCTION(BlueprintCallable, Category = "VP Post-Render Tool|Build")
+    static bool WriteCameraSamples(
+        UPostRenderCameraSamples* SampleAsset,
+        const TArray<int32>& FrameNumbers,
+        const TArray<FPostRenderCameraSample>& Samples,
+        int32 FrameRateNumerator,
+        int32 FrameRateDenominator,
+        const FString& SourceCsvPath);
+
+    /**
+     * Find-or-create a UPostRenderCameraTrack on the given binding, with one
+     * UPostRenderCameraSection covering [0, FrameCount) (display rate).
+     * Returns the section so caller can attach the SampleAsset.
+     *
+     * Idempotent: if a track of this type already exists on the binding,
+     * removes its sections and reuses the track (matches the existing
+     * "clear bindings + recreate" pattern in sequence_builder.py).
+     */
+    UFUNCTION(BlueprintCallable, Category = "VP Post-Render Tool|Build")
+    static UPostRenderCameraSection* EnsurePostRenderCameraTrackOnBinding(
+        UMovieSceneSequence* Sequence,
+        const FGuid& BindingGuid,
+        int32 SectionStartFrame,
+        int32 SectionEndFrame);
+
+    /**
+     * Find-or-create a UPostRenderCameraSamples DataAsset at the given
+     * package path. Bypasses the Python-side missing-factory problem
+     * (UDataAsset has no default UFactory exposed to AssetTools).
+     *
+     * If asset exists at PackagePath/AssetName, loads and returns it.
+     * Otherwise creates a new UPostRenderCameraSamples package, names it,
+     * MarkPackageDirty + saves. Caller is responsible for subsequent
+     * WriteCameraSamples + EditorAssetLibrary.save_asset.
+     */
+    UFUNCTION(BlueprintCallable, Category = "VP Post-Render Tool|Build")
+    static UPostRenderCameraSamples* CreateOrLoadCameraSamplesAsset(
+        const FString& PackagePath,
+        const FString& AssetName);
 };

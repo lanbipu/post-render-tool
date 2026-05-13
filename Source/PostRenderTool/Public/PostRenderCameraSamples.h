@@ -1,0 +1,93 @@
+// Copyright VP Post-Render Tool contributors. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Engine/DataAsset.h"
+#include "PostRenderCameraSample.h"
+#include "PostRenderCameraSamples.generated.h"
+
+/**
+ * Sample DataAsset for one CSV take. Stored separately from the LevelSequence
+ * so the same take can be referenced by multiple sequences and so sequence
+ * asset serialization stays small.
+ *
+ * Schema invariants (validated in WriteCameraSamples bridge):
+ *   - SourceFrameNumbers.Num() == Samples.Num()
+ *   - SourceFrameNumbers strictly ascending (no duplicates, allows gaps)
+ *   - FrameRate > 0
+ *
+ * bIsContiguous is recomputed on every write; downstream evaluator branches
+ * on it (O(1) direct index vs. O(log N) binary search).
+ */
+UCLASS(BlueprintType)
+class POSTRENDERTOOL_API UPostRenderCameraSamples : public UDataAsset
+{
+    GENERATED_BODY()
+
+public:
+    /** CSV source frame numbers (strictly ascending, may have gaps).
+     *  Same length as Samples. Stored as int32 because UE FFrameNumber
+     *  internally is int32 and Sequencer's display-rate frame indices fit. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Samples")
+    TArray<int32> SourceFrameNumbers;
+
+    /** Per-frame measurements, one entry per SourceFrameNumbers entry. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Samples")
+    TArray<FPostRenderCameraSample> Samples;
+
+    /** Cached at write time: true iff SourceFrameNumbers is a strictly +1
+     *  ascending run (no gaps). Lets evaluator do O(1) direct index. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Samples")
+    bool bIsContiguous = true;
+
+    // ----- Metadata (for debugging / future migration) -----
+
+    /** Display rate numerator (e.g. 24000 for 23.976). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Metadata")
+    int32 FrameRateNumerator = 24;
+
+    /** Display rate denominator (e.g. 1001 for 23.976). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Metadata")
+    int32 FrameRateDenominator = 1;
+
+    /** Originating CSV path (for traceability — not used at runtime). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Metadata")
+    FString SourceCsvPath;
+
+    /** Bumped manually when sample schema changes incompatibly. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Metadata")
+    int32 SchemaVersion = 1;
+
+    /** First / last source frame number for quick range checks. */
+    int32 GetFirstFrame() const
+    {
+        return SourceFrameNumbers.Num() > 0 ? SourceFrameNumbers[0] : 0;
+    }
+    int32 GetLastFrame() const
+    {
+        return SourceFrameNumbers.Num() > 0
+            ? SourceFrameNumbers.Last()
+            : 0;
+    }
+
+    /** Find the bounding samples for a given display-rate frame time.
+     *  Returns indices [LowerIdx, UpperIdx] into Samples (clamped to range).
+     *  Alpha is in [0, 1] for the fractional position between them.
+     *  Empty Samples → both indices are INDEX_NONE. */
+    void FindBoundingIndices(
+        FFrameNumber DisplayFrameNumber,
+        float SubFrame,
+        int32& OutLowerIdx,
+        int32& OutUpperIdx,
+        float& OutAlpha) const;
+
+    /** Recompute bIsContiguous from SourceFrameNumbers. Call after any write. */
+    void RecomputeContiguity();
+
+    // ----- UObject -----
+    // Refresh bIsContiguous on load. Old saved assets (or anyone editing
+    // SourceFrameNumbers outside WriteCameraSamples) could have stale
+    // contiguity flag; recomputing on PostLoad makes the cache self-healing.
+    virtual void PostLoad() override;
+};

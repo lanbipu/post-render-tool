@@ -17,6 +17,9 @@ public class PostRenderTool : ModuleRules
                 "UMG",
                 "Blutility",
                 "CinematicCamera",
+                "MovieScene",
+                "MovieSceneTracks",
+                "LevelSequence",
             }
         );
 
@@ -31,6 +34,8 @@ public class PostRenderTool : ModuleRules
                 "EditorSubsystem",
                 "ToolMenus",
                 "PythonScriptPlugin",
+                "Sequencer",
+                "MovieSceneTools",
             }
         );
     }

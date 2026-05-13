@@ -57,6 +57,28 @@
 > 也加一条 Overscan track(跟 camera 上的 Overscan 同源)。**改了 C++
 > UPROPERTY → 必须 UBT 重编 plugin + 重启 UE Editor + run_build()
 > 重生 material**。
+>
+> **2026-05-13 update #4 (Custom MovieScene Track)**: Path C 实施层从
+> "19 条 Sequencer Float Track + 1 条 Transform Track + per-frame add_key"
+> 切换到 "1 条 UPostRenderCameraTrack + UPostRenderCameraSamples DataAsset".
+> 解决 68k 帧大 CSV import 卡死 (130 万次 add_key × Section->Modify O(N²))
+> 和 Sequencer scrub 卡顿 (Curve Editor 渲染 ~130 万个 keyframe 点).
+> Evaluator 走 Sequencer 标准三段式: Evaluate (worker-thread 安全, 通过
+> SampleAsset->FindBoundingIndices 算 lerp 包围帧) → push ExecutionToken
+> → Execute (game-thread 写 actor / camera / controller + 显式调
+> RefreshMaterialParameters, 不依赖 TickComponent ordering).
+> 新加 C++ 类: FPostRenderCameraSample USTRUCT / UPostRenderCameraSamples
+> DataAsset / UPostRenderCameraSection / UPostRenderCameraTrack /
+> FPostRenderCameraSectionTemplate. Editor 侧 FPostRenderCameraTrackEditor
+> + FPostRenderCameraSection (FSequencerSection) 注册 Sequencer UI (缺
+> 这一步 Sequencer 打开 LevelSequence 会崩). Build.cs 加 MovieScene /
+> MovieSceneTracks / LevelSequence (Public), Sequencer / MovieSceneTools
+> (Private) 依赖. 每个 LevelSequence 现在配一份
+> /Game/PostRender/<csv_stem>/LS_<csv_stem>_Samples DataAsset 持 dense
+> 样本 (跟 LevelSequence 同目录). plan + 全部回归 evidence 在
+> docs/superpowers/plans/2026-05-13-custom-moviescene-track.md.
+> take_4 完整 import + Sequencer scrub + MRQ 渲染验证全部通过.
+> **改了 C++ + 加了私有模块依赖 → 必须 UBT 重编 plugin + 重启 UE Editor**.
 
 ## Project Overview
 
@@ -128,19 +150,30 @@ post_render_tool/                                       ← plugin root
 ├── PostRenderTool.uplugin                              ← plugin manifest
 ├── Source/
 │   └── PostRenderTool/
-│       ├── PostRenderTool.Build.cs                     ← module descriptor (UMG, Blutility, UnrealEd, …)
+│       ├── PostRenderTool.Build.cs                     ← module descriptor (UMG, Blutility, UnrealEd, MovieScene/MovieSceneTracks/LevelSequence Public, Sequencer/MovieSceneTools Private, …)
 │       ├── Public/
 │       │   ├── PostRenderToolModule.h                  ← empty module entry point
 │       │   ├── PostRenderToolWidget.h                  ← C++ BindWidget contract (33 UPROPERTYs)
-│       │   ├── PostRenderToolBuildHelper.h             ← C++ bridge for WidgetTree mutation (3 UFUNCTIONs)
+│       │   ├── PostRenderToolBuildHelper.h             ← C++ bridge for WidgetTree mutation + DataAsset write (6 UFUNCTIONs)
 │       │   ├── PostRenderToolCommands.h                ← FUICommandInfo for VPTool toolbar button
-│       │   └── PostRenderDistortionControllerComponent.h ← Path C: 7 Sequencer-facing UPROPERTYs (K1/K2/K3/CenterU/CenterV/Aspect/DistortionWeight) + MID 管理
+│       │   ├── PostRenderDistortionControllerComponent.h ← Path C: 7 Sequencer-facing UPROPERTYs (K1/K2/K3/CenterU/CenterV/Aspect/DistortionWeight) + MID 管理
+│       │   ├── PostRenderCameraSample.h                ← FPostRenderCameraSample USTRUCT(16 float per-frame 测量值 + 静态 Lerp)
+│       │   ├── PostRenderCameraSamples.h               ← UPostRenderCameraSamples DataAsset(dense 样本 + metadata + FindBoundingIndices)
+│       │   └── PostRenderCameraTrack.h                 ← UPostRenderCameraTrack Sequencer 自定义 track(替换旧 19 条 Float Track)
 │       └── Private/
 │           ├── PostRenderToolModule.cpp                ← toolbar + command 注册
 │           ├── PostRenderToolWidget.cpp                ← empty NativeConstruct stub
 │           ├── PostRenderToolBuildHelper.cpp
 │           ├── PostRenderToolCommands.cpp
-│           └── PostRenderDistortionControllerComponent.cpp
+│           ├── PostRenderDistortionControllerComponent.cpp
+│           ├── PostRenderCameraSamples.cpp
+│           ├── PostRenderCameraSection.h               ← UPostRenderCameraSection (持 SampleAsset 引用)
+│           ├── PostRenderCameraSection.cpp
+│           ├── PostRenderCameraTrack.cpp
+│           ├── PostRenderCameraSectionTemplate.h       ← FPostRenderCameraSectionTemplate eval template + FPostRenderCameraExecutionToken (worker→game thread 三段式)
+│           ├── PostRenderCameraSectionTemplate.cpp
+│           ├── PostRenderCameraTrackEditor.h           ← FPostRenderCameraTrackEditor + FPostRenderCameraSection(FSequencerSection)(Editor 侧, 注册 Sequencer UI)
+│           └── PostRenderCameraTrackEditor.cpp
 ├── Content/
 │   ├── Blueprints/
 │   │   └── BP_PostRenderToolWidget.uasset              ← not in upstream plugin source; first bootstrap authors once via deployment-guide.md §1.3 and commits to the project repo, later clones/deployments just sync
@@ -156,7 +189,8 @@ post_render_tool/                                       ← plugin root
 │           ├── distortion_math.py                      # Path C `official_sensor_inverse_uv` (HLSL 镜像, pure Python)
 │           ├── build_distortion_material.py            # Path C: 程序化生成 M_PRT_OfficialSensorInverse material asset (requires unreal)
 │           ├── camera_builder.py                       # CineCameraActor + Path C controller component (requires unreal)
-│           ├── sequence_builder.py                     # LevelSequence + 7 条 Path C distortion 关键帧轨 (requires unreal)
+│           ├── sequence_builder.py                     # LevelSequence + UPostRenderCameraTrack + _Samples DataAsset 一次性写入 (requires unreal)
+│           ├── sample_packer.py                        # Pure Python: CSV rows → FPostRenderCameraSample 列表 + DataAsset payload 序列化
 │           ├── pipeline.py                             # Orchestrator (requires unreal)
 │           ├── ui_interface.py                         # File dialog, sequencer, MRQ (requires unreal)
 │           ├── widget.py                               # BindWidget binder + callbacks
@@ -215,6 +249,26 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   不可调和 regression 需要回退,代码快照在 `archive/path_a_runtime/`,回退步骤见
   该目录 README.md。**不要**重新引入 LensFile 路径 —— 没经过验证就同时跑两条
   路线 = `apply_distortion` 没关时双倍畸变。
+- **per-frame 参数现在走 Custom MovieScene Track (2026-05-13),不再走 19 条 Float Track.**
+  Sequencer UI 上 camera binding 下只看到 1 条 PostRenderCameraTrack
+  (Post-Render Camera Samples horizontal section) + 1 条 Camera Cut Track —
+  这是正常状态,不是"数据丢了". 每帧 K1/K2/K3/CenterU/CenterV/Aspect/
+  Overscan/Sensor offset/transform/focal/aperture/focus_distance 全部存在
+  配对的 `LS_<csv_stem>_Samples` DataAsset 里(同目录, sample count 跟原 CSV
+  帧数一致). Evaluator 在评估时按 FFrameTime 从 DataAsset 取插值后写到
+  CineCameraActor + DistortionController. 要看具体数值,Content Browser 打开
+  Samples DataAsset 看 Details 面板. 旧 Float Track 路径在 git 历史里
+  (commit `f6f71fb` 之前), 不归档到 archive/.
+- **如何 override 单帧/少量帧** (Custom MovieScene Track 之后的工作流).
+  Custom track 的 sample DataAsset 设计上是只读的 dense tracker 数据,
+  不能在 Sequencer 里直接调任意一帧. 如果需要修正几帧 (例如修一个
+  tracker glitch / 加 jitter / 手 key 一段 zoom),正确做法是在 **同一个
+  camera binding 上额外加一条 Transform Track 或 Float Track** 打 1-2 个
+  keyframe 做 additive override. Sequencer 评估顺序: Custom track 先把
+  base sample 写到 actor → Transform/Float track 后 evaluate 覆盖
+  对应通道. 几个 keyframe 不会引起任何卡顿 (旧的 68k 帧问题源头是
+  *dense* keyframes,不是 keyframes 本身). 不要重新 import CSV 修单帧 —
+  那样会重写整个 sample DataAsset,丢失之前的所有手动修正.
 - **Path A 史料归档位置.** Runtime 代码(下架前的最后版本)在
   `archive/path_a_runtime/`。公式拟合脚本 / UV probe 资产 / k1_sweep dataset 在
   `scripts/distortion_calibration/archive/` +
