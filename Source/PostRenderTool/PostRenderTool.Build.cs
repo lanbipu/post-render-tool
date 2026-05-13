@@ -17,6 +17,9 @@ public class PostRenderTool : ModuleRules
                 "UMG",
                 "Blutility",
                 "CinematicCamera",
+                "MovieScene",
+                "MovieSceneTracks",
+                "LevelSequence",
             }
         );
 
