@@ -20,4 +20,5 @@ private:
 
     TSharedPtr<FUICommandList> PluginCommands;
     FDelegateHandle ToolMenusStartupHandle;
+    FDelegateHandle PostRenderCameraTrackEditorHandle;
 };

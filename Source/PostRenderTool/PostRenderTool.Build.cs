@@ -34,6 +34,8 @@ public class PostRenderTool : ModuleRules
                 "EditorSubsystem",
                 "ToolMenus",
                 "PythonScriptPlugin",
+                "Sequencer",
+                "MovieSceneTools",
             }
         );
     }
