@@ -520,12 +520,8 @@ def _apply_button_content_padding(w, v):
     style = w.get_editor_property("widget_style")
     if style is None:
         return
-    margin = _margin(v)
-    for prop_name in ("normal_padding", "pressed_padding"):
-        try:
-            style.set_editor_property(prop_name, margin)
-        except Exception:  # noqa: BLE001
-            continue
+    style.set_editor_property("normal_padding", _margin(v))
+    style.set_editor_property("pressed_padding", _pressed_margin(v))
     w.set_editor_property("widget_style", style)
 
 
@@ -534,6 +530,27 @@ def _apply_content_padding(w, v):
         _apply_button_content_padding(w, v)
         return
     w.set_editor_property("content_padding", _margin(v))
+
+
+def _pressed_margin(v):
+    values = list(v)
+    if len(values) != 4:
+        return _margin(v)
+    left, top, right, bottom = [float(x) for x in values]
+    return unreal.Margin(left, top + 1.0, right, max(0.0, bottom - 1.0))
+
+
+def _apply_button_pressed_padding(w, v):
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    style.set_editor_property("pressed_padding", _margin(v))
+    w.set_editor_property("widget_style", style)
+
+
+def _apply_pressed_padding(w, v):
+    if isinstance(w, unreal.Button):
+        _apply_button_pressed_padding(w, v)
 
 
 def _apply_has_down_arrow(w, v):
@@ -686,6 +703,26 @@ def _apply_button_background_color(w, v):
     w.set_editor_property("widget_style", style)
 
 
+def _apply_button_state_color(w, state_name: str, v):
+    style = w.get_editor_property("widget_style")
+    if style is None:
+        return
+    brush = style.get_editor_property(state_name) or unreal.SlateBrush()
+    _configure_brush(brush, rgba=v)
+    style.set_editor_property(state_name, brush)
+    w.set_editor_property("widget_style", style)
+
+
+def _apply_button_hovered_color(w, v):
+    if isinstance(w, unreal.Button):
+        _apply_button_state_color(w, "hovered", v)
+
+
+def _apply_button_pressed_color(w, v):
+    if isinstance(w, unreal.Button):
+        _apply_button_state_color(w, "pressed", v)
+
+
 def _apply_background_color(w, v):
     """Dispatch BackgroundColor — Buttons tint widget_style, others set prop directly."""
     if isinstance(w, unreal.Button):
@@ -699,6 +736,8 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "BrushColor": _apply_border_brush_color,
     "ColorAndOpacity": _apply_textblock_color_and_opacity,
     "BackgroundColor": _apply_background_color,
+    "HoveredColor": _apply_button_hovered_color,
+    "PressedColor": _apply_button_pressed_color,
     "Tint": _apply_image_tint,
     "ImageSize": _apply_image_size,
     "DrawAs": _apply_image_draw_as,
@@ -727,6 +766,7 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "ForegroundColor": _apply_foreground_color,
     "MinDesiredWidth": _apply_min_desired_width,
     "ContentPadding": _apply_content_padding,
+    "PressedPadding": _apply_pressed_padding,
     "HasDownArrow": _apply_has_down_arrow,
     "TextStyle": _apply_text_style,
     "FigmaInputStyle": _apply_figma_input_style,

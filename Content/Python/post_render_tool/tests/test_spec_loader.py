@@ -296,6 +296,25 @@ class TestProductionVisualSpecFile(unittest.TestCase):
             [20, 10, 20, 10],
         )
 
+    def test_production_spec_buttons_have_pressed_feedback(self):
+        nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
+        for name in (
+            "btn_recheck",
+            "btn_browse",
+            "btn_apply_mapping",
+            "btn_save_mapping",
+            "btn_open_seq",
+            "btn_open_mrq",
+        ):
+            props = nodes_by_name[name]["properties"]
+            self.assertEqual(props["HoveredColor"], [0.22, 0.22, 0.22, 1.0])
+            self.assertEqual(props["PressedColor"], [0.12, 0.12, 0.12, 1.0])
+            self.assertEqual(props["PressedPadding"], [14, 7, 14, 5])
+        import_props = nodes_by_name["btn_import"]["properties"]
+        self.assertEqual(import_props["HoveredColor"], [0.96, 0.5, 0.36, 1.0])
+        self.assertEqual(import_props["PressedColor"], [0.78, 0.33, 0.22, 1.0])
+        self.assertEqual(import_props["PressedPadding"], [20, 11, 20, 9])
+
     def test_production_spec_input_heights_match_figma(self):
         nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
         for name in (

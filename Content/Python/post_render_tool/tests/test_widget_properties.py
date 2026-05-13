@@ -368,7 +368,41 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
         )
         style = w.properties["widget_style"]
         self.assertEqual(style.props["normal_padding"].ltrb, (14.0, 6.0, 14.0, 6.0))
-        self.assertEqual(style.props["pressed_padding"].ltrb, (14.0, 6.0, 14.0, 6.0))
+        self.assertEqual(style.props["pressed_padding"].ltrb, (14.0, 7.0, 14.0, 5.0))
+
+    def test_apply_pressed_padding_on_button_style(self):
+        w = _unreal_stub.Button()
+        widget_properties.apply_widget_properties(
+            w,
+            {
+                "ContentPadding": [14, 6, 14, 6],
+                "PressedPadding": [14, 8, 14, 4],
+            },
+        )
+        style = w.properties["widget_style"]
+        self.assertEqual(style.props["pressed_padding"].ltrb, (14.0, 8.0, 14.0, 4.0))
+
+    def test_apply_hovered_and_pressed_color_on_button_style(self):
+        w = _unreal_stub.Button()
+        widget_properties.apply_widget_properties(
+            w,
+            {
+                "BackgroundColor": [0.18, 0.18, 0.18, 1.0],
+                "HoveredColor": [0.22, 0.22, 0.22, 1.0],
+                "PressedColor": [0.12, 0.12, 0.12, 1.0],
+            },
+        )
+        style = w.properties["widget_style"]
+        hovered_rgba = style.props["hovered"].props["tint_color"].props[
+            "specified_color"
+        ].rgba
+        pressed_rgba = style.props["pressed"].props["tint_color"].props[
+            "specified_color"
+        ].rgba
+        self.assertAlmostEqual(hovered_rgba[0], 0.0396819, places=6)
+        self.assertAlmostEqual(pressed_rgba[0], 0.0134117, places=6)
+        self.assertEqual(hovered_rgba[3], 1.0)
+        self.assertEqual(pressed_rgba[3], 1.0)
 
     def test_apply_tint_on_image(self):
         w = _unreal_stub.Image()
