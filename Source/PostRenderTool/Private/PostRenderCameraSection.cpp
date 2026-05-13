@@ -4,7 +4,6 @@
 
 UPostRenderCameraSection::UPostRenderCameraSection()
 {
-    EvalOptions.EnableSize = true;
     EvalOptions.CompletionMode = EMovieSceneCompletionMode::KeepState;
     bSupportsInfiniteRange = false;
 }

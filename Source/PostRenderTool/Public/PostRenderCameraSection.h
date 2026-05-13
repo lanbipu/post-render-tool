@@ -27,6 +27,6 @@ public:
     /** The sample DataAsset this section evaluates. Hard reference because
      *  evaluation runs every frame in MRQ — soft refs would force a load
      *  spike on first eval. */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PostRender")
     TObjectPtr<UPostRenderCameraSamples> SampleAsset;
 };
