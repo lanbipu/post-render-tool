@@ -60,22 +60,10 @@
                   12,
                   12
                 ],
-                "h_align": "Left",
+                "h_align": "Fill",
                 "v_align": "Top"
               },
               "children": [
-                {
-                  "type": "Spacer",
-                  "name": "lbl_figma_width_spacer",
-                  "role": "decorative",
-                  "properties": {
-                    "Size": [
-                      376,
-                      0
-                    ],
-                    "Visibility": "SelfHitTestInvisible"
-                  }
-                },
                 {
                   "type": "Border",
                   "name": "lbl_card_prereq",

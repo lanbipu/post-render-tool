@@ -180,17 +180,11 @@ class TestProductionVisualSpecFile(unittest.TestCase):
             "/Script/PostRenderTool.PostRenderToolWidget",
         )
 
-    def test_production_spec_constrains_content_to_figma_width(self):
+    def test_production_spec_content_fills_window_width(self):
         nodes_by_name = {node["name"]: node for node in self._walk_nodes(self.spec)}
         sections = nodes_by_name["lbl_sections"]
-        self.assertEqual(sections["slot"]["h_align"], "Left")
-        width_spacer = nodes_by_name["lbl_figma_width_spacer"]
-        self.assertEqual(width_spacer["type"], "Spacer")
-        self.assertEqual(width_spacer["properties"]["Size"], [376, 0])
-        self.assertEqual(
-            sections["children"][0]["name"],
-            "lbl_figma_width_spacer",
-        )
+        self.assertEqual(sections["slot"]["h_align"], "Fill")
+        self.assertNotIn("lbl_figma_width_spacer", nodes_by_name)
 
     def test_production_spec_keeps_required_contract(self):
         req, opt, _dec = collect_contract_names(self.spec)
