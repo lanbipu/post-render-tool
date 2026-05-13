@@ -51,9 +51,7 @@ void UPostRenderCameraTrack::RemoveSectionAt(int32 SectionIndex)
 
 const TArray<UMovieSceneSection*>& UPostRenderCameraTrack::GetAllSections() const
 {
-    // UE 5.7 expects TArray<UMovieSceneSection*> not TArray<TObjectPtr<...>>;
-    // reinterpret_cast is the established pattern (see UMovieSceneFloatTrack).
-    return *reinterpret_cast<const TArray<UMovieSceneSection*>*>(&Sections);
+    return Sections;
 }
 
 bool UPostRenderCameraTrack::SupportsType(TSubclassOf<UMovieSceneSection> SectionClass) const

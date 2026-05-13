@@ -46,5 +46,5 @@ public:
 
 private:
     UPROPERTY()
-    TArray<TObjectPtr<UMovieSceneSection>> Sections;
+    TArray<UMovieSceneSection*> Sections;
 };
