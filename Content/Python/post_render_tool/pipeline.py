@@ -350,7 +350,13 @@ def run_export_otio(
     samples = _load_sample_asset_for_sequence(level_sequence_asset_path)
     start_tc = _read_start_timecode_from_sample(samples)
     first_frame = int(samples.source_frame_numbers[0])
-    frame_count = len(samples.source_frame_numbers)
+    last_frame = int(samples.source_frame_numbers[-1])
+    # Timeline span on disk, not sample count: csv_parser can skip tracker-
+    # drop rows (csv_parser.py:563), and DataAsset schema explicitly allows
+    # gaps (PostRenderCameraSamples.h:18). MRQ renders every frame in the
+    # span, so OTIO must describe the full span — otherwise DaVinci/Nuke
+    # clip the timeline short by the gap count.
+    frame_count = last_frame - first_frame + 1
     fps = samples.frame_rate_numerator / samples.frame_rate_denominator
 
     # Shot name = LevelSequence asset name (last path segment before `.`)

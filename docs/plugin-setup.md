@@ -21,6 +21,24 @@ from scratch. Follow in order.
   - `PythonScriptPlugin` / `EditorScriptingUtilities` — auto-enabled by
     this plugin's `.uplugin`, no manual action needed
 
+### P1 timecode-sync (optional — only if using EXR / OTIO conform helpers)
+
+`Patch EXR Timecode` and `Export OTIO Sidecar` widget buttons need two
+extra dependencies on the host machine (not inside UE):
+
+- **OpenImageIO CLI** — provides `oiiotool` for writing typed SMPTE
+  `timeCode` + `framesPerSecond` attributes into MRQ-rendered EXR files
+  (so DaVinci 19+ / Nuke / Flame auto-conform).
+  - macOS: `brew install openimageio`
+  - Windows: `scoop install openimageio` (or the OpenImageIO MSI)
+- **OpenTimelineIO** — Python wheel for the `.otio` sidecar writer.
+  Installed into the UE-embedded Python 3.11:
+  - macOS / Linux: `<UE5.7>/Engine/Binaries/ThirdParty/Python3/.../python3 -m pip install opentimelineio`
+  - Windows: `"D:\Program Files\Epic Games\UE_5.7\Engine\Binaries\ThirdParty\Python3\Win64\python.exe" -m pip install opentimelineio`
+
+Without these, the P0 import pipeline still works; only the P1 conform
+helpers error out with install instructions.
+
 ## 2. Install the plugin
 
 ### Option A — Symlink (recommended for development)

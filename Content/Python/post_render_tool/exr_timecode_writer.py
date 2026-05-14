@@ -100,10 +100,39 @@ def _frame_to_timecode(start: Timecode, offset_frames: int) -> Timecode:
     )
 
 
+_UNRESOLVED_TOKEN_RE = re.compile(r"\{(?!frame:)\w+\}")
+
+
+def _validate_filename_pattern(pattern: str) -> None:
+    """Catch subdir / unresolved MRQ tokens before silent zero-count match."""
+    # MRQ formats like `{sequence_name}/render.{frame_number}` produce
+    # patterns with `/` after token resolution. patch_exr_timecode_in_dir
+    # only scans the top-level dir, so subdir patterns silently fail.
+    if "/" in pattern or "\\" in pattern:
+        raise ValueError(
+            f"filename_pattern contains a path separator ({pattern!r}); "
+            "this is usually because MRQ file_name_format includes a "
+            "subdirectory token (e.g. '{sequence_name}/render.{frame_number}'). "
+            "Point `output_dir` at the resolved subdirectory and pass only "
+            "the basename portion of the pattern, e.g. 'render.{frame:07d}.exr'."
+        )
+    # Unresolved MRQ tokens (e.g. {shot_name}, {date}, {render_pass}) survive
+    # `_filename_pattern_to_regex` as escaped literals and never match.
+    remaining = _UNRESOLVED_TOKEN_RE.findall(pattern)
+    if remaining:
+        raise ValueError(
+            f"filename_pattern has unresolved tokens {remaining}: {pattern!r}; "
+            "derive_mrq_filename_pattern only resolves {sequence_name} + "
+            "{frame_number}. Remove other MRQ tokens from file_name_format "
+            "or pass an explicit pattern."
+        )
+
+
 def _filename_pattern_to_regex(pattern: str) -> re.Pattern:
     """Convert `"render.{frame:07d}.exr"` → compiled regex with the frame
     number as group 1.
     """
+    _validate_filename_pattern(pattern)
     placeholder = re.compile(r"\{frame:(\d+)d\}")
     parts: list[str] = []
     last_end = 0

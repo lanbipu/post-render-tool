@@ -546,11 +546,19 @@ class PostRenderToolUI:
         pattern, _pad = derive_mrq_filename_pattern(ls_path)
         try:
             res = run_patch_exr_timecode(ls_path, output_dir, pattern)
-            self._set_results(
-                f"Patched {res['patched_count']} EXR file(s) with "
-                f"start_timecode={res['start_timecode']} in:\n"
-                f"{output_dir}\npattern: {pattern}"
-            )
+            count = res["patched_count"]
+            if count == 0:
+                self._set_results(
+                    f"Patched 0 EXR — pattern {pattern!r} 不匹配 "
+                    f"{output_dir} 里任何文件。检查 MRQ 实际写文件名 + "
+                    "file_name_format / zero_pad_frame_numbers。"
+                )
+            else:
+                self._set_results(
+                    f"Patched {count} EXR file(s) with "
+                    f"start_timecode={res['start_timecode']} in:\n"
+                    f"{output_dir}\npattern: {pattern}"
+                )
         except Exception as exc:  # noqa: BLE001
             self._set_results(f"Patch EXR timecode 失败: {exc}")
 
