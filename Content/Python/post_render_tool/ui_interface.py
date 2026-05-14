@@ -275,6 +275,60 @@ def _apply_csv_frame_filename_offset(job, level_sequence) -> bool:
     return True
 
 
+def derive_mrq_filename_pattern(
+    level_sequence_asset_path: str,
+    output_format: str = "exr",
+) -> "tuple[str, int]":
+    """Derive the actual EXR filename pattern from MRQ queue's last job,
+    so P1 patch_exr / export_otio can match real rendered files.
+
+    Returns `(filename_pattern, zero_pad)` — pattern uses Python format
+    syntax (`{frame:07d}`) ready for `patch_exr_timecode_in_dir`.
+
+    MRQ `file_name_format` is token-based (e.g. `{sequence_name}.{frame_number}`).
+    We resolve `{sequence_name}` to the LS asset name and `{frame_number}` to
+    `{frame:0<N>d}` where N is `zero_pad_frame_numbers`. Other tokens (like
+    `{shot_name}`) get passed through as-is for the caller to decide.
+
+    Falls back to `render.{frame:07d}.exr` if no MRQ job / output setting
+    is found.
+    """
+    fallback_pattern = "render.{frame:07d}.exr"
+    fallback_pad = 7
+    try:
+        queue_subsystem = unreal.get_editor_subsystem(
+            unreal.MoviePipelineQueueSubsystem
+        )
+        if queue_subsystem is None:
+            return fallback_pattern, fallback_pad
+        queue = queue_subsystem.get_queue()
+        jobs = queue.get_jobs()
+        if not jobs:
+            return fallback_pattern, fallback_pad
+        # Last job is the one most recently added (sequence_builder.run_import
+        # → widget._on_open_mrq triggers create_job_from_sequence).
+        job = jobs[-1]
+        output_setting = job.get_configuration().find_or_add_setting_by_class(
+            unreal.MoviePipelineOutputSetting
+        )
+        fmt = str(output_setting.get_editor_property("file_name_format"))
+        pad = int(output_setting.get_editor_property("zero_pad_frame_numbers"))
+        if "{frame_number}" not in fmt:
+            return fallback_pattern, fallback_pad
+        # Resolve {sequence_name} from LS asset name
+        ls_name = level_sequence_asset_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        resolved = fmt.replace("{sequence_name}", ls_name)
+        # Replace {frame_number} with Python format placeholder
+        resolved = resolved.replace("{frame_number}", f"{{frame:0{pad}d}}")
+        # Append output extension
+        return resolved + f".{output_format}", pad
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(
+            f"[ui_interface] derive_mrq_filename_pattern fallback: {exc}"
+        )
+        return fallback_pattern, fallback_pad
+
+
 def _find_csv_frame_bounds_from_sequence(level_sequence):
     """遍历 sequence bindings → UPostRenderCameraTrack → sections →
     sample_asset 拿 (first, last) CSV frame numbers.

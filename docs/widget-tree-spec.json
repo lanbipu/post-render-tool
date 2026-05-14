@@ -4045,25 +4045,40 @@
       "name": "txt_render_output_dir",
       "role": "optional",
       "properties": {
-        "HintText": "Render output directory (P1: EXR timecode patch / OTIO export)",
-        "Visibility": "Collapsed"
+        "HintText": "Render output directory (P1: EXR timecode patch / OTIO export)"
       }
     },
     {
       "type": "Button",
       "name": "btn_patch_exr_timecode",
       "role": "optional",
-      "properties": {
-        "Visibility": "Collapsed"
-      }
+      "children": [
+        {
+          "type": "TextBlock",
+          "name": "lbl_btn_patch_exr_text",
+          "role": "decorative",
+          "properties": {
+            "Text": "Patch EXR Timecode",
+            "Visibility": "SelfHitTestInvisible"
+          }
+        }
+      ]
     },
     {
       "type": "Button",
       "name": "btn_export_otio",
       "role": "optional",
-      "properties": {
-        "Visibility": "Collapsed"
-      }
+      "children": [
+        {
+          "type": "TextBlock",
+          "name": "lbl_btn_export_otio_text",
+          "role": "decorative",
+          "properties": {
+            "Text": "Export OTIO Sidecar",
+            "Visibility": "SelfHitTestInvisible"
+          }
+        }
+      ]
     }
   ]
 }

@@ -511,14 +511,16 @@ class PostRenderToolUI:
         output_dir = self._get_render_output_dir()
         if output_dir is None:
             return
+        ls_path = self._last_result.level_sequence_path
+        from .ui_interface import derive_mrq_filename_pattern
         from .pipeline import run_patch_exr_timecode
+        pattern, _pad = derive_mrq_filename_pattern(ls_path)
         try:
-            res = run_patch_exr_timecode(
-                self._last_result.level_sequence_path, output_dir
-            )
+            res = run_patch_exr_timecode(ls_path, output_dir, pattern)
             self._set_results(
                 f"Patched {res['patched_count']} EXR file(s) with "
-                f"start_timecode={res['start_timecode']} in:\n{output_dir}"
+                f"start_timecode={res['start_timecode']} in:\n"
+                f"{output_dir}\npattern: {pattern}"
             )
         except Exception as exc:  # noqa: BLE001
             self._set_results(f"Patch EXR timecode 失败: {exc}")
@@ -533,13 +535,16 @@ class PostRenderToolUI:
         ls_path = self._last_result.level_sequence_path
         shot_name = ls_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
         sidecar = output_dir.rstrip("/").rstrip("\\") + f"/{shot_name}.otio"
+        from .ui_interface import derive_mrq_filename_pattern
         from .pipeline import run_export_otio
+        pattern, _pad = derive_mrq_filename_pattern(ls_path)
         try:
-            res = run_export_otio(ls_path, output_dir, sidecar)
+            res = run_export_otio(ls_path, output_dir, sidecar, pattern)
             self._set_results(
                 f"OTIO sidecar written: {res['sidecar_path']}\n"
                 f"frame_count={res['frame_count']}, "
-                f"start_timecode={res['start_timecode']}"
+                f"start_timecode={res['start_timecode']}\n"
+                f"pattern: {pattern}"
             )
         except Exception as exc:  # noqa: BLE001
             self._set_results(f"Export OTIO 失败: {exc}")
