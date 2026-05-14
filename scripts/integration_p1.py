@@ -1,5 +1,16 @@
 """P1 integration test — run_patch_exr_timecode + run_export_otio.
 
+2026-05-14 backend swap: EXR patcher uses oiio-static-python Python
+wheel in-process (OpenImageIO 3.0.8.1 statically built, same C++
+library that backs oiiotool). lanPC UE Python must have
+`oiio-static-python==3.0.8.1.1` installed via `pip install --user`
+(same pattern as opentimelineio).
+
+Verification via two independent paths:
+  1) OIIO Python read-back (`buf.spec().getattribute(...)`)
+  2) exrheader.exe ground truth (from C:/Tools/miniforge3/Library/bin/
+     on lanPC; brew install openimageio on dev Mac)
+
 Pre-requisite: take_4 already imported (LevelSequence + sample DataAsset
 at /Game/PostRender/test_take_4_dense/). P0 集成测试已 set up。
 
@@ -77,26 +88,39 @@ def main() -> None:
     samples = unreal.EditorAssetLibrary.load_asset(ls_path + "_Samples")
     first_frame = int(samples.source_frame_numbers[0])
 
-    have_oiiotool = shutil.which("oiiotool") is not None
-    have_exrheader = shutil.which("exrheader") is not None
-    if not have_oiiotool:
+    have_oiio = False
+    try:
+        import OpenImageIO as oiio
+        import numpy as np  # noqa: F401
+        have_oiio = True
+    except ImportError:
         unreal.log_warning(
-            "[P1_INTEG] oiiotool not on lanPC PATH — EXR patcher tests "
-            "SKIPPED. Run `scoop install openimageio` on lanPC."
+            "[P1_INTEG] oiio-static-python not installed in UE Python — "
+            "EXR patcher tests SKIPPED. Install: "
+            "`<UE>/Engine/Binaries/ThirdParty/Python3/Win64/python.exe "
+            "-m pip install --user oiio-static-python==3.0.8.1.1`"
         )
 
-    if have_oiiotool:
-        # Generate mock EXR matching derived pattern.
+    exrheader_exe = r"C:\Tools\miniforge3\Library\bin\exrheader.exe"
+    have_exrheader = os.path.exists(exrheader_exe)
+    if not have_exrheader:
+        unreal.log_warning(
+            "[P1_INTEG] exrheader.exe not at Miniforge3 location — "
+            "skipping typed-attribute ground-truth cross-check."
+        )
+
+    if have_oiio:
         for offset in range(3):
             frame = first_frame + offset
             filename = pattern.format(frame=frame)
             fpath = os.path.join(test_dir, filename)
             try:
-                subprocess.check_call([
-                    "oiiotool", "--create", "4x4", "3",
-                    "--fill:color=0.5,0.5,0.5", "4x4",
-                    "-o", fpath,
-                ])
+                spec = oiio.ImageSpec(4, 4, 3, "half")
+                spec.attribute("compression", "zip")
+                buf = oiio.ImageBuf(spec)
+                oiio.ImageBufAlgo.fill(buf, (0.5, 0.5, 0.5))
+                if not buf.write(fpath):
+                    raise RuntimeError(buf.geterror())
             except Exception as e:
                 _verify(f"generate mock EXR offset={offset}", False, str(e))
                 return
@@ -115,23 +139,36 @@ def main() -> None:
             _verify("run_patch_exr_timecode runs", False, repr(e))
             return
 
+        first_filename = pattern.format(frame=first_frame)
+        first_path = os.path.join(test_dir, first_filename)
+        try:
+            chk = oiio.ImageBuf(first_path)
+            tc = chk.spec().getattribute("smpte:TimeCode")
+            fps_attr = chk.spec().getattribute("FramesPerSecond")
+            _verify("EXR has smpte:TimeCode attribute",
+                    tc is not None,
+                    f"got {tc!r}")
+            _verify("EXR has rational FramesPerSecond",
+                    fps_attr is not None and tuple(fps_attr) == (50, 1),
+                    f"got {fps_attr!r}")
+        except Exception as e:
+            _verify("OIIO Python attribute read", False, str(e))
+
         if have_exrheader:
-            first_filename = pattern.format(frame=first_frame)
-            first_path = os.path.join(test_dir, first_filename)
             try:
                 out = subprocess.check_output(
-                    ["exrheader", first_path], text=True,
+                    [exrheader_exe, first_path], text=True,
                     stderr=subprocess.STDOUT,
                 )
                 has_typed_tc = any(
                     "type timecode" in line.lower() for line in out.splitlines()
                 )
-                _verify("EXR has typed timeCode attribute", has_typed_tc)
                 has_rational_fps = any(
                     "framespersecond" in line.lower() and "rational" in line.lower()
                     for line in out.splitlines()
                 )
-                _verify("EXR has rational FramesPerSecond", has_rational_fps)
+                _verify("exrheader: typed timecode", has_typed_tc)
+                _verify("exrheader: rational FramesPerSecond", has_rational_fps)
             except Exception as e:
                 _verify("exrheader read", False, str(e))
 
