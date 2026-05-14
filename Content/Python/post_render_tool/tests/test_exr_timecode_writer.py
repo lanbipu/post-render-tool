@@ -1,10 +1,12 @@
 """EXR header SMPTE timecode patcher tests.
 
-Offline (no `unreal` dependency); shells out to `oiiotool` + `exrheader`
-which need to be installed (`brew install openimageio` on macOS).
+Offline (no `unreal` dependency). Uses oiio-static-python for mock-EXR
+generation + attribute read-back; uses `exrheader` (from Miniforge3 on
+lanPC; `brew install openimageio` on dev Mac) as ground-truth for
+typed-attribute verification when available.
 
-The tests skip themselves if either CLI is missing — keeps CI lean and lets
-contributors without OpenImageIO still run the rest of the suite.
+I/O tests skip if `oiio-static-python` is missing — keeps the pure-
+Python suite runnable on contributors without it installed.
 """
 from __future__ import annotations
 
@@ -15,26 +17,58 @@ import tempfile
 import unittest
 
 
-_HAVE_OIIOTOOL = shutil.which("oiiotool") is not None
+try:
+    import OpenImageIO as oiio
+    import numpy as np
+    _HAVE_OIIO = True
+except ImportError:
+    _HAVE_OIIO = False
+
 _HAVE_EXRHEADER = shutil.which("exrheader") is not None
 
 
-def _gen_test_exr(path: str) -> None:
-    """Create a 4x4 RGB EXR via oiiotool."""
-    subprocess.check_call([
-        "oiiotool",
-        "--create", "4x4", "3",
-        "--fill:color=0.5,0.5,0.5", "4x4",
-        "-o", path,
-    ])
+def _gen_test_exr(path: str, channels: int = 3) -> None:
+    """Create a 4x4 EXR via OIIO Python (default RGB)."""
+    spec = oiio.ImageSpec(4, 4, channels, "half")
+    spec.attribute("compression", "zip")
+    buf = oiio.ImageBuf(spec)
+    fill = tuple([0.5] * channels)
+    oiio.ImageBufAlgo.fill(buf, fill)
+    if not buf.write(path):
+        raise RuntimeError(f"OIIO write: {buf.geterror()}")
 
 
-def _read_exr_attribute_line(path: str, attr_name: str) -> str:
-    """Return the exrheader line containing `attr_name`, lower-cased."""
+def _read_typed_timecode(path: str):
+    """Return (time, user) tuple stored in smpte:TimeCode, or None."""
+    buf = oiio.ImageBuf(path)
+    return buf.spec().getattribute("smpte:TimeCode")
+
+
+def _read_rational_fps(path: str):
+    """Return (num, den) of FramesPerSecond, or None."""
+    buf = oiio.ImageBuf(path)
+    attr = buf.spec().getattribute("FramesPerSecond")
+    return tuple(attr) if attr is not None else None
+
+
+def _decode_smpte_time_field(val: int):
+    """Inverse of _smpte_encode_time_field — for asserting per-frame
+    increments in tests. Returns (h, m, s, f, drop_frame)."""
+    ff = (val & 0xF) + ((val >> 4) & 0x3) * 10
+    drop = bool((val >> 6) & 0x1)
+    ss = ((val >> 8) & 0xF) + ((val >> 12) & 0x7) * 10
+    mm = ((val >> 16) & 0xF) + ((val >> 20) & 0x7) * 10
+    hh = ((val >> 24) & 0xF) + ((val >> 28) & 0x3) * 10
+    return hh, mm, ss, ff, drop
+
+
+def _exrheader_grep(path: str, attr_name: str) -> str:
+    """Return the exrheader line containing `attr_name`, lower-cased.
+    Empty string if exrheader unavailable or attribute not found."""
     if not _HAVE_EXRHEADER:
         return ""
     out = subprocess.check_output(
-        ["exrheader", path], text=True, stderr=subprocess.STDOUT
+        ["exrheader", path], text=True, stderr=subprocess.STDOUT,
     )
     for line in out.splitlines():
         if attr_name.lower() in line.lower():
@@ -42,18 +76,17 @@ def _read_exr_attribute_line(path: str, attr_name: str) -> str:
     return ""
 
 
-@unittest.skipUnless(_HAVE_OIIOTOOL, "oiiotool not on PATH")
+@unittest.skipUnless(_HAVE_OIIO,
+                     "oiio-static-python not installed — "
+                     "pip install --user oiio-static-python==3.0.8.1.1")
 class TestPatchExrTimecode(unittest.TestCase):
     def setUp(self):
-        # Late import — the module triggers an oiiotool availability check
-        # at call time, but we only want to import once tests can run.
         from post_render_tool.exr_timecode_writer import (
             patch_exr_timecode_in_dir,
         )
         self.patch = patch_exr_timecode_in_dir
 
         self.tmpdir = tempfile.mkdtemp(prefix="exr_test_")
-        # Generate 3 frames with absolute frame numbers 625914..625916
         for i in range(3):
             _gen_test_exr(os.path.join(
                 self.tmpdir, f"render.{625914 + i:07d}.exr"
@@ -73,11 +106,20 @@ class TestPatchExrTimecode(unittest.TestCase):
         )
         self.assertEqual(n, 3)
         first = os.path.join(self.tmpdir, "render.0625914.exr")
+
+        tc = _read_typed_timecode(first)
+        self.assertIsNotNone(tc, "smpte:TimeCode missing after patch")
+        self.assertEqual(len(tc), 2, f"expected (time,user) tuple, got {tc!r}")
+
+        fps = _read_rational_fps(first)
+        self.assertEqual(fps, (50, 1), f"got {fps!r}")
+
+        # exrheader ground-truth cross-check.
         if _HAVE_EXRHEADER:
-            tc_line = _read_exr_attribute_line(first, "timecode")
+            tc_line = _exrheader_grep(first, "timecode")
             self.assertIn("type timecode", tc_line.lower(),
                           f"expected typed timecode, got: {tc_line!r}")
-            fps_line = _read_exr_attribute_line(first, "framesPerSecond")
+            fps_line = _exrheader_grep(first, "framesPerSecond")
             self.assertIn("rational", fps_line.lower(),
                           f"expected rational FramesPerSecond, got: {fps_line!r}")
 
@@ -90,20 +132,13 @@ class TestPatchExrTimecode(unittest.TestCase):
             Timecode.parse("10:00:00:00", 50.0),
             50.0,
         )
-        if not _HAVE_EXRHEADER:
-            self.skipTest("exrheader missing — can't verify per-frame increment")
-        # Frame 625914 -> 10:00:00:00, 625915 -> 10:00:00:01, etc.
-        # exrheader prints raw bit-packed values, but oiiotool --info -v
-        # decodes them. We use oiiotool for the value check.
         for offset, expected_ff in enumerate([0, 1, 2]):
             path = os.path.join(self.tmpdir, f"render.{625914 + offset:07d}.exr")
-            info = subprocess.check_output(
-                ["oiiotool", "--info", "-v", path], text=True,
-                stderr=subprocess.STDOUT,
-            )
-            self.assertIn(f"10:00:00:{expected_ff:02d}", info,
-                          f"frame {offset}: expected '10:00:00:{expected_ff:02d}' "
-                          f"in oiiotool info, got: {info[-200:]}")
+            tc_value = _read_typed_timecode(path)
+            h, m, s, f, _drop = _decode_smpte_time_field(tc_value[0])
+            self.assertEqual(
+                (h, m, s, f), (10, 0, 0, expected_ff),
+                f"frame {offset}: timecode drift")
 
     def test_nonexistent_dir_returns_zero(self):
         from post_render_tool.timecode import Timecode
@@ -118,9 +153,6 @@ class TestPatchExrTimecode(unittest.TestCase):
 
     def test_subdir_pattern_raises(self):
         from post_render_tool.timecode import Timecode
-        # MRQ format `{sequence_name}/render.{frame_number}` resolves to a
-        # pattern with `/` — patcher only scans top-level so this would
-        # silently match nothing. Fail fast instead.
         with self.assertRaises(ValueError) as ctx:
             self.patch(
                 self.tmpdir,
@@ -133,8 +165,6 @@ class TestPatchExrTimecode(unittest.TestCase):
 
     def test_unresolved_mrq_token_raises(self):
         from post_render_tool.timecode import Timecode
-        # `{shot_name}` left unresolved by derive_mrq_filename_pattern would
-        # silently never match. Bail with explicit error.
         with self.assertRaises(ValueError) as ctx:
             self.patch(
                 self.tmpdir,
@@ -147,8 +177,6 @@ class TestPatchExrTimecode(unittest.TestCase):
 
     def test_skips_files_below_start_frame(self):
         from post_render_tool.timecode import Timecode
-        # Add a file with absolute frame BELOW start_csv_frame; patcher
-        # should leave it alone.
         below = os.path.join(self.tmpdir, "render.0625900.exr")
         _gen_test_exr(below)
         n = self.patch(
@@ -158,7 +186,6 @@ class TestPatchExrTimecode(unittest.TestCase):
             Timecode.parse("10:00:00:00", 50.0),
             50.0,
         )
-        # 3 in-range + 1 out-of-range — only 3 patched
         self.assertEqual(n, 3)
 
 
@@ -235,8 +262,7 @@ class TestFrameToTimecodeRoundTrip(unittest.TestCase):
         self.assertLess(tc.hours, 24)
 
 
-@unittest.skipUnless(_HAVE_OIIOTOOL and _HAVE_EXRHEADER,
-                     "oiiotool + exrheader needed")
+@unittest.skipUnless(_HAVE_OIIO, "oiio-static-python not installed")
 class TestFractionalFpsRationalMetadata(unittest.TestCase):
     """FramesPerSecond must keep the exact NTSC rational (24000/1001 etc.),
     not get rounded to integer 24/1. Otherwise EXR readers drift over long
@@ -264,9 +290,16 @@ class TestFractionalFpsRationalMetadata(unittest.TestCase):
             fps,
         )
         self.assertEqual(n, 1)
-        line = _read_exr_attribute_line(path, "framesPerSecond")
-        self.assertIn(f"{exp_num}/{exp_den}", line,
-                      f"expected {exp_num}/{exp_den} for {fps}fps, got: {line}")
+        r = _read_rational_fps(path)
+        self.assertEqual(
+            r, (exp_num, exp_den),
+            f"expected {exp_num}/{exp_den} for {fps}fps, got: {r!r}",
+        )
+        # exrheader ground-truth: confirm it's stored as `type rational`.
+        if _HAVE_EXRHEADER:
+            line = _exrheader_grep(path, "framesPerSecond")
+            self.assertIn(f"{exp_num}/{exp_den}", line,
+                          f"exrheader: expected {exp_num}/{exp_den}, got: {line}")
 
     def test_23976_writes_24000_over_1001(self):
         self._check_rational(23.976, "00:00:00:00", 24000, 1001)
@@ -279,6 +312,77 @@ class TestFractionalFpsRationalMetadata(unittest.TestCase):
 
     def test_50_writes_50_over_1(self):
         self._check_rational(50.0, "00:00:00:00", 50, 1)
+
+
+@unittest.skipUnless(_HAVE_OIIO, "oiio-static-python not installed")
+class TestMultipartPreservation(unittest.TestCase):
+    """Multipart EXR rewrite must preserve every subimage with its own
+    channel layout. Regression-guards the failure mode Codex
+    adversarial review [high] flagged (ImageBuf.write per-subimage
+    collapsing multipart to last subimage)."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix="exr_test_multipart_")
+        self.path = os.path.join(self.tmpdir, "render.0000000.exr")
+        # Build a 2-subimage EXR: subimage 0 = RGB (3 ch), subimage 1 =
+        # RGBA (4 ch). Different channel counts make collapsing visible.
+        spec0 = oiio.ImageSpec(4, 4, 3, "half")
+        spec0.attribute("compression", "zip")
+        pix0 = np.full((4, 4, 3), 0.5, dtype=np.float16)
+        spec1 = oiio.ImageSpec(4, 4, 4, "half")
+        spec1.attribute("compression", "zip")
+        pix1 = np.full((4, 4, 4), 0.3, dtype=np.float16)
+
+        out = oiio.ImageOutput.create(self.path)
+        if not out.open(self.path, [spec0, spec1]):
+            self.fail(f"multipart open: {out.geterror()}")
+        if not out.write_image(pix0):
+            self.fail(f"subimage 0 write: {out.geterror()}")
+        if not out.open(self.path, spec1, "AppendSubimage"):
+            self.fail(f"AppendSubimage open: {out.geterror()}")
+        if not out.write_image(pix1):
+            self.fail(f"subimage 1 write: {out.geterror()}")
+        out.close()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_multipart_rewrite_preserves_two_subimages(self):
+        from post_render_tool.exr_timecode_writer import (
+            patch_exr_timecode_in_dir,
+        )
+        from post_render_tool.timecode import Timecode
+
+        n = patch_exr_timecode_in_dir(
+            self.tmpdir,
+            "render.{frame:07d}.exr",
+            0,
+            Timecode.parse("10:00:00:00", 50.0),
+            50.0,
+        )
+        self.assertEqual(n, 1, "patcher reported wrong file count")
+
+        # Authoritative subimage count via ImageInput.seek_subimage.
+        inp = oiio.ImageInput.open(self.path)
+        try:
+            specs = []
+            si = 0
+            while inp.seek_subimage(si, 0):
+                specs.append(inp.spec())
+                si += 1
+        finally:
+            inp.close()
+        self.assertEqual(si, 2, f"subimage count drift: {si}")
+        self.assertEqual([s.nchannels for s in specs], [3, 4],
+                         f"channel layout drift: {[s.nchannels for s in specs]}")
+        # Typed attrs must be on EVERY subimage.
+        for i, sp in enumerate(specs):
+            self.assertIsNotNone(
+                sp.getattribute("smpte:TimeCode"),
+                f"subimage {i}: smpte:TimeCode missing")
+            self.assertEqual(
+                tuple(sp.getattribute("FramesPerSecond")), (50, 1),
+                f"subimage {i}: FramesPerSecond drift")
 
 
 if __name__ == "__main__":
