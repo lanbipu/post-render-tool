@@ -12,6 +12,7 @@ class UComboBoxString;
 class UTextBlock;
 class UMultiLineEditableText;
 class UScrollBox;
+class UEditableTextBox;
 
 /**
  * Editor Utility Widget for the VP Post-Render Tool.
@@ -179,6 +180,24 @@ public:
 
     UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
     UMultiLineEditableText* txt_results;
+
+    // ======================================================================
+    // Section 5: P1 timecode-sync — EXR header patch + OTIO sidecar export
+    //
+    // BindWidgetOptional so existing BP_PostRenderToolWidget assets (P0
+    // authored, before P1 controls existed) keep compiling. When missing,
+    // widget.py logs a warning instead of crashing. User runs
+    // rebuild_from_spec() to add the controls.
+    // ======================================================================
+
+    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UEditableTextBox* txt_render_output_dir;
+
+    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UButton* btn_patch_exr_timecode;
+
+    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UButton* btn_export_otio;
 
 protected:
     virtual void NativeConstruct() override;

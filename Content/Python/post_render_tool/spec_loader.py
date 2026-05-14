@@ -28,6 +28,7 @@ EXPANDABLE_TYPES = {"ExpandableArea"}
 LEAF_TYPES = {
     "Image", "TextBlock", "Spacer",
     "SpinBox", "ComboBoxString", "MultiLineEditableText",
+    "EditableTextBox",
 }
 ALL_TYPES = PANEL_TYPES | CONTENT_TYPES | EXPANDABLE_TYPES | LEAF_TYPES
 

@@ -50,6 +50,18 @@ class PipelineResult:
     report: Optional[ValidationReport] = None
     package_path: str = ""
 
+    @property
+    def level_sequence_path(self) -> Optional[str]:
+        """Full asset path of the imported LevelSequence (or None).
+
+        Used by P1 widget callbacks (`run_patch_exr_timecode` /
+        `run_export_otio`) to locate the sample DataAsset without needing
+        a live unreal.LevelSequence reference.
+        """
+        if self.level_sequence is None:
+            return None
+        return self.level_sequence.get_path_name()
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -236,3 +248,126 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
             error_message=msg,
             package_path=package_path if "package_path" in dir() else "",
         )
+
+
+# ---------------------------------------------------------------------------
+# P1: post-render EXR timecode patcher + OTIO sidecar exporter
+# ---------------------------------------------------------------------------
+
+def _load_sample_asset_for_sequence(level_sequence_asset_path: str):
+    """Find the UPostRenderCameraSamples DataAsset by convention.
+
+    sequence_builder stores the sample asset at `<seq>_Samples` next to
+    the LevelSequence (e.g. /Game/PostRender/take_4/LS_take_4_Samples).
+    The path passed in is the LevelSequence's full path
+    (`/Game/.../LS_X.LS_X`); strip the object name first.
+    """
+    pkg_path = level_sequence_asset_path.rsplit(".", 1)[0]
+    samples_path = pkg_path + "_Samples"
+    samples = unreal.EditorAssetLibrary.load_asset(samples_path)
+    if samples is None:
+        raise RuntimeError(
+            f"Sample DataAsset 未找到: {samples_path}; "
+            f"重跑 run_import 重建 sample asset 后再 patch。"
+        )
+    return samples
+
+
+def _read_start_timecode_from_sample(samples) -> "Timecode":
+    """Reconstruct post_render_tool.timecode.Timecode from sample DataAsset's
+    canonical StartTimecode fields (see Task 5).
+    """
+    from .timecode import Timecode
+    if not samples.has_start_timecode:
+        raise RuntimeError(
+            "Sample DataAsset bHasStartTimecode=False — 该 LevelSequence "
+            "在 timecode-sync 部署前导入或 csv_parser 没传 fps。重跑 "
+            "run_import 后再 patch / export。"
+        )
+    tc = samples.start_timecode
+    # unreal.Timecode struct fields verified by
+    # scripts/probe_ue_timecode_roundtrip.py
+    rate_num = int(samples.frame_rate_numerator)
+    rate_den = int(samples.frame_rate_denominator)
+    return Timecode(
+        hours=int(tc.get_editor_property("hours")),
+        minutes=int(tc.get_editor_property("minutes")),
+        seconds=int(tc.get_editor_property("seconds")),
+        frames=int(tc.get_editor_property("frames")),
+        drop_frame=bool(tc.get_editor_property("drop_frame_format")),
+        rate_num=rate_num,
+        rate_den=rate_den,
+    )
+
+
+def run_patch_exr_timecode(
+    level_sequence_asset_path: str,
+    output_dir: str,
+    filename_pattern: str = "render.{frame:07d}.exr",
+) -> dict:
+    """Patch SMPTE timecode header into every EXR in `output_dir` that
+    matches `filename_pattern`. Reads canonical StartTimecode from the
+    sample DataAsset associated with the given LevelSequence path.
+
+    Returns a dict: `{"patched_count": int, "output_dir": str,
+                       "start_timecode": str}`.
+    """
+    from .exr_timecode_writer import patch_exr_timecode_in_dir
+
+    samples = _load_sample_asset_for_sequence(level_sequence_asset_path)
+    start_tc = _read_start_timecode_from_sample(samples)
+    first_frame = int(samples.source_frame_numbers[0])
+    fps = samples.frame_rate_numerator / samples.frame_rate_denominator
+
+    n = patch_exr_timecode_in_dir(
+        output_dir=output_dir,
+        filename_pattern=filename_pattern,
+        start_csv_frame=first_frame,
+        start_timecode=start_tc,
+        fps=fps,
+    )
+    return {
+        "patched_count": n,
+        "output_dir": output_dir,
+        "start_timecode": str(start_tc),
+    }
+
+
+def run_export_otio(
+    level_sequence_asset_path: str,
+    cg_render_dir: str,
+    sidecar_path: str,
+    filename_pattern: str = "render.{frame:07d}.exr",
+) -> dict:
+    """Dump a `.otio` sidecar describing the rendered sequence.
+
+    Reads canonical StartTimecode + frame range from the sample DataAsset.
+    Returns `{"sidecar_path": str, "frame_count": int,
+              "start_timecode": str}`.
+    """
+    from .otio_export import export_sidecar
+
+    samples = _load_sample_asset_for_sequence(level_sequence_asset_path)
+    start_tc = _read_start_timecode_from_sample(samples)
+    first_frame = int(samples.source_frame_numbers[0])
+    frame_count = len(samples.source_frame_numbers)
+    fps = samples.frame_rate_numerator / samples.frame_rate_denominator
+
+    # Shot name = LevelSequence asset name (last path segment before `.`)
+    shot_name = level_sequence_asset_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+
+    export_sidecar(
+        sidecar_path=sidecar_path,
+        shot_name=shot_name,
+        cg_render_dir=cg_render_dir,
+        cg_filename_pattern=filename_pattern,
+        start_csv_frame=first_frame,
+        frame_count=frame_count,
+        start_timecode=start_tc,
+        fps=fps,
+    )
+    return {
+        "sidecar_path": sidecar_path,
+        "frame_count": frame_count,
+        "start_timecode": str(start_tc),
+    }

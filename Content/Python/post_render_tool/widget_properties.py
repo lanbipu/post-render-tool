@@ -28,6 +28,7 @@ WIDGET_CLASS_MAP: Dict[str, type] = {
     "SpinBox": unreal.SpinBox,
     "ComboBoxString": unreal.ComboBoxString,
     "MultiLineEditableText": unreal.MultiLineEditableText,
+    "EditableTextBox": unreal.EditableTextBox,
 }
 
 
