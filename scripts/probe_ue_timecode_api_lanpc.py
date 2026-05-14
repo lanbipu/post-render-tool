@@ -57,8 +57,9 @@ def main() -> None:
     unreal.log("\n=== UE 5.7 Python Visibility Verification ===")
     unreal.log("| API | Visible? |")
     unreal.log("|---|---|")
+    # ASCII only — Windows GBK locale chokes on ✓ / ✗ when bridge prints back.
     for desc, ok in rows:
-        verdict = "✓ yes" if ok else "✗ NO"
+        verdict = "yes" if ok else "NO"
         unreal.log(f"| {desc} | {verdict} |")
     unreal.log("=== end ===\n")
 

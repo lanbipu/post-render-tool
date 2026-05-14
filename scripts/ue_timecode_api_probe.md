@@ -63,12 +63,66 @@ UE 5.7 `PyGenUtil.cpp` 暴露 UPROPERTY 给 Python 有两条独立路径:
 
 跑 `scripts/probe_ue_timecode_api_lanpc.py` 在 lanPC UE Editor 实测确认。
 
+## lanPC 实测结果 (2026-05-14)
+
+### dir() visibility check (`probe_ue_timecode_api_lanpc.py`)
+
+| API | dir() visible? |
+|---|---|
+| MovieSceneSection class | yes |
+| MovieSceneSection.timecode_source attr | NO (但 set_editor_property 可绕过 — 见下) |
+| MovieSceneTimecodeSource struct | yes |
+| Timecode struct | yes |
+| MoviePipelineOutputSetting class | yes |
+| MoviePipelineOutputSetting.frame_number_offset | yes |
+| MoviePipelineOutputSetting.zero_pad_frame_numbers | yes |
+| MoviePipelineOutputSetting.file_name_format | yes |
+| MoviePipelineEditorLibrary.create_job_from_sequence | yes |
+| MoviePipelineQueueSubsystem | yes |
+| PostRenderToolBuildHelper (plugin) | yes |
+
+### Roundtrip 实测 (`probe_ue_timecode_roundtrip.py`)
+
+`unreal.Timecode` dir(): `hours, minutes, seconds, frames, drop_frame_format, subframe, ...`
+`unreal.MovieSceneTimecodeSource` dir(): `timecode, ...`
+
+完整 round-trip 通过:
+```
+tc = unreal.Timecode()
+tc.set_editor_property("hours", 10)
+tc.set_editor_property("minutes", 30)
+tc.set_editor_property("seconds", 45)
+tc.set_editor_property("frames", 22)
+tc.set_editor_property("drop_frame_format", False)
+
+src = unreal.MovieSceneTimecodeSource()
+src.set_editor_property("timecode", tc)
+
+section.set_editor_property("timecode_source", src)
+got = section.get_editor_property("timecode_source").get_editor_property("timecode")
+# → H=10 M=30 S=45 F=22 (exactly matches set)
+```
+
+### 最终结论
+
+**Task 4 C++ UFUNCTION wrapper:跳过(SKIPPED)**
+
+- `Section.set_editor_property("timecode_source", ...)` 走 UE 反射,工作正常
+- 通过 Codex review (PyGenUtil.cpp:1813 `ShouldExportEditorOnlyProperty` 路径) +
+  实测 round-trip 双重证明
+- Python native 4 行注入足够,无需 C++ wrapper / UBT 重编
+
+**Task 7 `FrameNumberOffset`:Python native(确认)**
+- `MoviePipelineOutputSetting.frame_number_offset` Python 可见,
+  `output_setting.set_editor_property("frame_number_offset", N)` 即可
+
+**Task 5 `UPostRenderCameraSamples.StartTimecode`:仍然需要做**
+- 跟 wrapper 是两件事:Task 5 加 DataAsset schema(canonical 数据存储),
+  让 P1 EXR patcher / OTIO exporter 不需要从 Section.TimecodeSource 反向读
+- 仍需 UBT 重编(UPROPERTY 改 schema)
+
 ## 下一步
 
-1. lanPC UE Editor 开了之后, 执行:
-   ```
-   scp scripts/probe_ue_timecode_api_lanpc.py lanpc:C:/temp/ue-remote/probe_tc.py
-   ssh lanpc '"D:/Program Files/Epic Games/UE_5.7/Engine/Binaries/ThirdParty/Python3/Win64/python.exe" C:/temp/ue-remote/run_ue.py C:/temp/ue-remote/probe_tc.py'
-   ```
-2. 实测结果回填 → 决定 Task 4 走 Python 原生还是写 wrapper
-3. 进入 Task 4 实施
+1. ~~Task 4 C++ wrapper~~ SKIPPED
+2. Task 5: UPostRenderCameraSamples 加 StartTimecode UPROPERTY
+3. Task 6: sequence_builder Step 4a/6a 直接 Python set_editor_property
