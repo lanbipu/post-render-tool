@@ -34,11 +34,30 @@ def _verify(label: str, ok: bool, detail: str = "") -> bool:
     return ok
 
 
+def _ensure_user_site_on_sys_path() -> None:
+    """UE Editor caches sys.path at startup; packages pip-install-ed AFTER
+    UE launched won't be visible until restart unless we addsitedir at
+    runtime. Mirror the user-site path that `pip install --user` uses on
+    Windows (Python 3.11)."""
+    import os
+    import site
+    import sys
+
+    user_site = os.path.join(
+        os.environ.get("APPDATA", ""),
+        "Python", "Python311", "site-packages",
+    )
+    if os.path.isdir(user_site) and user_site not in sys.path:
+        site.addsitedir(user_site)
+
+
 def main() -> None:
     import importlib
     import os
     import shutil
     import subprocess
+
+    _ensure_user_site_on_sys_path()
 
     unreal.log("\n=== P1 Integration Test ===")
 
