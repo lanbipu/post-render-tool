@@ -433,11 +433,18 @@ class TestWidgetPropertyApplicators(unittest.TestCase):
     def test_apply_spinbox_range(self):
         w = _unreal_stub.SpinBox()
         widget_properties.apply_widget_properties(
-            w, {"MinValue": 0.0, "MaxValue": 120.0, "Value": 0.0}
+            w,
+            {
+                "MinValue": 0.0,
+                "MaxValue": 120.0,
+                "Value": 0.0,
+                "EnableSlider": False,
+            },
         )
         self.assertEqual(w.properties["min_value"], 0.0)
         self.assertEqual(w.properties["max_value"], 120.0)
         self.assertEqual(w.properties["value"], 0.0)
+        self.assertIs(w.properties["enable_slider"], False)
 
     def test_apply_multiline_read_only(self):
         w = _unreal_stub.MultiLineEditableText()

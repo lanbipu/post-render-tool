@@ -363,6 +363,10 @@ def _apply_spinbox_value(w, v):
     w.set_editor_property("value", float(v))
 
 
+def _apply_spinbox_enable_slider(w, v):
+    w.set_editor_property("enable_slider", bool(v))
+
+
 def _apply_spinbox_fractional(w, v):
     w.set_editor_property("min_fractional_digits", int(v))
 
@@ -750,6 +754,7 @@ _PROPERTY_APPLICATORS: Dict[str, Callable[[Any, Any], None]] = {
     "MinValue": _apply_spinbox_min,
     "MaxValue": _apply_spinbox_max,
     "Value": _apply_spinbox_value,
+    "EnableSlider": _apply_spinbox_enable_slider,
     "MinFractionalDigits": _apply_spinbox_fractional,
     "DefaultOptions": _apply_combo_default_options,
     "IsReadOnly": _apply_multiline_readonly,

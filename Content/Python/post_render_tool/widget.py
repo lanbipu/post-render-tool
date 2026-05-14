@@ -37,6 +37,17 @@ _AXIS_OPTIONS = ["X (0)", "Y (1)", "Z (2)"]
 _AXIS_INDEX_MAP = {"X (0)": 0, "Y (1)": 1, "Z (2)": 2}
 _INDEX_AXIS_MAP = {0: "X (0)", 1: "Y (1)", 2: "Z (2)"}
 
+_AXIS_SCALE_SPINBOXES = (
+    "spn_pos_x_scale",
+    "spn_pos_y_scale",
+    "spn_pos_z_scale",
+    "spn_rot_pitch_scale",
+    "spn_rot_yaw_scale",
+    "spn_rot_roll_scale",
+)
+_AXIS_SCALE_MIN = -100000.0
+_AXIS_SCALE_MAX = 100000.0
+
 # Names that MUST exist on the BP (matches PostRenderToolWidget.h).
 # Missing names cause a warning but not a crash — the binder degrades
 # gracefully so a half-built BP still loads.
@@ -85,6 +96,7 @@ class PostRenderToolUI:
 
         self._acquire_all_controls()
         self._init_axis_combos()
+        self._configure_axis_scale_spinboxes()
         self._push_initial_mapping_values()
         self._bind_events()
         self._check_and_display_prereqs()
@@ -141,6 +153,23 @@ class PostRenderToolUI:
                 pass
             for opt in _AXIS_OPTIONS:
                 combo.add_option(opt)
+
+    def _configure_axis_scale_spinboxes(self):
+        for name in _AXIS_SCALE_SPINBOXES:
+            spn = self._get(name)
+            if spn is None:
+                continue
+            for prop_name, value in (
+                ("enable_slider", False),
+                ("min_value", _AXIS_SCALE_MIN),
+                ("max_value", _AXIS_SCALE_MAX),
+            ):
+                try:
+                    spn.set_editor_property(prop_name, value)
+                except Exception as exc:  # noqa: BLE001
+                    unreal.log_warning(
+                        f"[widget] Failed to configure {name}.{prop_name}: {exc}"
+                    )
 
     def _push_initial_mapping_values(self):
         pos = config.POSITION_MAPPING

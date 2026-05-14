@@ -56,7 +56,7 @@ Field rules:
 | `Image` | Leaf | 0 | `Tint`, `ImageSize`, `DrawAs` |
 | `TextBlock` | Leaf | 0 | `Text`, `FontSize`, `ColorAndOpacity` |
 | `Spacer` | Leaf | 0 | `Size` |
-| `SpinBox` | Leaf | 0 | `MinValue`, `MaxValue`, `Value`, `MinFractionalDigits` |
+| `SpinBox` | Leaf | 0 | `MinValue`, `MaxValue`, `Value`, `EnableSlider`, `MinFractionalDigits` |
 | `ComboBoxString` | Leaf | 0 | `DefaultOptions` |
 | `MultiLineEditableText` | Leaf | 0 | `Text`, `IsReadOnly`, `HintText` |
 
@@ -70,7 +70,7 @@ Field rules:
 | `Padding` | `[l,t,r,b]` | `[12, 10, 12, 10]` | `FMargin` |
 | `WidthOverride` / `HeightOverride` | number | `3` | `float` |
 | `MinValue` / `MaxValue` / `Value` | number | `0.0` | `float` |
-| `IsReadOnly` | bool | `true` | `bool` |
+| `EnableSlider` / `IsReadOnly` | bool | `false` | `bool` |
 | `FontSize` | number | `11` | `int32` |
 | `DrawAs` | string | `"Box"` | `ESlateBrushDrawType` (`"Box"` / `"Image"` / `"NoDrawType"`) |
 | `DefaultOptions` | `string[]` | `["X (0)","Y (1)","Z (2)"]` | `TArray<FString>` |

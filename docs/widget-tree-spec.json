@@ -1666,6 +1666,9 @@
                                       "role": "required",
                                       "properties": {
                                         "Value": -100.0,
+                                        "MinValue": -100000.0,
+                                        "MaxValue": 100000.0,
+                                        "EnableSlider": false,
                                         "MinFractionalDigits": 1,
                                         "FigmaInputStyle": {
                                           "BackgroundColor": [
@@ -1966,6 +1969,9 @@
                                       "role": "required",
                                       "properties": {
                                         "Value": 100.0,
+                                        "MinValue": -100000.0,
+                                        "MaxValue": 100000.0,
+                                        "EnableSlider": false,
                                         "MinFractionalDigits": 1,
                                         "FigmaInputStyle": {
                                           "BackgroundColor": [
@@ -2266,6 +2272,9 @@
                                       "role": "required",
                                       "properties": {
                                         "Value": 100.0,
+                                        "MinValue": -100000.0,
+                                        "MaxValue": 100000.0,
+                                        "EnableSlider": false,
                                         "MinFractionalDigits": 1,
                                         "FigmaInputStyle": {
                                           "BackgroundColor": [
@@ -2603,6 +2612,9 @@
                                       "role": "required",
                                       "properties": {
                                         "Value": -1.0,
+                                        "MinValue": -100000.0,
+                                        "MaxValue": 100000.0,
+                                        "EnableSlider": false,
                                         "MinFractionalDigits": 1,
                                         "FigmaInputStyle": {
                                           "BackgroundColor": [
@@ -2903,6 +2915,9 @@
                                       "role": "required",
                                       "properties": {
                                         "Value": -1.0,
+                                        "MinValue": -100000.0,
+                                        "MaxValue": 100000.0,
+                                        "EnableSlider": false,
                                         "MinFractionalDigits": 1,
                                         "FigmaInputStyle": {
                                           "BackgroundColor": [
@@ -3203,6 +3218,9 @@
                                       "role": "required",
                                       "properties": {
                                         "Value": 1.0,
+                                        "MinValue": -100000.0,
+                                        "MaxValue": 100000.0,
+                                        "EnableSlider": false,
                                         "MinFractionalDigits": 1,
                                         "FigmaInputStyle": {
                                           "BackgroundColor": [

@@ -20,6 +20,7 @@
 - Non-interactive layout/decorative widgets use `SelfHitTestInvisible` so mouse wheel input can bubble to the root `EditorUtilityScrollBox`; interactive controls remain hit-testable.
 - `UPostRenderToolWidget::NativeOnMouseWheel()` forwards unhandled wheel input to optional `lbl_root_scroll`, which requires a full plugin rebuild and Editor restart after the C++ change.
 - UE `SizeBox` dimensions are applied through `set_width_override()` / `set_height_override()` and cleared through `clear_*_override()`. Directly setting `width_override` / `height_override` updates only the stored number and does not enable the layout override flag.
+- Axis Mapping scale `SpinBox` controls set `EnableSlider=false` so click-release reliably enters text edit mode instead of treating small horizontal mouse motion as slider drag.
 - `rebuild_from_spec(recreate=True)` deletes and regenerates the production Blueprint asset. Use this after structural spec changes so UE cannot silently reuse stale widget-tree branches.
 
 ## UE Build Command
