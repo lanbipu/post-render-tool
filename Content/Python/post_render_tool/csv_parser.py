@@ -431,7 +431,11 @@ def trim_static_padding(result: "CsvDenseResult") -> "CsvDenseResult":
 
 
 
-def parse_csv_dense(file_path: str, fps: Optional[float] = None) -> CsvDenseResult:
+def parse_csv_dense(
+    file_path: str,
+    fps: Optional[float] = None,
+    strict_timecode: bool = False,
+) -> CsvDenseResult:
     """Parse a Disguise Designer CSV Dense export file.
 
     Parameters
@@ -445,6 +449,17 @@ def parse_csv_dense(file_path: str, fps: Optional[float] = None) -> CsvDenseResu
         ``CsvDenseResult.start_timecode/end_timecode/frame_rate``.
         ``None`` (default) keeps the legacy behavior — structured fields
         stay ``None`` so older callers don't break.
+    strict_timecode:
+        When True, raise ``CsvTimecodeMismatch`` if ``timestamp`` delta
+        doesn't match ``frame_number`` delta across rows. When False
+        (default), log a warning and continue.
+
+        Disguise emits ``timestamp`` as wall-clock SMPTE and ``frame`` as a
+        free-running counter; the two streams are **not** required to stay
+        1:1 across pause / re-sync / time-shift events, so strict mode is
+        opt-in for known-clean takes only. Production take_4 (50fps)
+        already shows a ~10% drift in real data, so strict=True would
+        block legitimate imports.
 
     Returns
     -------
@@ -456,8 +471,9 @@ def parse_csv_dense(file_path: str, fps: Optional[float] = None) -> CsvDenseResu
     CsvParseError
         On structural problems (missing columns, empty file, bad format).
     CsvTimecodeMismatch
-        When ``fps`` is given but a row's ``timestamp`` ↔ ``frame_number``
-        delta doesn't match (cross-midnight aware via ``unwrap_timecode_frames``).
+        Only when ``strict_timecode=True`` and ``fps`` is given and a row's
+        ``timestamp`` vs ``frame_number`` delta doesn't match
+        (cross-midnight aware via ``unwrap_timecode_frames``).
     """
     with open(file_path, encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
@@ -637,19 +653,43 @@ def parse_csv_dense(file_path: str, fps: Optional[float] = None) -> CsvDenseResu
             first.timecode.drop_frame,
         )
         if last.frame_number - first.frame_number >= max_span:
-            raise CsvTimecodeMismatch(
-                f"CSV span {last.frame_number - first.frame_number} frames exceeds 24h "
-                f"({max_span}); multi-day takes are not supported, split the CSV."
+            if strict_timecode:
+                raise CsvTimecodeMismatch(
+                    f"CSV span {last.frame_number - first.frame_number} frames "
+                    f"exceeds 24h ({max_span}); multi-day takes are not supported, "
+                    f"split the CSV."
+                )
+            print(
+                f"[csv_parser] WARNING: CSV span "
+                f"{last.frame_number - first.frame_number} frames exceeds 24h "
+                f"({max_span}); SMPTE timecode wrap not guaranteed accurate."
             )
+        mismatch_count = 0
+        first_mismatch_msg = ""
         for f in frames[1:]:
             expected_delta = unwrap_timecode_frames(first.timecode, f.timecode)
             actual_delta = f.frame_number - first.frame_number
             if expected_delta != actual_delta:
-                raise CsvTimecodeMismatch(
-                    f"CSV timecode ↔ frame_number drift at frame {f.frame_number}: "
-                    f"timestamp={f.timestamp} expects Δ={expected_delta} since start, "
-                    f"but frame_number says Δ={actual_delta}."
+                msg = (
+                    f"frame {f.frame_number} timestamp={f.timestamp}: "
+                    f"timestamp delta={expected_delta} vs frame_number delta="
+                    f"{actual_delta}"
                 )
+                if strict_timecode:
+                    raise CsvTimecodeMismatch(
+                        f"CSV timecode vs frame_number drift at " + msg
+                    )
+                if mismatch_count == 0:
+                    first_mismatch_msg = msg
+                mismatch_count += 1
+        if mismatch_count > 0:
+            print(
+                f"[csv_parser] WARNING: SMPTE timestamp / frame_number drift "
+                f"detected at {mismatch_count} row(s); first: {first_mismatch_msg}. "
+                f"This is normal for Disguise dual-stream exports; "
+                f"frame_number remains authoritative for keyframe positions, "
+                f"start_timecode used as SMPTE anchor for downstream conform."
+            )
         start_tc = first.timecode
         end_tc = last.timecode
         frame_rate = (start_tc.rate_num, start_tc.rate_den)

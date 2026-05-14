@@ -55,8 +55,10 @@ class TestCsvParserTimecodeWithFps(unittest.TestCase):
         self.assertEqual(result.timecode_start, "10:00:00:00")
         self.assertEqual(result.timecode_end, "10:00:00:02")
 
-    def test_smpte_equivalence_failure_raises(self):
+    def test_smpte_equivalence_failure_raises_when_strict(self):
         # Inject a frame where frame_number drifts away from the timestamp.
+        # strict_timecode=True (opt-in) is required for fail-fast; default mode
+        # tolerates this (Disguise dual-stream exports often drift legitimately).
         with open(_FIXTURE, "r") as f:
             content = f.read()
         broken = content.replace("10:00:00:02,500002,", "10:00:00:02,500003,")
@@ -67,7 +69,25 @@ class TestCsvParserTimecodeWithFps(unittest.TestCase):
             broken_path = tf.name
         try:
             with self.assertRaises(CsvTimecodeMismatch):
-                parse_csv_dense(broken_path, fps=50.0)
+                parse_csv_dense(broken_path, fps=50.0, strict_timecode=True)
+        finally:
+            os.unlink(broken_path)
+
+    def test_smpte_drift_warns_but_does_not_raise_by_default(self):
+        # take_4 production CSV has natural Disguise dual-stream drift; we
+        # must not block import — only warn.
+        with open(_FIXTURE, "r") as f:
+            content = f.read()
+        broken = content.replace("10:00:00:02,500002,", "10:00:00:02,500003,")
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False
+        ) as tf:
+            tf.write(broken)
+            broken_path = tf.name
+        try:
+            # Should NOT raise — strict default is False
+            result = parse_csv_dense(broken_path, fps=50.0)
+            self.assertEqual(result.frame_count, 3)
         finally:
             os.unlink(broken_path)
 
@@ -217,7 +237,7 @@ class TestCsvParserTimecodeEdgeCases(unittest.TestCase):
         finally:
             os.unlink(path)
 
-    def test_over_24h_span_fails_fast(self):
+    def test_over_24h_span_fails_fast_when_strict(self):
         # frame_number 跨度 > 24h frames @ 50fps = 50 * 86400 = 4_320_000
         path = self._make_csv([
             self._data_row("00:00:00:00", 0, 0.5),
@@ -225,7 +245,7 @@ class TestCsvParserTimecodeEdgeCases(unittest.TestCase):
         ])
         try:
             with self.assertRaises(CsvTimecodeMismatch) as ctx:
-                parse_csv_dense(path, fps=50.0)
+                parse_csv_dense(path, fps=50.0, strict_timecode=True)
             self.assertIn("24h", str(ctx.exception))
         finally:
             os.unlink(path)
@@ -241,6 +261,20 @@ class TestCsvParserTimecodeEdgeCases(unittest.TestCase):
                 parse_csv_dense(path, fps=50.0)
             self.assertIn("500001", str(ctx.exception))
             self.assertIn("BAD_FORMAT", str(ctx.exception))
+        finally:
+            os.unlink(path)
+
+    def test_over_24h_span_strict_only(self):
+        # over-24h check is part of the strict envelope and only fires under
+        # strict_timecode=True (consistent with the rest of fail-fast SMPTE checks).
+        path = self._make_csv([
+            self._data_row("00:00:00:00", 0, 0.5),
+            self._data_row("00:00:00:01", 5_000_000, 0.6),
+        ])
+        try:
+            # default tolerant mode: parse succeeds (24h check is part of strict)
+            result = parse_csv_dense(path, fps=50.0)
+            self.assertEqual(result.frame_count, 2)
         finally:
             os.unlink(path)
 
