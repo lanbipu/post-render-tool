@@ -333,7 +333,9 @@ bool UPostRenderToolBuildHelper::WriteCameraSamples(
     const TArray<FPostRenderCameraSample>& Samples,
     int32 FrameRateNumerator,
     int32 FrameRateDenominator,
-    const FString& SourceCsvPath)
+    const FString& SourceCsvPath,
+    const FTimecode& StartTimecode,
+    bool bHasStartTimecode)
 {
     if (!SampleAsset)
     {
@@ -383,6 +385,19 @@ bool UPostRenderToolBuildHelper::WriteCameraSamples(
     SampleAsset->FrameRateNumerator = FrameRateNumerator;
     SampleAsset->FrameRateDenominator = FrameRateDenominator;
     SampleAsset->SourceCsvPath      = SourceCsvPath;
+    // Canonical SMPTE start timecode (P0 timecode-sync). When the caller
+    // signals the timecode is unknown (csv_parser invoked without fps),
+    // reset the field to a zeroed FTimecode rather than honoring the
+    // stale value the caller passed in.
+    if (bHasStartTimecode)
+    {
+        SampleAsset->StartTimecode = StartTimecode;
+    }
+    else
+    {
+        SampleAsset->StartTimecode = FTimecode();
+    }
+    SampleAsset->bHasStartTimecode = bHasStartTimecode;
     SampleAsset->RecomputeContiguity();
     SampleAsset->MarkPackageDirty();
     return true;

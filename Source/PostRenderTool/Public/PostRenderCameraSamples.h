@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Misc/Timecode.h"
 #include "PostRenderCameraSample.h"
 #include "PostRenderCameraSamples.generated.h"
 
@@ -55,9 +56,25 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Metadata")
     FString SourceCsvPath;
 
-    /** Bumped manually when sample schema changes incompatibly. */
+    /** Bumped manually when sample schema changes incompatibly.
+     *  v2 (timecode-sync) — added StartTimecode + bHasStartTimecode. */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Metadata")
-    int32 SchemaVersion = 1;
+    int32 SchemaVersion = 2;
+
+    // ----- Canonical start timecode (P0 timecode-sync) -----
+    // Persisted at write time so P1 EXR patcher / OTIO exporter can read SMPTE
+    // start tc directly from this DataAsset, without reflecting through
+    // Section.TimecodeSource. FTimecode is BlueprintType + Python-exposed
+    // (verified by scripts/probe_ue_timecode_roundtrip.py).
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Timecode")
+    FTimecode StartTimecode;
+
+    /** False on legacy DataAssets written before timecode-sync deploy or when
+     *  csv_parser was invoked without fps. P1 patcher / exporter check this
+     *  flag and bail with a clear error rather than emitting 00:00:00:00. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Timecode")
+    bool bHasStartTimecode = false;
 
     /** First / last source frame number for quick range checks. */
     int32 GetFirstFrame() const
