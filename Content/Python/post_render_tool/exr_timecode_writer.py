@@ -28,7 +28,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .timecode import Timecode
+from .timecode import Timecode, _frames_per_24h
 
 
 def _ensure_oiiotool() -> None:
@@ -47,6 +47,11 @@ def _frame_to_timecode(start: Timecode, offset_frames: int) -> Timecode:
     Drop-frame aware (Bevin 29.97 / 59.94 NTSC reversed).
     """
     total = start.to_frames() + offset_frames
+    # Wrap at 24h so cross-midnight renders (start near 23:59 + render
+    # spans past 00:00:00:00) don't produce hours>=24 that would be
+    # rejected by Timecode.__post_init__.
+    day_frames = _frames_per_24h(start.rate_num, start.rate_den, start.drop_frame)
+    total = total % day_frames
     nominal_fps = round(start.rate_num / start.rate_den)
 
     if not start.drop_frame:
@@ -150,7 +155,11 @@ def patch_exr_timecode_in_dir(
     _ensure_oiiotool()
 
     fn_regex = _filename_pattern_to_regex(filename_pattern)
-    nominal_fps = int(round(fps))
+    # Preserve fractional NTSC rates exactly (23.976 = 24000/1001 etc.) so
+    # EXR readers don't drift over long takes when interpreting the
+    # SMPTE timecode at the wrong playback rate.
+    rate_num = start_timecode.rate_num
+    rate_den = start_timecode.rate_den
 
     processed = 0
     for file in sorted(out_path.iterdir()):
@@ -165,7 +174,7 @@ def patch_exr_timecode_in_dir(
         subprocess.check_call([
             "oiiotool", str(file),
             "--attrib:type=timecode", "smpte:TimeCode", str(tc),
-            "--attrib:type=rational", "FramesPerSecond", f"{nominal_fps}/1",
+            "--attrib:type=rational", "FramesPerSecond", f"{rate_num}/{rate_den}",
             "-o", str(file),
         ])
         processed += 1

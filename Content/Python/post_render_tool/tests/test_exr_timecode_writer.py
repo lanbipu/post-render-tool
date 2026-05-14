@@ -185,6 +185,72 @@ class TestFrameToTimecodeRoundTrip(unittest.TestCase):
                 f"drop-frame 59.94 round-trip fail at offset {offset}: got {tc}",
             )
 
+    def test_cross_midnight_does_not_raise(self):
+        """offset that pushes total past 24h gets wrapped, not rejected."""
+        from post_render_tool.exr_timecode_writer import _frame_to_timecode
+        from post_render_tool.timecode import Timecode, _frames_per_24h
+        start = Timecode.parse("23:59:59:48", 50.0)
+        # 5 frames after 23:59:59:48 → wraps to 00:00:00:03
+        tc = _frame_to_timecode(start, 5)
+        self.assertEqual((tc.hours, tc.minutes, tc.seconds, tc.frames),
+                         (0, 0, 0, 3))
+
+    def test_cross_midnight_dropframe_does_not_raise(self):
+        from post_render_tool.exr_timecode_writer import _frame_to_timecode
+        from post_render_tool.timecode import Timecode
+        # 29.97 DF: 23:59:59;29 + 1 frame should wrap to 00:00:00;00
+        # (top-of-hour: 10-min boundary at H 24:00 wraps to 0)
+        start = Timecode.parse("23:59:59;29", 29.97)
+        tc = _frame_to_timecode(start, 1)
+        # After wrap, hours must be 0..23
+        self.assertLess(tc.hours, 24)
+
+
+@unittest.skipUnless(_HAVE_OIIOTOOL and _HAVE_EXRHEADER,
+                     "oiiotool + exrheader needed")
+class TestFractionalFpsRationalMetadata(unittest.TestCase):
+    """FramesPerSecond must keep the exact NTSC rational (24000/1001 etc.),
+    not get rounded to integer 24/1. Otherwise EXR readers drift over long
+    takes."""
+
+    def setUp(self):
+        from post_render_tool.exr_timecode_writer import (
+            patch_exr_timecode_in_dir,
+        )
+        self.patch = patch_exr_timecode_in_dir
+        self.tmpdir = tempfile.mkdtemp(prefix="exr_test_rational_")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _check_rational(self, fps: float, tc_str: str, exp_num: int, exp_den: int):
+        from post_render_tool.timecode import Timecode
+        path = os.path.join(self.tmpdir, "render.0000000.exr")
+        _gen_test_exr(path)
+        n = self.patch(
+            self.tmpdir,
+            "render.{frame:07d}.exr",
+            0,
+            Timecode.parse(tc_str, fps),
+            fps,
+        )
+        self.assertEqual(n, 1)
+        line = _read_exr_attribute_line(path, "framesPerSecond")
+        self.assertIn(f"{exp_num}/{exp_den}", line,
+                      f"expected {exp_num}/{exp_den} for {fps}fps, got: {line}")
+
+    def test_23976_writes_24000_over_1001(self):
+        self._check_rational(23.976, "00:00:00:00", 24000, 1001)
+
+    def test_2997_writes_30000_over_1001(self):
+        self._check_rational(29.97, "00:00:00;00", 30000, 1001)
+
+    def test_5994_writes_60000_over_1001(self):
+        self._check_rational(59.94, "00:00:00;00", 60000, 1001)
+
+    def test_50_writes_50_over_1(self):
+        self._check_rational(50.0, "00:00:00:00", 50, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
