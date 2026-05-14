@@ -124,7 +124,10 @@ def run_import(csv_path: str, fps: float) -> PipelineResult:
         unreal.log(f"[pipeline] 使用帧率: {fps} fps")
 
         unreal.log("[pipeline] 步骤 1/4 — 解析 CSV Dense 文件...")
-        csv_result: CsvDenseResult = parse_csv_dense(csv_path)
+        # Pass fps so csv_parser builds structured Timecode + runs SMPTE
+        # equivalence check (P0 timecode-sync); sequence_builder reads
+        # csv_result.start_timecode and persists it to the sample DataAsset.
+        csv_result: CsvDenseResult = parse_csv_dense(csv_path, fps=fps)
         original_count = csv_result.frame_count
         csv_result = trim_static_padding(csv_result)
         if csv_result.frame_count != original_count:

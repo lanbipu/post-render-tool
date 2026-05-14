@@ -37,6 +37,37 @@ def _resolve_frame_rate(fps: float) -> tuple[int, int]:
 
 
 # ---------------------------------------------------------------------------
+# Timecode helper
+# ---------------------------------------------------------------------------
+
+def _to_unreal_timecode(timecode):
+    """Convert post_render_tool.timecode.Timecode → unreal.Timecode struct.
+
+    Field names verified by `scripts/probe_ue_timecode_roundtrip.py`:
+    `unreal.Timecode` has `hours/minutes/seconds/frames/drop_frame_format`.
+    """
+    ftc = unreal.Timecode()
+    ftc.set_editor_property("hours", int(timecode.hours))
+    ftc.set_editor_property("minutes", int(timecode.minutes))
+    ftc.set_editor_property("seconds", int(timecode.seconds))
+    ftc.set_editor_property("frames", int(timecode.frames))
+    ftc.set_editor_property("drop_frame_format", bool(timecode.drop_frame))
+    return ftc
+
+
+def _apply_section_timecode_source(section, timecode) -> None:
+    """Set TimecodeSource on a MovieSceneSection via Python reflection.
+
+    Roundtrip verified in `scripts/probe_ue_timecode_roundtrip.py` — UE 5.7
+    exposes `MovieSceneSection.TimecodeSource` (EditAnywhere only) to Python
+    `set_editor_property` via `PyGenUtil.cpp:1813 ShouldExportEditorOnlyProperty`.
+    """
+    src = unreal.MovieSceneTimecodeSource()
+    src.set_editor_property("timecode", _to_unreal_timecode(timecode))
+    section.set_editor_property("timecode_source", src)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -125,6 +156,16 @@ def build_sequence(
     )
 
     # ------------------------------------------------------------------
+    # Step 4a: Camera Cut Section TimecodeSource (P0 G1 — Sequencer UI
+    # displays SMPTE start tc when "Show Timecode" is on). Python native
+    # path verified by scripts/probe_ue_timecode_roundtrip.py — no C++
+    # wrapper needed; UPROPERTY EditAnywhere is reflected via
+    # PyGenUtil.cpp:1813 ShouldExportEditorOnlyProperty.
+    # ------------------------------------------------------------------
+    if csv_result.start_timecode is not None:
+        _apply_section_timecode_source(camera_cut_section, csv_result.start_timecode)
+
+    # ------------------------------------------------------------------
     # Step 5: Build sample DataAsset
     # ------------------------------------------------------------------
     samples_asset_name = f"{asset_name}_Samples"
@@ -167,7 +208,12 @@ def build_sequence(
         s.set_editor_property("aspect",            d["aspect"])
         sample_structs.append(s)
 
-    # One-shot write.
+    # One-shot write — pass canonical SMPTE start tc so the DataAsset is the
+    # single source of truth (P1 EXR patcher / OTIO exporter reads it directly,
+    # no Section.TimecodeSource reflection round-trip).
+    tc = csv_result.start_timecode
+    has_tc = tc is not None
+    ftc = _to_unreal_timecode(tc) if has_tc else unreal.Timecode()
     ok = unreal.PostRenderToolBuildHelper.write_camera_samples(
         samples_asset,
         frame_numbers,
@@ -175,6 +221,8 @@ def build_sequence(
         numerator,
         denominator,
         csv_result.file_path,
+        ftc,
+        has_tc,
     )
     if not ok:
         raise RuntimeError(
@@ -200,6 +248,15 @@ def build_sequence(
             "EnsurePostRenderCameraTrackOnBinding 返回 None — 检查 UE Log"
         )
     section.set_editor_property("sample_asset", samples_asset)
+
+    # ------------------------------------------------------------------
+    # Step 6a: UPostRenderCameraSection TimecodeSource (same as Step 4a but
+    # on the plugin's custom section; both sections must carry TimecodeSource
+    # so MovieScene::GetEarliestTimecodeSource() picks up either as the
+    # sequence-wide anchor).
+    # ------------------------------------------------------------------
+    if csv_result.start_timecode is not None:
+        _apply_section_timecode_source(section, csv_result.start_timecode)
 
     # ------------------------------------------------------------------
     # Step 7: Save and log

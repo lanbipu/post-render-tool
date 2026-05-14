@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Misc/Timecode.h"
 #include "PostRenderToolBuildHelper.generated.h"
 
 class UWidgetBlueprint;
@@ -141,7 +142,12 @@ public:
         const TArray<FPostRenderCameraSample>& Samples,
         int32 FrameRateNumerator,
         int32 FrameRateDenominator,
-        const FString& SourceCsvPath);
+        const FString& SourceCsvPath,
+        // P0 timecode-sync: canonical start timecode persisted on the asset.
+        // bHasStartTimecode=false → impl resets StartTimecode to zeroed
+        // FTimecode (used when csv_parser was called without `fps`).
+        const FTimecode& StartTimecode,
+        bool bHasStartTimecode);
 
     /**
      * Find-or-create a UPostRenderCameraTrack on the given binding, with one

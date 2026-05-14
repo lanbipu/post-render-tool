@@ -19,6 +19,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+from .timecode import Timecode, unwrap_timecode_frames
+
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -26,6 +28,14 @@ from typing import Dict, List, Optional, Tuple
 
 class CsvParseError(Exception):
     """Raised when the CSV cannot be parsed due to structural or field issues."""
+
+
+class CsvTimecodeMismatch(CsvParseError):
+    """timestamp 列跟 frame_number 列不等价 (SMPTE drift / Disguise CSV 异常).
+
+    继承 CsvParseError 让 pipeline.py 的 `except CsvParseError` 分支自然捕获,
+    不会落到 generic Exception 路径。
+    """
 
 
 class _EmptyFieldError(ValueError):
@@ -73,6 +83,9 @@ class FrameData:
     overscan_y: Optional[float] = None
     overscan_resolution_x: Optional[int] = None
     overscan_resolution_y: Optional[int] = None
+    # Structured SMPTE timecode parsed from `timestamp`. None when
+    # parse_csv_dense was called without an explicit `fps`.
+    timecode: Optional[Timecode] = None
 
 
 @dataclass
@@ -87,6 +100,12 @@ class CsvDenseResult:
     focal_length_range: Tuple[float, float]
     sensor_width_mm: float
     aspect_ratio: float
+    # Structured timecode fields — populated only when caller passes `fps` to
+    # parse_csv_dense. Legacy `timecode_start/end: str` stay populated either way
+    # so older consumers don't break.
+    start_timecode: Optional[Timecode] = None
+    end_timecode: Optional[Timecode] = None
+    frame_rate: Optional[Tuple[int, int]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +405,14 @@ def trim_static_padding(result: "CsvDenseResult") -> "CsvDenseResult":
         return result
 
     focals = [f.focal_length_mm for f in trimmed]
+    # Structured timecode tracks trimmed first/last; preserves None when the
+    # original result had no fps-based parse.
+    trimmed_start_tc = (
+        trimmed[0].timecode if result.start_timecode is not None else None
+    )
+    trimmed_end_tc = (
+        trimmed[-1].timecode if result.end_timecode is not None else None
+    )
     return CsvDenseResult(
         file_path=result.file_path,
         camera_prefix=result.camera_prefix,
@@ -396,18 +423,43 @@ def trim_static_padding(result: "CsvDenseResult") -> "CsvDenseResult":
         focal_length_range=(min(focals), max(focals)),
         sensor_width_mm=trimmed[0].sensor_width_mm,
         aspect_ratio=trimmed[0].aspect_ratio,
+        start_timecode=trimmed_start_tc,
+        end_timecode=trimmed_end_tc,
+        frame_rate=result.frame_rate,
     )
 
 
 
 
-def parse_csv_dense(file_path: str) -> CsvDenseResult:
+def parse_csv_dense(
+    file_path: str,
+    fps: Optional[float] = None,
+    strict_timecode: bool = False,
+) -> CsvDenseResult:
     """Parse a Disguise Designer CSV Dense export file.
 
     Parameters
     ----------
     file_path:
         Absolute or relative path to the .csv file.
+    fps:
+        When given, parse each row's ``timestamp`` column into a structured
+        ``Timecode`` and validate that ``frame_number`` deltas match SMPTE
+        deltas across the take. Required to populate
+        ``CsvDenseResult.start_timecode/end_timecode/frame_rate``.
+        ``None`` (default) keeps the legacy behavior — structured fields
+        stay ``None`` so older callers don't break.
+    strict_timecode:
+        When True, raise ``CsvTimecodeMismatch`` if ``timestamp`` delta
+        doesn't match ``frame_number`` delta across rows. When False
+        (default), log a warning and continue.
+
+        Disguise emits ``timestamp`` as wall-clock SMPTE and ``frame`` as a
+        free-running counter; the two streams are **not** required to stay
+        1:1 across pause / re-sync / time-shift events, so strict mode is
+        opt-in for known-clean takes only. Production take_4 (50fps)
+        already shows a ~10% drift in real data, so strict=True would
+        block legitimate imports.
 
     Returns
     -------
@@ -418,6 +470,10 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
     ------
     CsvParseError
         On structural problems (missing columns, empty file, bad format).
+    CsvTimecodeMismatch
+        Only when ``strict_timecode=True`` and ``fps`` is given and a row's
+        ``timestamp`` vs ``frame_number`` delta doesn't match
+        (cross-midnight aware via ``unwrap_timecode_frames``).
     """
     with open(file_path, encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
@@ -568,6 +624,76 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
     focal_lengths = [f.focal_length_mm for f in frames]
     sensor_widths = [f.sensor_width_mm for f in frames]
 
+    # Structured timecode parse + SMPTE equivalence validation.
+    #
+    # 等价检查支持 tracker-drop 场景: 跳行后 `frames` 的 frame_number 会出现
+    # gap, 但每行的 timestamp ↔ frame_number 仍然一一对应; delta_frame ==
+    # delta_timecode 对 retained rows 依然成立。
+    #
+    # 等价检查仅支持 ≤24h 录制 (单次跨午夜); 超出会 early-fail。
+    start_tc: Optional[Timecode] = None
+    end_tc: Optional[Timecode] = None
+    frame_rate: Optional[Tuple[int, int]] = None
+    if fps is not None and frames:
+        for f in frames:
+            try:
+                f.timecode = Timecode.parse(f.timestamp, fps)
+            except ValueError as exc:
+                raise CsvParseError(
+                    f"frame {f.frame_number}: invalid timestamp "
+                    f"{f.timestamp!r}: {exc}"
+                ) from exc
+        first = frames[0]
+        last = frames[-1]
+        # >24h take fail-fast: unwrap_timecode_frames 只处理单次跨午夜。
+        from .timecode import _frames_per_24h
+        max_span = _frames_per_24h(
+            first.timecode.rate_num,
+            first.timecode.rate_den,
+            first.timecode.drop_frame,
+        )
+        if last.frame_number - first.frame_number >= max_span:
+            if strict_timecode:
+                raise CsvTimecodeMismatch(
+                    f"CSV span {last.frame_number - first.frame_number} frames "
+                    f"exceeds 24h ({max_span}); multi-day takes are not supported, "
+                    f"split the CSV."
+                )
+            print(
+                f"[csv_parser] WARNING: CSV span "
+                f"{last.frame_number - first.frame_number} frames exceeds 24h "
+                f"({max_span}); SMPTE timecode wrap not guaranteed accurate."
+            )
+        mismatch_count = 0
+        first_mismatch_msg = ""
+        for f in frames[1:]:
+            expected_delta = unwrap_timecode_frames(first.timecode, f.timecode)
+            actual_delta = f.frame_number - first.frame_number
+            if expected_delta != actual_delta:
+                msg = (
+                    f"frame {f.frame_number} timestamp={f.timestamp}: "
+                    f"timestamp delta={expected_delta} vs frame_number delta="
+                    f"{actual_delta}"
+                )
+                if strict_timecode:
+                    raise CsvTimecodeMismatch(
+                        f"CSV timecode vs frame_number drift at " + msg
+                    )
+                if mismatch_count == 0:
+                    first_mismatch_msg = msg
+                mismatch_count += 1
+        if mismatch_count > 0:
+            print(
+                f"[csv_parser] WARNING: SMPTE timestamp / frame_number drift "
+                f"detected at {mismatch_count} row(s); first: {first_mismatch_msg}. "
+                f"This is normal for Disguise dual-stream exports; "
+                f"frame_number remains authoritative for keyframe positions, "
+                f"start_timecode used as SMPTE anchor for downstream conform."
+            )
+        start_tc = first.timecode
+        end_tc = last.timecode
+        frame_rate = (start_tc.rate_num, start_tc.rate_den)
+
     return CsvDenseResult(
         file_path=file_path,
         camera_prefix=dialect.camera_prefix,
@@ -578,4 +704,7 @@ def parse_csv_dense(file_path: str) -> CsvDenseResult:
         focal_length_range=(min(focal_lengths), max(focal_lengths)),
         sensor_width_mm=sensor_widths[0],
         aspect_ratio=frames[0].aspect_ratio,
+        start_timecode=start_tc,
+        end_timecode=end_tc,
+        frame_rate=frame_rate,
     )

@@ -165,7 +165,8 @@ def open_sequencer(level_sequence=None) -> None:
 
 
 def open_movie_render_queue(level_sequence=None) -> None:
-    """把 LevelSequence 预填到 MRQ queue 并打印手动打开指引。
+    """把 LevelSequence 预填到 MRQ queue + 配 absolute CSV frame 文件名,
+    并打印手动打开指引。
 
     UE 5.7 未暴露 FGlobalTabmanager::TryInvokeTab 到 Python，脚本无法直接
     打开 MRQ tab；此函数仅做 queue 预填 + 人工操作指引。
@@ -188,10 +189,21 @@ def open_movie_render_queue(level_sequence=None) -> None:
                     unreal.MoviePipelineEditorLibrary.ensure_job_has_default_settings(
                         job
                     )
-                    unreal.log(
-                        f"[ui_interface] 已把 {level_sequence.get_name()} "
-                        "添加到 MRQ queue"
+                    configured = _apply_csv_frame_filename_offset(
+                        job, level_sequence
                     )
+                    if configured:
+                        unreal.log(
+                            f"[ui_interface] 已把 {level_sequence.get_name()} "
+                            "添加到 MRQ queue (FrameNumberOffset 已配, "
+                            "请不要在 MRQ UI 删除 {frame_number} token)"
+                        )
+                    else:
+                        unreal.log(
+                            f"[ui_interface] 已把 {level_sequence.get_name()} "
+                            "添加到 MRQ queue (未配 FrameNumberOffset — "
+                            "见上方 warning)"
+                        )
         except Exception as exc:  # noqa: BLE001
             unreal.log_warning(f"[ui_interface] MRQ queue 预填失败: {exc}")
 
@@ -199,6 +211,117 @@ def open_movie_render_queue(level_sequence=None) -> None:
         "[ui_interface] 请手动打开 Movie Render Queue: "
         "菜单 Window → Cinematics → Movie Render Queue"
     )
+
+
+def _apply_csv_frame_filename_offset(job, level_sequence) -> bool:
+    """配 MRQ output 让渲出的文件名带 absolute CSV frame number.
+
+    从 LevelSequence 关联的 UPostRenderCameraSamples DataAsset 读
+    source_frame_numbers[0] / [-1], 设给 UMoviePipelineOutputSetting:
+      - FrameNumberOffset = first_csv_frame   (MRQ 把 {frame_number}
+        token 加上 offset, 见 MoviePipelineBlueprintLibrary.cpp:1059)
+      - ZeroPadFrameNumbers = max(7, len(str(last_csv_frame)))   动态算
+        宽度防 7→8 位跨越导致文件名排序错乱
+      - FileNameFormat: 现有 default 若已含 `{frame_number}` token 则
+        保留 (e.g. 用户可能预设了 "{sequence_name}/render.{frame_number}"),
+        否则覆盖成 "render.{frame_number}"
+
+    UE 5.7 MoviePipelineOutputSetting.h:101 frame_number_offset UPROPERTY
+    标记 BlueprintReadWrite, Python 原生可见。
+
+    Returns:
+        True 若 frame_number_offset 配置完成, False 若 LevelSequence
+        缺 UPostRenderCameraTrack / sample asset。
+    """
+    config = job.get_configuration()
+    output_setting = config.find_or_add_setting_by_class(
+        unreal.MoviePipelineOutputSetting
+    )
+
+    bounds = _find_csv_frame_bounds_from_sequence(level_sequence)
+    if bounds is None:
+        unreal.log_warning(
+            "[ui_interface] 未找到 UPostRenderCameraSamples DataAsset, "
+            "跳过 FrameNumberOffset 配置 — MRQ 文件名用默认 0 起的"
+        )
+        return False
+
+    first_frame, last_frame = bounds
+    padding = max(7, len(str(int(last_frame))))
+
+    output_setting.set_editor_property("frame_number_offset", int(first_frame))
+    output_setting.set_editor_property("zero_pad_frame_numbers", padding)
+
+    # 只在 default 不含 {frame_number} token 时覆盖, 保留用户可能的
+    # 自定义 path prefix / sequence name token。
+    current_format = ""
+    try:
+        current_format = str(output_setting.get_editor_property("file_name_format"))
+    except Exception:  # noqa: BLE001
+        current_format = ""
+    if "{frame_number}" not in current_format:
+        output_setting.set_editor_property(
+            "file_name_format", "render.{frame_number}"
+        )
+        unreal.log(
+            f"[ui_interface] MRQ output: FrameNumberOffset={first_frame}, "
+            f"FileNameFormat=render.{{frame_number}} ({padding}-digit pad)"
+        )
+    else:
+        unreal.log(
+            f"[ui_interface] MRQ output: FrameNumberOffset={first_frame}, "
+            f"FileNameFormat preserved ({current_format!r}), pad={padding}"
+        )
+    return True
+
+
+def _find_csv_frame_bounds_from_sequence(level_sequence):
+    """遍历 sequence bindings → UPostRenderCameraTrack → sections →
+    sample_asset 拿 (first, last) CSV frame numbers.
+
+    返回 None 当 sequence 没挂 plugin 的 custom track / 没有 sample。
+
+    `unreal.PostRenderCameraTrack` 在 plugin runtime 没暴露成 Python
+    class symbol (只反射 base UMovieSceneTrack), 所以走 get_class()
+    name 字符串匹配。如果未来 C++ 改 class 名,这里会静默 fall through;
+    `unreal_get_class_name()` 任何异常都 log warning 而不是静默, 让
+    误判暴露。
+    """
+    try:
+        bindings = level_sequence.get_bindings()
+    except Exception as exc:  # noqa: BLE001
+        unreal.log_warning(
+            f"[ui_interface] level_sequence.get_bindings() 抛错: {exc} — "
+            "MRQ FrameNumberOffset 配置跳过"
+        )
+        return None
+
+    for binding in bindings:
+        try:
+            tracks = binding.get_tracks()
+        except Exception as exc:  # noqa: BLE001
+            unreal.log_warning(
+                f"[ui_interface] binding.get_tracks() 抛错: {exc}"
+            )
+            continue
+        for track in tracks:
+            try:
+                cls_name = track.get_class().get_name()
+            except Exception as exc:  # noqa: BLE001
+                unreal.log_warning(
+                    f"[ui_interface] track.get_class().get_name() 抛错: {exc}"
+                )
+                continue
+            if cls_name != "PostRenderCameraTrack":
+                continue
+            for section in track.get_sections():
+                sample_asset = section.get_editor_property("sample_asset")
+                if sample_asset is None:
+                    continue
+                frame_numbers = sample_asset.source_frame_numbers
+                if frame_numbers:
+                    return int(frame_numbers[0]), int(frame_numbers[-1])
+    return None
 
 
 # ---------------------------------------------------------------------------

@@ -167,7 +167,7 @@ class ValidationReport:
         lines.append("=" * 50)
 
         lines.append(f"  帧数        : {self.frame_count}")
-        lines.append(f"  时间码范围  : {self.timecode_start} → {self.timecode_end}")
+        lines.append(f"  时间码范围  : {self.timecode_start} -> {self.timecode_end}")
         fl_min, fl_max = self.focal_length_range
         if fl_min == fl_max:
             lines.append(f"  焦距        : {fl_min:.3f} mm")
@@ -179,7 +179,7 @@ class ValidationReport:
         lines.append("")
         lines.append("【FOV 一致性检查】")
         fov = self.fov_check
-        symbol = "⚠" if fov.has_fov_warning else "✓"
+        symbol = "[WARN]" if fov.has_fov_warning else "[OK]"
         lines.append(
             f"  {symbol} 最大 FOV 误差: {fov.max_fov_error_deg:.4f}° "
             f"(帧索引 {fov.max_fov_error_frame_index})"
@@ -190,9 +190,9 @@ class ValidationReport:
         lines.append("")
         lines.append("【异常帧检测】")
         if not self.anomalous_frames:
-            lines.append("  ✓ 未发现位置/旋转跳变")
+            lines.append("  [OK] 未发现位置/旋转跳变")
         else:
-            lines.append(f"  ⚠ 发现 {len(self.anomalous_frames)} 处异常:")
+            lines.append(f"  [WARN] 发现 {len(self.anomalous_frames)} 处异常:")
             for a in self.anomalous_frames:
                 reason_cn = "位置跳变" if a["reason"] == "position_jump" else "旋转跳变"
                 lines.append(
