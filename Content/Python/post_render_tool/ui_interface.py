@@ -195,13 +195,14 @@ def open_movie_render_queue(level_sequence=None) -> None:
                     if configured:
                         unreal.log(
                             f"[ui_interface] 已把 {level_sequence.get_name()} "
-                            "添加到 MRQ queue (FrameNumberOffset 已配, "
-                            "请不要在 MRQ UI 删除 {frame_number} token)"
+                            "添加到 MRQ queue (output 文件名按 absolute "
+                            "CSV frame 配置, 不要在 MRQ UI 删除 "
+                            "{frame_number} token)"
                         )
                     else:
                         unreal.log(
                             f"[ui_interface] 已把 {level_sequence.get_name()} "
-                            "添加到 MRQ queue (未配 FrameNumberOffset — "
+                            "添加到 MRQ queue (未配 output 文件名 — "
                             "见上方 warning)"
                         )
         except Exception as exc:  # noqa: BLE001
@@ -216,22 +217,20 @@ def open_movie_render_queue(level_sequence=None) -> None:
 def _apply_csv_frame_filename_offset(job, level_sequence) -> bool:
     """配 MRQ output 让渲出的文件名带 absolute CSV frame number.
 
-    从 LevelSequence 关联的 UPostRenderCameraSamples DataAsset 读
-    source_frame_numbers[0] / [-1], 设给 UMoviePipelineOutputSetting:
-      - FrameNumberOffset = first_csv_frame   (MRQ 把 {frame_number}
-        token 加上 offset, 见 MoviePipelineBlueprintLibrary.cpp:1059)
-      - ZeroPadFrameNumbers = max(7, len(str(last_csv_frame)))   动态算
-        宽度防 7→8 位跨越导致文件名排序错乱
-      - FileNameFormat: 现有 default 若已含 `{frame_number}` token 则
-        保留 (e.g. 用户可能预设了 "{sequence_name}/render.{frame_number}"),
-        否则覆盖成 "render.{frame_number}"
+    sequence playback range 已经从 absolute CSV frame 起,
+    MRQ `{frame_number}` token 默认就展开成 absolute frame, 所以
+    `frame_number_offset` 强制设 0 (避免双重偏移)。
 
-    UE 5.7 MoviePipelineOutputSetting.h:101 frame_number_offset UPROPERTY
-    标记 BlueprintReadWrite, Python 原生可见。
+    本 helper 仍配:
+      - zero_pad_frame_numbers = max(7, len(str(last_csv_frame)))
+        动态算宽度, MRQ default 4 位 pad 装不下 absolute frame
+      - FileNameFormat: 不含 `{frame_number}` token 时覆盖成
+        "render.{frame_number}"; 含 token 的用户预设保留
 
     Returns:
-        True 若 frame_number_offset 配置完成, False 若 LevelSequence
-        缺 UPostRenderCameraTrack / sample asset。
+        True 若 MRQ output_setting 写入完成, False 若 LevelSequence 缺
+        UPostRenderCameraTrack / sample asset (此时 output_setting 完全
+        未被改动, MRQ 用全套 UE 默认值渲)。
     """
     config = job.get_configuration()
     output_setting = config.find_or_add_setting_by_class(
@@ -242,14 +241,17 @@ def _apply_csv_frame_filename_offset(job, level_sequence) -> bool:
     if bounds is None:
         unreal.log_warning(
             "[ui_interface] 未找到 UPostRenderCameraSamples DataAsset, "
-            "跳过 FrameNumberOffset 配置 — MRQ 文件名用默认 0 起的"
+            "跳过 MRQ output 配置"
         )
         return False
 
     first_frame, last_frame = bounds
     padding = max(7, len(str(int(last_frame))))
 
-    output_setting.set_editor_property("frame_number_offset", int(first_frame))
+    # FrameNumberOffset = 0: sequence playback range 已经从 absolute CSV
+    # frame 起, MRQ {frame_number} token 直接是 absolute; 再加 offset
+    # 就双重偏移了。
+    output_setting.set_editor_property("frame_number_offset", 0)
     output_setting.set_editor_property("zero_pad_frame_numbers", padding)
 
     # 只在 default 不含 {frame_number} token 时覆盖, 保留用户可能的
@@ -264,13 +266,15 @@ def _apply_csv_frame_filename_offset(job, level_sequence) -> bool:
             "file_name_format", "render.{frame_number}"
         )
         unreal.log(
-            f"[ui_interface] MRQ output: FrameNumberOffset={first_frame}, "
-            f"FileNameFormat=render.{{frame_number}} ({padding}-digit pad)"
+            f"[ui_interface] MRQ output: sequence frame = absolute CSV frame "
+            f"(first={first_frame}), FileNameFormat=render.{{frame_number}} "
+            f"({padding}-digit pad)"
         )
     else:
         unreal.log(
-            f"[ui_interface] MRQ output: FrameNumberOffset={first_frame}, "
-            f"FileNameFormat preserved ({current_format!r}), pad={padding}"
+            f"[ui_interface] MRQ output: sequence frame = absolute CSV frame "
+            f"(first={first_frame}), FileNameFormat preserved "
+            f"({current_format!r}), pad={padding}"
         )
     return True
 

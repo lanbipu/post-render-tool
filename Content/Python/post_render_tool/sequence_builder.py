@@ -136,13 +136,27 @@ def build_sequence(
     )
 
     # ------------------------------------------------------------------
-    # Step 3: Set playback range (preserve original frame cadence)
+    # Step 3: Set playback range using absolute CSV frame numbers.
+    #
+    # Sequencer NDF Timecode ruler = playback_time -> SMPTE conversion
+    # starting from playback_start. With playback_start=0 the ruler
+    # shows 00:00:00:00 regardless of Section.TimecodeSource (that field
+    # is source-clip metadata, not the ruler driver). Absolute frame
+    # numbers make the ruler display the real wall-clock SMPTE from the
+    # CSV. MRQ {frame_number} token expansion also picks up the absolute
+    # value automatically.
+    #
+    # The custom section template's
+    # AssetFrameOffset = LocalDisplayTime + SampleAsset->GetFirstFrame()
+    # math cancels for either base: with section start = first_frame_num
+    # and SourceFrameNumbers[0] = first_frame_num, the resolved sample
+    # index is unchanged.
     # ------------------------------------------------------------------
     first_frame_num = csv_result.frames[0].frame_number
     last_frame_num = csv_result.frames[-1].frame_number
     frame_span = last_frame_num - first_frame_num + 1
-    level_sequence.set_playback_start(0)
-    level_sequence.set_playback_end(frame_span)
+    level_sequence.set_playback_start(first_frame_num)
+    level_sequence.set_playback_end(last_frame_num + 1)
 
     # ------------------------------------------------------------------
     # Step 4: Bind camera actor as possessable + Camera Cut Track
@@ -150,7 +164,7 @@ def build_sequence(
     camera_binding = level_sequence.add_possessable(camera_actor)
     camera_cut_track = level_sequence.add_track(unreal.MovieSceneCameraCutTrack)
     camera_cut_section = camera_cut_track.add_section()
-    camera_cut_section.set_range(0, frame_span)
+    camera_cut_section.set_range(first_frame_num, last_frame_num + 1)
     camera_cut_section.set_camera_binding_id(
         level_sequence.get_binding_id(camera_binding)
     )
@@ -240,8 +254,8 @@ def build_sequence(
     section = unreal.PostRenderToolBuildHelper.ensure_post_render_camera_track_on_binding(
         level_sequence,
         camera_binding.get_id(),
-        0,           # section start (display-rate frame)
-        frame_span,  # section end
+        first_frame_num,        # section start = absolute CSV frame
+        last_frame_num + 1,     # section end (exclusive)
     )
     if section is None:
         raise RuntimeError(
