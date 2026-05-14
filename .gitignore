@@ -14,3 +14,4 @@ validation_results/**/*.dpx
 
 # Codex CLI / companion script transient logs (含 ChatGPT auth metadata)
 error.log
+.venv_*
