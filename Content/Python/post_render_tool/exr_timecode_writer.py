@@ -1,17 +1,22 @@
 """EXR header SMPTE timecode patcher.
 
-Offline (post-render) — shells out to `oiiotool` (OpenImageIO CLI) to
-write typed `smpte:TimeCode` + `FramesPerSecond` rational attributes to
-EXR files matching a filename pattern.
+Offline (post-render) — uses the `oiio-static-python` PyPI wheel
+(OpenImageIO 3.0.8 statically built, with Python bindings) to write
+typed `smpte:TimeCode` + `FramesPerSecond` rational attributes to EXR
+files matching a filename pattern. In-process; same OIIO C++ library
+that backs the `oiiotool` CLI, so spike-validated preservation of
+channels / compression / multipart / pixelAspectRatio transfers
+directly.
 
-Backend choice rationale: see `scripts/exr_timecode_spike_report.md`.
-oiiotool was picked over PyPI `OpenEXR` because it preserves multipart
-EXR layout, all channels, and `compression` / `pixelAspectRatio` attrs
-intact while emitting typed timecode (not a string alias).
+Backend rationale: see `scripts/exr_timecode_spike_report.md`
+(2026-05-14 addendum). The conda-forge Windows `openimageio` package
+does not ship `oiiotool.exe`, and PyPI `OpenEXR` 3.x had API
+mismatches verified empirically. `oiio-static-python` (the same OIIO
+library, wheel-bundled) was the chosen swap.
 
 Install:
-    macOS:   brew install openimageio
-    Windows: scoop install openimageio    (or install OpenImageIO MSI)
+    pip install --user oiio-static-python==3.0.8.1.1
+    (already on lanPC UE Python alongside opentimelineio.)
 
 Public API:
     patch_exr_timecode_in_dir(output_dir, filename_pattern,
@@ -19,25 +24,70 @@ Public API:
         Walks `output_dir`, matches `filename_pattern` to extract the
         absolute CSV frame number from each filename, calculates the
         per-frame SMPTE timecode, and rewrites the EXR with that
-        timecode in the header. Returns the count of patched files.
+        timecode in the header. All subimages are rewritten via
+        `ImageInput.seek_subimage` + `ImageOutput` multi-subimage
+        open + 'AppendSubimage' (multipart-safe; ImageBuf.write has no
+        multi-subimage semantics). Atomic — `os.replace` over the
+        original only after every subimage wrote successfully. Returns
+        the count of patched files.
 """
 from __future__ import annotations
 
+import os
 import re
-import shutil
-import subprocess
 from pathlib import Path
 
 from .timecode import Timecode, _frames_per_24h
 
 
-def _ensure_oiiotool() -> None:
-    if shutil.which("oiiotool") is None:
+def _ensure_oiio() -> None:
+    """Lazy import + clear error message if the OIIO Python wheel is
+    missing. Imported on first call rather than at module scope so the
+    pure-Python `_frame_to_timecode` helper remains testable without
+    `oiio-static-python` installed.
+    """
+    try:
+        import OpenImageIO  # noqa: F401
+    except ImportError as e:
         raise RuntimeError(
-            "oiiotool not on PATH. Install OpenImageIO: "
-            "macOS=`brew install openimageio`, "
-            "Windows=`scoop install openimageio` (or the MSI)."
-        )
+            "OpenImageIO Python binding not installed on the current "
+            "Python. Install with `pip install --user "
+            "oiio-static-python==3.0.8.1.1` (same install pattern as "
+            "opentimelineio). Backend was swapped from "
+            "subprocess+oiiotool on 2026-05-14 — see "
+            "scripts/exr_timecode_spike_report.md."
+        ) from e
+
+
+def _smpte_encode_time_field(hh: int, mm: int, ss: int, ff: int,
+                              drop_frame: bool = False) -> int:
+    """Encode SMPTE 12M timecode `time` field as packed uint32 BCD.
+    Mirrors the OpenEXR / OIIO C++ Imath::TimeCode constructor — the
+    oiio-static-python 3.0.8 wheel does NOT expose `oiio.TimeCode`,
+    so encoding is done by hand here.
+
+    Layout (low-bit-first per SMPTE 12M):
+      bits 0-3   frame units (BCD)
+      bits 4-5   frame tens (2 bits)
+      bit  6     drop-frame flag
+      bit  7     color-frame flag (0)
+      bits 8-11  seconds units
+      bits 12-14 seconds tens (3 bits)
+      bit  15    binary group flag 0
+      bits 16-19 minutes units
+      bits 20-22 minutes tens (3 bits)
+      bit  23    binary group flag 1
+      bits 24-27 hours units
+      bits 28-29 hours tens (2 bits)
+      bits 30-31 binary group flag 2 + field/bgf
+    """
+    val = (ff % 10) | ((ff // 10) << 4)
+    if drop_frame:
+        val |= 1 << 6
+    val |= ((ss % 10) << 8) | ((ss // 10) << 12)
+    val |= ((mm % 10) << 16) | ((mm // 10) << 20)
+    val |= ((hh % 10) << 24) | ((hh // 10) << 28)
+    return val
 
 
 def _frame_to_timecode(start: Timecode, offset_frames: int) -> Timecode:
@@ -181,7 +231,8 @@ def patch_exr_timecode_in_dir(
     out_path = Path(output_dir)
     if not out_path.is_dir():
         return 0
-    _ensure_oiiotool()
+    _ensure_oiio()
+    import OpenImageIO as oiio
 
     fn_regex = _filename_pattern_to_regex(filename_pattern)
     # Preserve fractional NTSC rates exactly (23.976 = 24000/1001 etc.) so
@@ -200,11 +251,87 @@ def patch_exr_timecode_in_dir(
         if offset < 0:
             continue
         tc = _frame_to_timecode(start_timecode, offset)
-        subprocess.check_call([
-            "oiiotool", str(file),
-            "--attrib:type=timecode", "smpte:TimeCode", str(tc),
-            "--attrib:type=rational", "FramesPerSecond", f"{rate_num}/{rate_den}",
-            "-o", str(file),
-        ])
-        processed += 1
+        time_field = _smpte_encode_time_field(
+            tc.hours, tc.minutes, tc.seconds, tc.frames,
+            drop_frame=tc.drop_frame,
+        )
+        tc_value = (time_field, 0)  # (time, user) — user field unused
+        fps_value = (rate_num, rate_den)
+
+        # Step A: read every subimage's spec + pixels via ImageInput.
+        # ImageInput.seek_subimage is the authoritative subimage iterator;
+        # ImageBuf.has_error past last subimage is unreliable.
+        inp = oiio.ImageInput.open(str(file))
+        if inp is None:
+            # Not a readable EXR (or a non-image file matching the
+            # filename pattern by accident) — skip silently.
+            continue
+        subimages = []  # [(mutated_spec, pixels_ndarray), ...]
+        try:
+            si = 0
+            while inp.seek_subimage(si, 0):
+                spec = inp.spec()
+                spec.attribute("smpte:TimeCode", oiio.TypeTimeCode, tc_value)
+                spec.attribute("FramesPerSecond", oiio.TypeRational, fps_value)
+                pixels = inp.read_image(spec.format)
+                if pixels is None:
+                    raise RuntimeError(
+                        f"OIIO read_image subimage {si} of {file}: "
+                        f"{inp.geterror()}"
+                    )
+                subimages.append((spec, pixels))
+                si += 1
+        finally:
+            inp.close()
+
+        if not subimages:
+            continue
+
+        # Step B: write all subimages to <file>.tmp via ImageOutput.
+        # Multipart path: pass list of specs to declare layout, write
+        # subimage 0, then re-open with mode='AppendSubimage' for each
+        # additional subimage. Single-part path: pass the single spec.
+        # Use ".partial.exr" suffix so ImageOutput infers the format from
+        # extension. ".tmp" would fail with "could not find a format
+        # writer" since OIIO infers by extension.
+        tmp = str(file) + ".partial.exr"
+        try:
+            out = oiio.ImageOutput.create(tmp)
+            if out is None:
+                raise RuntimeError(
+                    f"OIIO ImageOutput.create for {tmp}"
+                )
+            specs_only = [sp for sp, _ in subimages]
+            if len(specs_only) == 1:
+                ok = out.open(tmp, specs_only[0])
+            else:
+                ok = out.open(tmp, specs_only)
+            if not ok:
+                raise RuntimeError(
+                    f"OIIO open {tmp}: {out.geterror()}"
+                )
+            for i, (spec, pixels) in enumerate(subimages):
+                if i > 0:
+                    # 'AppendSubimage' is a string mode in OIIO Python
+                    # 3.0.8.1 (verified by probe Phase A.7 on 2026-05-14).
+                    if not out.open(tmp, spec, "AppendSubimage"):
+                        raise RuntimeError(
+                            f"OIIO AppendSubimage #{i}: {out.geterror()}"
+                        )
+                if not out.write_image(pixels):
+                    raise RuntimeError(
+                        f"OIIO write_image subimage {i}: {out.geterror()}"
+                    )
+            out.close()
+            # Step C: atomic swap. On any prior raise, tmp is not
+            # promoted — original file untouched.
+            os.replace(tmp, str(file))
+            processed += 1
+        finally:
+            if os.path.exists(tmp):
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+
     return processed
