@@ -4039,6 +4039,31 @@
         "Value": 0.0,
         "Visibility": "Collapsed"
       }
+    },
+    {
+      "type": "EditableTextBox",
+      "name": "txt_render_output_dir",
+      "role": "optional",
+      "properties": {
+        "HintText": "Render output directory (P1: EXR timecode patch / OTIO export)",
+        "Visibility": "Collapsed"
+      }
+    },
+    {
+      "type": "Button",
+      "name": "btn_patch_exr_timecode",
+      "role": "optional",
+      "properties": {
+        "Visibility": "Collapsed"
+      }
+    },
+    {
+      "type": "Button",
+      "name": "btn_export_otio",
+      "role": "optional",
+      "properties": {
+        "Visibility": "Collapsed"
+      }
     }
   ]
 }

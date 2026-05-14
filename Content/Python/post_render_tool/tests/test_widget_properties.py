@@ -218,6 +218,7 @@ _unreal_stub.Border = type("Border", (_StubWidgetBase,), {})
 _unreal_stub.SizeBox = _StubSizeBox
 _unreal_stub.SpinBox = _StubSpinBox
 _unreal_stub.MultiLineEditableText = type("MultiLineEditableText", (_StubWidgetBase,), {})
+_unreal_stub.EditableTextBox = type("EditableTextBox", (_StubWidgetBase,), {})
 _unreal_stub.Spacer = type("Spacer", (_StubWidgetBase,), {})
 _unreal_stub.VerticalBox = type("VerticalBox", (_StubWidgetBase,), {})
 _unreal_stub.HorizontalBox = type("HorizontalBox", (_StubWidgetBase,), {})

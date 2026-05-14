@@ -65,6 +65,8 @@ _OPTIONAL_CONTROLS = (
     "prereq_label_3", "prereq_label_4", "prereq_label_5",
     "prereq_summary",
     "spn_rot_pitch_offset", "spn_rot_yaw_offset", "spn_rot_roll_offset",
+    # P1 timecode-sync controls — task 12
+    "txt_render_output_dir", "btn_patch_exr_timecode", "btn_export_otio",
 )
 
 class PostRenderToolUI:
@@ -223,6 +225,9 @@ class PostRenderToolUI:
         self._bind_click("btn_import", self._on_import_clicked)
         self._bind_click("btn_open_seq", self._on_open_sequencer_clicked)
         self._bind_click("btn_open_mrq", self._on_open_mrq_clicked)
+        # P1 timecode-sync (optional — bind only if BP has the buttons)
+        self._bind_click("btn_patch_exr_timecode", self._on_patch_exr_timecode_clicked)
+        self._bind_click("btn_export_otio", self._on_export_otio_clicked)
 
     # ------------------------------------------------------------------
     # Setters
@@ -479,6 +484,65 @@ class PostRenderToolUI:
     def _on_open_mrq_clicked(self):
         seq = self._last_result.level_sequence if self._last_result else None
         open_movie_render_queue(seq)
+
+    # ------------------------------------------------------------------
+    # P1 timecode-sync — Patch EXR timecode / Export OTIO sidecar
+    # ------------------------------------------------------------------
+
+    def _get_render_output_dir(self) -> Optional[str]:
+        """Read render_output_dir text input. Returns None on empty / missing."""
+        ctrl = self._get("txt_render_output_dir")
+        if ctrl is None:
+            self._set_results(
+                "txt_render_output_dir widget 缺失 — 跑 rebuild_from_spec() "
+                "把 P1 控件加进 BP, 然后重开 widget."
+            )
+            return None
+        text = str(ctrl.get_text()).strip()
+        if not text:
+            self._set_results("请先在 'Render output dir' 输入框填渲染输出目录。")
+            return None
+        return text
+
+    def _on_patch_exr_timecode_clicked(self):
+        if self._last_result is None or self._last_result.level_sequence_path is None:
+            self._set_results("还没 Import LevelSequence — 跑 Import 后再 patch EXR.")
+            return
+        output_dir = self._get_render_output_dir()
+        if output_dir is None:
+            return
+        from .pipeline import run_patch_exr_timecode
+        try:
+            res = run_patch_exr_timecode(
+                self._last_result.level_sequence_path, output_dir
+            )
+            self._set_results(
+                f"Patched {res['patched_count']} EXR file(s) with "
+                f"start_timecode={res['start_timecode']} in:\n{output_dir}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self._set_results(f"Patch EXR timecode 失败: {exc}")
+
+    def _on_export_otio_clicked(self):
+        if self._last_result is None or self._last_result.level_sequence_path is None:
+            self._set_results("还没 Import LevelSequence — 跑 Import 后再 export OTIO.")
+            return
+        output_dir = self._get_render_output_dir()
+        if output_dir is None:
+            return
+        ls_path = self._last_result.level_sequence_path
+        shot_name = ls_path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        sidecar = output_dir.rstrip("/").rstrip("\\") + f"/{shot_name}.otio"
+        from .pipeline import run_export_otio
+        try:
+            res = run_export_otio(ls_path, output_dir, sidecar)
+            self._set_results(
+                f"OTIO sidecar written: {res['sidecar_path']}\n"
+                f"frame_count={res['frame_count']}, "
+                f"start_timecode={res['start_timecode']}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self._set_results(f"Export OTIO 失败: {exc}")
 
     # ------------------------------------------------------------------
     # Misc

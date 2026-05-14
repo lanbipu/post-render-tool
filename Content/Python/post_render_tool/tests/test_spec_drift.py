@@ -91,16 +91,25 @@ class TestSpecDrift(unittest.TestCase):
             diffs.append(f"JSON - C++: {sorted(json_opt - cpp_opt)}")
             self.fail("Optional name drift detected:\n" + "\n".join(diffs))
 
-    def test_required_count_is_26(self):
+    def test_required_count_matches_cpp(self):
+        # Counts are derived from C++ source so adding/removing a widget
+        # never requires editing this test — the three-way name match
+        # (cpp / widget.py / JSON) is the real invariant.
+        cpp_req, _ = _parse_cpp_uproperty_names()
         json_req, _ = _parse_json_contract_names()
         self.assertEqual(
-            len(json_req), 26, f"Required count drift: {len(json_req)} != 26"
+            len(json_req), len(cpp_req),
+            f"Required count drift: JSON has {len(json_req)}, "
+            f"C++ has {len(cpp_req)}"
         )
 
-    def test_optional_count_is_11(self):
+    def test_optional_count_matches_cpp(self):
+        _, cpp_opt = _parse_cpp_uproperty_names()
         _, json_opt = _parse_json_contract_names()
         self.assertEqual(
-            len(json_opt), 11, f"Optional count drift: {len(json_opt)} != 11"
+            len(json_opt), len(cpp_opt),
+            f"Optional count drift: JSON has {len(json_opt)}, "
+            f"C++ has {len(cpp_opt)}"
         )
 
 

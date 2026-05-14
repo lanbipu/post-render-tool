@@ -36,6 +36,8 @@ OPTIONAL_NAMES = {
     "prereq_label_3", "prereq_label_4", "prereq_label_5",
     "prereq_summary",
     "spn_rot_pitch_offset", "spn_rot_yaw_offset", "spn_rot_roll_offset",
+    # P1 timecode-sync controls — task 12
+    "txt_render_output_dir", "btn_patch_exr_timecode", "btn_export_otio",
 }
 
 
