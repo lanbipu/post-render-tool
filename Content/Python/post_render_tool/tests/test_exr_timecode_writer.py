@@ -116,6 +116,35 @@ class TestPatchExrTimecode(unittest.TestCase):
         )
         self.assertEqual(n, 0)
 
+    def test_subdir_pattern_raises(self):
+        from post_render_tool.timecode import Timecode
+        # MRQ format `{sequence_name}/render.{frame_number}` resolves to a
+        # pattern with `/` — patcher only scans top-level so this would
+        # silently match nothing. Fail fast instead.
+        with self.assertRaises(ValueError) as ctx:
+            self.patch(
+                self.tmpdir,
+                "shot1/render.{frame:07d}.exr",
+                625914,
+                Timecode.parse("10:00:00:00", 50.0),
+                50.0,
+            )
+        self.assertIn("path separator", str(ctx.exception))
+
+    def test_unresolved_mrq_token_raises(self):
+        from post_render_tool.timecode import Timecode
+        # `{shot_name}` left unresolved by derive_mrq_filename_pattern would
+        # silently never match. Bail with explicit error.
+        with self.assertRaises(ValueError) as ctx:
+            self.patch(
+                self.tmpdir,
+                "{shot_name}.render.{frame:07d}.exr",
+                625914,
+                Timecode.parse("10:00:00:00", 50.0),
+                50.0,
+            )
+        self.assertIn("unresolved tokens", str(ctx.exception))
+
     def test_skips_files_below_start_frame(self):
         from post_render_tool.timecode import Timecode
         # Add a file with absolute frame BELOW start_csv_frame; patcher
