@@ -57,9 +57,14 @@ public:
     FString SourceCsvPath;
 
     /** Bumped manually when sample schema changes incompatibly.
-     *  v2 (timecode-sync) — added StartTimecode + bHasStartTimecode. */
+     *  v2 (timecode-sync) — added StartTimecode + bHasStartTimecode.
+     *  v3 (sequencer-timecode-alignment) — SourceFrameNumbers semantics
+     *      switched from CSV `frame` column (Disguise free-running counter)
+     *      to `timecode.to_frames()` (SMPTE wall-clock since 00:00:00:00).
+     *      Old v2 assets won't pass v3's `_REQUIRED_DATAASSET_SCHEMA` gate
+     *      in pipeline.py — user must rerun run_import. */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostRender|Metadata")
-    int32 SchemaVersion = 2;
+    int32 SchemaVersion = 3;
 
     // ----- Canonical start timecode (P0 timecode-sync) -----
     // Persisted at write time so P1 EXR patcher / OTIO exporter can read SMPTE

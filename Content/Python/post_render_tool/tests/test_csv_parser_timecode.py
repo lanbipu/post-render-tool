@@ -283,6 +283,24 @@ class TestCsvParserTimecodeEdgeCases(unittest.TestCase):
         # `except CsvParseError` 分支能捕到
         self.assertTrue(issubclass(CsvTimecodeMismatch, CsvParseError))
 
+    def test_duplicate_timecode_frame_warns_and_drops(self):
+        # Disguise dense CSV 实际会出现两行 timestamp 完全相同 (sub-frame
+        # 采样写在同一 SMPTE bucket), 跟 tracker-drop row 一样, parser
+        # 应该 warn + 保留首条, 不阻塞 import.
+        path = self._make_csv([
+            self._data_row("10:00:00:00", 500000, 0.5),
+            self._data_row("10:00:00:00", 500001, 0.6),  # 重复 timecode
+            self._data_row("10:00:00:01", 500002, 0.7),
+        ])
+        try:
+            result = parse_csv_dense(path, fps=50.0)
+            # 重复行被丢, 留 2 行
+            self.assertEqual(result.frame_count, 2)
+            kept_frame_numbers = [f.frame_number for f in result.frames]
+            self.assertEqual(kept_frame_numbers, [500000, 500002])
+        finally:
+            os.unlink(path)
+
 
 if __name__ == "__main__":
     unittest.main()

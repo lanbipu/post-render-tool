@@ -136,13 +136,46 @@ def build_sequence(
     )
 
     # ------------------------------------------------------------------
-    # Step 3: Set playback range (preserve original frame cadence)
+    # Step 3: Set playback range using absolute CSV frame numbers.
+    #
+    # Sequencer NDF Timecode ruler = playback_time -> SMPTE conversion
+    # starting from playback_start. With playback_start=0 the ruler
+    # shows 00:00:00:00 regardless of Section.TimecodeSource (that field
+    # is source-clip metadata, not the ruler driver). Absolute frame
+    # numbers make the ruler display the real wall-clock SMPTE from the
+    # CSV. MRQ {frame_number} token expansion also picks up the absolute
+    # value automatically.
+    #
+    # The custom section template's
+    # AssetFrameOffset = LocalDisplayTime + SampleAsset->GetFirstFrame()
+    # math cancels for either base: with section start = first_frame_num
+    # and SourceFrameNumbers[0] = first_frame_num, the resolved sample
+    # index is unchanged.
     # ------------------------------------------------------------------
-    first_frame_num = csv_result.frames[0].frame_number
-    last_frame_num = csv_result.frames[-1].frame_number
+    # Use timecode-derived frame (wall-clock SMPTE since 00:00:00:00) as
+    # the sequence frame index, not CSV's `frame` counter column. Disguise
+    # exports `timestamp` and `frame` as independent streams — the user-
+    # facing time alignment lives in `timestamp`. Sample DataAsset's
+    # SourceFrameNumbers picks up the same semantics via sample_packer.
+    #
+    # Cross-midnight unwrap: anchor on first.to_frames() + monotonic delta
+    # so playback range stays ascending even when the take crosses
+    # 00:00:00:00 (raw to_frames wraps at 24h). UE Sequencer ruler
+    # renders any frame N as `(N / fps)` mod 24h SMPTE, so values past
+    # the wrap still display the correct on-set timecode.
+    from .timecode import unwrap_timecode_frames
+    first_tc = csv_result.frames[0].timecode
+    last_tc = csv_result.frames[-1].timecode
+    if first_tc is None or last_tc is None:
+        raise RuntimeError(
+            "csv_result.frames missing timecode — caller must pass fps to "
+            "parse_csv_dense for timecode-derived sequence frames."
+        )
+    first_frame_num = first_tc.to_frames()
+    last_frame_num = first_frame_num + unwrap_timecode_frames(first_tc, last_tc)
     frame_span = last_frame_num - first_frame_num + 1
-    level_sequence.set_playback_start(0)
-    level_sequence.set_playback_end(frame_span)
+    level_sequence.set_playback_start(first_frame_num)
+    level_sequence.set_playback_end(last_frame_num + 1)
 
     # ------------------------------------------------------------------
     # Step 4: Bind camera actor as possessable + Camera Cut Track
@@ -150,7 +183,7 @@ def build_sequence(
     camera_binding = level_sequence.add_possessable(camera_actor)
     camera_cut_track = level_sequence.add_track(unreal.MovieSceneCameraCutTrack)
     camera_cut_section = camera_cut_track.add_section()
-    camera_cut_section.set_range(0, frame_span)
+    camera_cut_section.set_range(first_frame_num, last_frame_num + 1)
     camera_cut_section.set_camera_binding_id(
         level_sequence.get_binding_id(camera_binding)
     )
@@ -240,8 +273,8 @@ def build_sequence(
     section = unreal.PostRenderToolBuildHelper.ensure_post_render_camera_track_on_binding(
         level_sequence,
         camera_binding.get_id(),
-        0,           # section start (display-rate frame)
-        frame_span,  # section end
+        first_frame_num,        # section start = absolute CSV frame
+        last_frame_num + 1,     # section end (exclusive)
     )
     if section is None:
         raise RuntimeError(

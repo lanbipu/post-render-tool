@@ -21,6 +21,7 @@ from .coordinate_transform import (
     transform_rotation,
 )
 from .csv_parser import csv_overscan_to_ue_overscan
+from .timecode import unwrap_timecode_frames
 
 
 # Sample field schema. Order is informational only; consumers index by key.
@@ -56,6 +57,29 @@ def pack_samples(frames) -> Tuple[List[int], List[dict]]:
     frame_numbers: List[int] = []
     samples: List[dict] = []
 
+    # Use timecode-derived frame index (CSV `timestamp` column) as the
+    # sequence frame, NOT Disguise's free-running CSV `frame` counter.
+    # The two streams are not 1:1 — `timestamp` is the wall-clock SMPTE
+    # the user shoots against (LTC / free-run), `frame` is Disguise's
+    # internal session counter. For Sequencer ruler + MRQ filename to
+    # line up with on-set footage, we anchor on the SMPTE stream.
+    #
+    # Cross-midnight unwrap: `Timecode.to_frames()` wraps at 24h, so a
+    # take crossing 00:00:00:00 would produce non-monotonic raw values
+    # and fail WriteCameraSamples' strictly-ascending invariant. Anchor
+    # on `frames[0].timecode` and add `unwrap_timecode_frames(first, f)`
+    # so every output frame index is base + monotonic delta.
+    if not frames:
+        return frame_numbers, samples
+    if frames[0].timecode is None:
+        raise RuntimeError(
+            f"sample_packer requires FrameData.timecode populated. "
+            f"frame {frames[0].frame_number}: call parse_csv_dense(..., "
+            "fps=fps) first."
+        )
+    first_tc = frames[0].timecode
+    base_frame = first_tc.to_frames()
+
     for f in frames:
         ue_x, ue_y, ue_z = transform_position(
             f.offset_x, f.offset_y, f.offset_z, cfg=cfg
@@ -68,7 +92,12 @@ def pack_samples(frames) -> Tuple[List[int], List[dict]]:
             f.overscan_x, f.overscan_y, frame_number=f.frame_number
         )
 
-        frame_numbers.append(int(f.frame_number))
+        if f.timecode is None:
+            raise RuntimeError(
+                f"sample_packer requires FrameData.timecode populated. "
+                f"frame {f.frame_number}: call parse_csv_dense(..., fps=fps) first."
+            )
+        frame_numbers.append(base_frame + unwrap_timecode_frames(first_tc, f.timecode))
         samples.append({
             "location_x": ue_x,
             "location_y": ue_y,
