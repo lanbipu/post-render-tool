@@ -193,9 +193,20 @@ def main() -> None:
     fnf = output_setting.get_editor_property("file_name_format")
     pad = output_setting.get_editor_property("zero_pad_frame_numbers")
     first_frame = int(samples_asset.source_frame_numbers[0])
-    _verify("MRQ FrameNumberOffset = first CSV frame",
-            int(fno) == first_frame,
-            f"got={fno}, expected={first_frame}")
+
+    # SchemaVersion 3 invariant: SourceFrameNumbers[0] = timecode.to_frames()
+    # take_4 trimmed start = 09:44:25:10 @ 50fps =
+    # 50 * (9*3600 + 44*60 + 25) + 10 = 1753260
+    expected_tc_frame = 50 * (9 * 3600 + 44 * 60 + 25) + 10
+    _verify("DataAsset SchemaVersion = 3",
+            int(samples_asset.schema_version) == 3,
+            str(samples_asset.schema_version))
+    _verify("SourceFrameNumbers[0] = timecode-derived (not CSV frame col)",
+            first_frame == expected_tc_frame,
+            f"got={first_frame}, expected={expected_tc_frame}")
+    # FrameNumberOffset is now hardcoded 0 (sequence frame is already absolute)
+    _verify("MRQ FrameNumberOffset = 0 (sequence frame is absolute)",
+            int(fno) == 0, f"got={fno}")
     _verify("MRQ FileNameFormat contains {frame_number}",
             "{frame_number}" in str(fnf), repr(fnf))
     _verify("MRQ ZeroPadFrameNumbers >= 7",

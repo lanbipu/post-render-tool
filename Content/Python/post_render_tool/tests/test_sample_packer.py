@@ -1,7 +1,7 @@
 """Unit tests for sample_packer.py — pure-Python sample preparation."""
 
 import unittest
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from post_render_tool.sample_packer import (
@@ -9,6 +9,7 @@ from post_render_tool.sample_packer import (
     detect_contiguous,
     pack_samples,
 )
+from post_render_tool.timecode import Timecode
 
 
 @dataclass
@@ -32,9 +33,18 @@ class _MockFrame:
     center_shift_y_mm: float
     overscan_x: Optional[float]
     overscan_y: Optional[float]
+    timecode: Optional[Timecode] = None
 
 
 def _make_frame(frame_number: int, **overrides) -> _MockFrame:
+    # Synthesise a unique Timecode per frame so pack_samples produces a
+    # strictly-ascending frame_numbers list — pack_samples now uses
+    # `timecode.to_frames()` as the canonical sequence frame index.
+    # Spread frames 1 second apart so to_frames() values stay unique and
+    # ordered regardless of `frame_number` value.
+    hh = (frame_number // 3600) % 24
+    mm = (frame_number // 60) % 60
+    ss = frame_number % 60
     defaults = dict(
         frame_number=frame_number,
         offset_x=1.0, offset_y=2.0, offset_z=3.0,
@@ -48,6 +58,10 @@ def _make_frame(frame_number: int, **overrides) -> _MockFrame:
         center_shift_y_mm=0.0,
         overscan_x=1.0,
         overscan_y=1.0,
+        timecode=Timecode(
+            hours=hh, minutes=mm, seconds=ss, frames=0,
+            drop_frame=False, rate_num=24, rate_den=1,
+        ),
     )
     defaults.update(overrides)
     return _MockFrame(**defaults)
@@ -60,7 +74,37 @@ class TestPackSamples(unittest.TestCase):
         frame_numbers, samples = pack_samples(frames)
         self.assertEqual(len(frame_numbers), 3)
         self.assertEqual(len(samples), 3)
-        self.assertEqual(frame_numbers, [10, 11, 12])
+        # frame_numbers now derives from timecode.to_frames(), not the CSV
+        # `frame` column. _make_frame spaces frames 1s apart at 24 fps, so
+        # frame_number 10/11/12 → 240/264/288.
+        self.assertEqual(frame_numbers, [10 * 24, 11 * 24, 12 * 24])
+
+    def test_pack_cross_midnight_stays_monotonic(self):
+        """take crossing 00:00:00:00 must produce strictly-ascending frames.
+
+        Without unwrap, Timecode.to_frames() wraps at 24h: e.g. 23:59:58:00
+        → 4319900 @ 50fps, 00:00:02:00 → 100 (wrapped). pack_samples
+        anchors on frames[0].timecode + delta, so output stays ascending.
+        """
+        tc_before = Timecode(
+            hours=23, minutes=59, seconds=58, frames=0,
+            drop_frame=False, rate_num=24, rate_den=1,
+        )
+        # 4 seconds after that = 00:00:02:00 next day
+        tc_after = Timecode(
+            hours=0, minutes=0, seconds=2, frames=0,
+            drop_frame=False, rate_num=24, rate_den=1,
+        )
+        frames = [
+            _make_frame(0, timecode=tc_before),
+            _make_frame(1, timecode=tc_after),
+        ]
+        frame_numbers, _ = pack_samples(frames)
+        # Strictly ascending — last > first (raw to_frames() would be
+        # 0 < 4319900-equivalent at 24fps)
+        self.assertGreater(frame_numbers[1], frame_numbers[0])
+        # Delta = 4 seconds × 24 fps = 96 frames
+        self.assertEqual(frame_numbers[1] - frame_numbers[0], 96)
 
     def test_each_sample_dict_has_all_required_fields(self):
         frames = [_make_frame(0)]

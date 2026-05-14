@@ -385,6 +385,15 @@ bool UPostRenderToolBuildHelper::WriteCameraSamples(
     SampleAsset->FrameRateNumerator = FrameRateNumerator;
     SampleAsset->FrameRateDenominator = FrameRateDenominator;
     SampleAsset->SourceCsvPath      = SourceCsvPath;
+    // Upgrade serialized schema on every write so v2 assets re-imported
+    // after the v3 cutover get bumped. The C++ default initializer
+    // (PostRenderCameraSamples.h SchemaVersion = 3) only takes effect for
+    // newly-constructed assets; existing serialized assets keep their old
+    // value through CreateOrLoadCameraSamplesAsset → Load. Without this
+    // explicit set, `run_import` on a v2 asset would leave SchemaVersion=2
+    // and the pipeline-side v3 gate (_REQUIRED_DATAASSET_SCHEMA) would
+    // permanently reject it. Keep in sync with header default.
+    SampleAsset->SchemaVersion      = 3;
     // Canonical SMPTE start timecode (P0 timecode-sync). When the caller
     // signals the timecode is unknown (csv_parser invoked without fps),
     // reset the field to a zeroed FTimecode rather than honoring the

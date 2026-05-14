@@ -273,6 +273,9 @@ def _load_sample_asset_for_sequence(level_sequence_asset_path: str):
     return samples
 
 
+_REQUIRED_DATAASSET_SCHEMA = 3
+
+
 def _read_start_timecode_from_sample(samples) -> "Timecode":
     """Reconstruct post_render_tool.timecode.Timecode from sample DataAsset's
     canonical StartTimecode fields (see Task 5).
@@ -283,6 +286,13 @@ def _read_start_timecode_from_sample(samples) -> "Timecode":
             "Sample DataAsset bHasStartTimecode=False — 该 LevelSequence "
             "在 timecode-sync 部署前导入或 csv_parser 没传 fps。重跑 "
             "run_import 后再 patch / export。"
+        )
+    schema_v = int(samples.schema_version)
+    if schema_v < _REQUIRED_DATAASSET_SCHEMA:
+        raise RuntimeError(
+            f"Sample DataAsset SchemaVersion={schema_v} (旧 frame_number 语义), "
+            f"当前 plugin 要求 v{_REQUIRED_DATAASSET_SCHEMA} (timecode-derived "
+            "sequence frames). 请重跑 run_import 重建 DataAsset 后再 patch / export。"
         )
     tc = samples.start_timecode
     # unreal.Timecode struct fields verified by

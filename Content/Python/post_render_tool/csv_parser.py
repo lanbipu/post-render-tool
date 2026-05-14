@@ -690,6 +690,44 @@ def parse_csv_dense(
                 f"frame_number remains authoritative for keyframe positions, "
                 f"start_timecode used as SMPTE anchor for downstream conform."
             )
+        # Strict-ascending invariant for timecode-derived sequence frames:
+        # sample_packer + WriteCameraSamples require SourceFrameNumbers to
+        # be strictly ascending. Disguise dense CSVs in the wild include
+        # rows that share `timestamp` (sub-frame samples written at the
+        # same SMPTE bucket), so we dedupe by `timecode.to_frames()` and
+        # keep the first occurrence — same posture as the row-skip
+        # handling for empty transform fields above.
+        seen_tc_frames: Dict[int, int] = {}      # to_frames -> index of first row
+        dup_indices: List[int] = []
+        first_dup_msg: Optional[str] = None
+        for idx, f in enumerate(frames):
+            tf = f.timecode.to_frames()
+            if tf in seen_tc_frames:
+                if first_dup_msg is None:
+                    prev = frames[seen_tc_frames[tf]]
+                    first_dup_msg = (
+                        f"SMPTE frame {tf}: frame {prev.frame_number} "
+                        f"@ {prev.timestamp} <-> frame {f.frame_number} "
+                        f"@ {f.timestamp}"
+                    )
+                dup_indices.append(idx)
+            else:
+                seen_tc_frames[tf] = idx
+        if dup_indices:
+            print(
+                f"[csv_parser] WARNING: 丢弃 {len(dup_indices)} 行折算到重复 "
+                f"SMPTE frame 的样本 (Disguise 同帧多采样导致); 首处: "
+                f"{first_dup_msg}. 保留每个 SMPTE frame 的第一行。"
+            )
+            # Drop duplicates while preserving first occurrence + index order
+            keep = [True] * len(frames)
+            for i in dup_indices:
+                keep[i] = False
+            frames = [f for f, k in zip(frames, keep) if k]
+            # first/last may have shifted; refresh
+            first = frames[0]
+            last = frames[-1]
+
         start_tc = first.timecode
         end_tc = last.timecode
         frame_rate = (start_tc.rate_num, start_tc.rate_den)

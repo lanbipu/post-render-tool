@@ -152,8 +152,27 @@ def build_sequence(
     # and SourceFrameNumbers[0] = first_frame_num, the resolved sample
     # index is unchanged.
     # ------------------------------------------------------------------
-    first_frame_num = csv_result.frames[0].frame_number
-    last_frame_num = csv_result.frames[-1].frame_number
+    # Use timecode-derived frame (wall-clock SMPTE since 00:00:00:00) as
+    # the sequence frame index, not CSV's `frame` counter column. Disguise
+    # exports `timestamp` and `frame` as independent streams — the user-
+    # facing time alignment lives in `timestamp`. Sample DataAsset's
+    # SourceFrameNumbers picks up the same semantics via sample_packer.
+    #
+    # Cross-midnight unwrap: anchor on first.to_frames() + monotonic delta
+    # so playback range stays ascending even when the take crosses
+    # 00:00:00:00 (raw to_frames wraps at 24h). UE Sequencer ruler
+    # renders any frame N as `(N / fps)` mod 24h SMPTE, so values past
+    # the wrap still display the correct on-set timecode.
+    from .timecode import unwrap_timecode_frames
+    first_tc = csv_result.frames[0].timecode
+    last_tc = csv_result.frames[-1].timecode
+    if first_tc is None or last_tc is None:
+        raise RuntimeError(
+            "csv_result.frames missing timecode — caller must pass fps to "
+            "parse_csv_dense for timecode-derived sequence frames."
+        )
+    first_frame_num = first_tc.to_frames()
+    last_frame_num = first_frame_num + unwrap_timecode_frames(first_tc, last_tc)
     frame_span = last_frame_num - first_frame_num + 1
     level_sequence.set_playback_start(first_frame_num)
     level_sequence.set_playback_end(last_frame_num + 1)
