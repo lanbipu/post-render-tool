@@ -162,6 +162,53 @@ def _verify_typed_attrs(path: str) -> dict:
     return out
 
 
+def _extract_channels(header_text: str) -> set[str]:
+    """Pull channel names from exrheader / oiiotool --info output."""
+    channels: set[str] = set()
+    in_channels = False
+    for line in header_text.splitlines():
+        s = line.strip()
+        if "channels" in s.lower():
+            in_channels = True
+            continue
+        # `R, half, 1 1` style (exrheader) or `Channel list:` (oiiotool)
+        if in_channels:
+            # Stop when we hit another attribute or blank line
+            if s == "" or "(type " in s.lower():
+                in_channels = False
+                continue
+            # Channel name is everything before `,` or `:`
+            for tok in s.replace(":", ",").split(","):
+                tok = tok.strip()
+                if tok and not tok[0].isdigit() and "type" not in tok:
+                    channels.add(tok.split()[0])
+    return channels
+
+
+def _extract_compression(header_text: str) -> str:
+    for line in header_text.splitlines():
+        s = line.strip().lower()
+        if "compression" in s and "compressionlevel" not in s:
+            return s
+    return ""
+
+
+def _verify_preservation(baseline: str, patched: str) -> dict:
+    """Compare channels + compression between baseline and patched EXR."""
+    baseline_chans = _extract_channels(baseline)
+    patched_chans = _extract_channels(patched)
+    baseline_compr = _extract_compression(baseline)
+    patched_compr = _extract_compression(patched)
+    return {
+        "channels_preserved": baseline_chans == patched_chans,
+        "compression_preserved": baseline_compr == patched_compr,
+        "baseline_channels": sorted(baseline_chans),
+        "patched_channels": sorted(patched_chans),
+        "baseline_compression": baseline_compr,
+        "patched_compression": patched_compr,
+    }
+
+
 def main() -> int:
     if not _have("oiiotool"):
         print("FAIL: oiiotool not installed (brew install openimageio)")
@@ -183,8 +230,13 @@ def main() -> int:
     print(f"  write: {'OK' if ok else 'FAIL'}")
     if ok:
         res = _verify_typed_attrs(sp_b_single)
+        patched_b_s = _exr_header(sp_b_single)
+        pres = _verify_preservation(baseline_b_s, patched_b_s)
         print(f"  timeCode typed: {res['timeCode_typed']}")
         print(f"  FramesPerSecond typed: {res['framesPerSecond_typed']}")
+        print(f"  channels preserved: {pres['channels_preserved']} "
+              f"(baseline={pres['baseline_channels']}, patched={pres['patched_channels']})")
+        print(f"  compression preserved: {pres['compression_preserved']}")
         print(f"  header excerpt: {res['header_excerpt']}")
     print()
 
@@ -192,12 +244,18 @@ def main() -> int:
     print("## Backend (b) oiiotool — multipart EXR (stress test)\n")
     try:
         _gen_mock_exr(sp_b_multi, multipart=True)
+        baseline_b_m = _exr_header(sp_b_multi)
         ok = _spike_oiiotool(sp_b_multi, 10, 0, 0, 0, False, 50)
         print(f"  write: {'OK' if ok else 'FAIL'}")
         if ok:
             res = _verify_typed_attrs(sp_b_multi)
+            patched_b_m = _exr_header(sp_b_multi)
+            pres = _verify_preservation(baseline_b_m, patched_b_m)
             print(f"  timeCode typed: {res['timeCode_typed']}")
             print(f"  FramesPerSecond typed: {res['framesPerSecond_typed']}")
+            print(f"  channels preserved: {pres['channels_preserved']} "
+                  f"(baseline={pres['baseline_channels']}, patched={pres['patched_channels']})")
+            print(f"  compression preserved: {pres['compression_preserved']}")
             print(f"  header excerpt: {res['header_excerpt']}")
     except subprocess.CalledProcessError as exc:
         print(f"  multipart gen/spike FAILED: {exc}")

@@ -28,7 +28,7 @@ with on-set footage's embedded SMPTE timecode.
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from pathlib import PurePosixPath, PureWindowsPath
 
 import opentimelineio as otio  # noqa: I001
 
@@ -36,6 +36,21 @@ from .timecode import Timecode
 
 
 _PATTERN_RE = re.compile(r"^(.*?)\{frame:0?(\d+)d\}(.*)$")
+_WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/]")
+
+
+def _to_file_uri_base(cg_render_dir: str) -> str:
+    """`E:/RenderStream Projects/take_4` →
+    `file:///E:/RenderStream%20Projects/take_4/`.
+
+    Platform-aware: Windows drive paths go through `PureWindowsPath` so
+    DaVinci/Nuke can locate the EXRs; POSIX paths use `PurePosixPath`.
+    """
+    if _WINDOWS_DRIVE_RE.match(cg_render_dir):
+        uri = PureWindowsPath(cg_render_dir).as_uri()
+    else:
+        uri = PurePosixPath(cg_render_dir).as_uri()
+    return uri.rstrip("/") + "/"
 
 
 def _split_filename_pattern(pattern: str) -> tuple[str, str, int]:
@@ -85,21 +100,24 @@ def export_sidecar(
     """
     name_prefix, name_suffix, padding = _split_filename_pattern(cg_filename_pattern)
 
+    # Derive the exact rate from the start_timecode (which preserves the
+    # 24000/1001 / 30000/1001 / 60000/1001 NTSC fractionals); the caller's
+    # `fps` is the rounded UI value (23.976 vs 23.97602...). Using the
+    # exact rate avoids long-take drift in DaVinci/Nuke conform.
+    rate = start_timecode.rate_num / start_timecode.rate_den
+
     timeline = otio.schema.Timeline(name=shot_name)
-    # global_start_time encodes the SMPTE start anchor that conform tools
-    # snap to. Use the SMPTE frame count since 00:00:00:00 — when DaVinci
-    # imports, `to_timecode(global_start_time, rate=fps)` rounds back to
-    # the original string.
+    # global_start_time encodes the SMPTE start anchor conform tools snap
+    # to. SMPTE frame count since 00:00:00:00 + exact rate.
     timeline.global_start_time = otio.opentime.RationalTime(
-        start_timecode.to_frames(), fps
+        start_timecode.to_frames(), rate
     )
 
     track = otio.schema.Track(
         name="CG Render", kind=otio.schema.TrackKind.Video
     )
 
-    # target_url_base must end in `/`. file:// URI accepts absolute paths.
-    url_base = "file://" + str(Path(cg_render_dir).as_posix()).rstrip("/") + "/"
+    url_base = _to_file_uri_base(cg_render_dir)
 
     img_ref = otio.schema.ImageSequenceReference(
         target_url_base=url_base,
@@ -107,18 +125,18 @@ def export_sidecar(
         name_suffix=name_suffix,
         start_frame=start_csv_frame,
         frame_zero_padding=padding,
-        rate=fps,
+        rate=rate,
         available_range=otio.opentime.TimeRange(
-            start_time=otio.opentime.RationalTime(0, fps),
-            duration=otio.opentime.RationalTime(frame_count, fps),
+            start_time=otio.opentime.RationalTime(0, rate),
+            duration=otio.opentime.RationalTime(frame_count, rate),
         ),
     )
     clip = otio.schema.Clip(
         name=f"{shot_name}_cg",
         media_reference=img_ref,
         source_range=otio.opentime.TimeRange(
-            start_time=otio.opentime.RationalTime(0, fps),
-            duration=otio.opentime.RationalTime(frame_count, fps),
+            start_time=otio.opentime.RationalTime(0, rate),
+            duration=otio.opentime.RationalTime(frame_count, rate),
         ),
     )
     track.append(clip)

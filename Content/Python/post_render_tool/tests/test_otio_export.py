@@ -118,6 +118,26 @@ class TestOtioExport(unittest.TestCase):
         duration = clip.duration()
         self.assertEqual(int(duration.value), 200)
 
+    def test_windows_path_produces_escaped_file_uri(self):
+        # lanPC MRQ output path has drive letter + spaces; URI must escape
+        # them so DaVinci/Nuke can resolve the EXR sequence.
+        tl = self._export(cg_render_dir=r"E:\RenderStream Projects\take_4")
+        url = tl.tracks[0][0].media_reference.target_url_base
+        # Must escape space and route the drive letter via the 3-slash form.
+        self.assertTrue(url.startswith("file:///E:/"),
+                        f"unexpected URL: {url!r}")
+        self.assertIn("RenderStream%20Projects", url,
+                      f"space not escaped: {url!r}")
+        # Trailing slash for OTIO ImageSequenceReference convention
+        self.assertTrue(url.endswith("/"), url)
+
+    def test_posix_path_produces_file_uri(self):
+        tl = self._export(cg_render_dir="/renders/take 4")
+        url = tl.tracks[0][0].media_reference.target_url_base
+        self.assertTrue(url.startswith("file:///"),
+                        f"unexpected URL: {url!r}")
+        self.assertIn("take%204", url, f"space not escaped: {url!r}")
+
 
 if __name__ == "__main__":
     unittest.main()
