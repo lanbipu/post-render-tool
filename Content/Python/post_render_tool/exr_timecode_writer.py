@@ -45,18 +45,66 @@ def _ensure_oiio() -> None:
     missing. Imported on first call rather than at module scope so the
     pure-Python `_frame_to_timecode` helper remains testable without
     `oiio-static-python` installed.
+
+    UE Editor caches ``sys.path`` at startup, so packages installed via
+    ``pip install --user`` AFTER UE launched are invisible until the
+    editor restarts. As a fallback we ``site.addsitedir`` the
+    Python-reported user-site directory before raising — this lets the
+    same running editor session pick up a fresh install without a
+    restart.
     """
     try:
         import OpenImageIO  # noqa: F401
-    except ImportError as e:
-        raise RuntimeError(
-            "OpenImageIO Python binding not installed on the current "
-            "Python. Install with `pip install --user "
-            "oiio-static-python==3.0.8.1.1` (same install pattern as "
-            "opentimelineio). Backend was swapped from "
-            "subprocess+oiiotool on 2026-05-14 — see "
-            "scripts/exr_timecode_spike_report.md."
-        ) from e
+        return
+    except ImportError:
+        pass
+
+    # Try several user-site candidates. UE embedded Python may have
+    # ENABLE_USER_SITE=False or a USER_BASE that doesn't match where
+    # `pip install --user` actually wrote the wheel, so we don't trust
+    # site.getusersitepackages() alone — fall back to the platform-
+    # specific defaults that pip itself uses.
+    import site
+    import sys
+    candidates: list[str] = []
+    try:
+        guess = site.getusersitepackages()
+        if guess:
+            candidates.append(guess)
+    except Exception:
+        pass
+    py_xy = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    py_XY = f"Python{sys.version_info.major}{sys.version_info.minor}"
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA", "")
+        if appdata:
+            candidates.append(os.path.join(appdata, "Python", py_XY, "site-packages"))
+    elif sys.platform == "darwin":
+        home = os.path.expanduser("~")
+        candidates.append(os.path.join(home, "Library", "Python",
+                                       f"{sys.version_info.major}.{sys.version_info.minor}",
+                                       "lib", "python", "site-packages"))
+    else:
+        home = os.path.expanduser("~")
+        candidates.append(os.path.join(home, ".local", "lib", py_xy, "site-packages"))
+
+    for cand in candidates:
+        if cand and os.path.isdir(cand) and cand not in sys.path:
+            site.addsitedir(cand)
+    try:
+        import OpenImageIO  # noqa: F401
+        return
+    except ImportError:
+        pass
+
+    raise RuntimeError(
+        "OpenImageIO Python binding not installed on the current "
+        "Python. Install with `pip install --user "
+        "oiio-static-python==3.0.8.1.1` (same install pattern as "
+        "opentimelineio). Backend was swapped from "
+        "subprocess+oiiotool on 2026-05-14 — see "
+        "scripts/exr_timecode_spike_report.md."
+    )
 
 
 def _smpte_encode_time_field(hh: int, mm: int, ss: int, ff: int,
