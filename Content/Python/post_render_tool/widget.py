@@ -80,6 +80,46 @@ _OPTIONAL_CONTROLS = (
     "txt_render_output_dir", "btn_patch_exr_timecode", "btn_export_otio",
 )
 
+_MISSING_IMPORT_RESULT = (
+    "⚠️ 还没 Import LevelSequence\n\n"
+    "  请先跑 Import CSV 流程，再回来点这个按钮。"
+)
+_MISSING_RENDER_OUTPUT_DIR_RESULT = (
+    "⚠️ Render output dir 没填\n\n"
+    "  请先在上方输入框填渲染输出目录。"
+)
+
+
+def _format_patch_result(success: bool, **kwargs) -> str:
+    if success:
+        return (
+            "✅ Patch EXR Timecode 成功\n\n"
+            f"  共处理 {kwargs['count']} 个 EXR 文件\n"
+            f"  起始时间码：{kwargs['start_timecode']}\n"
+            "  输出目录：\n"
+            f"    {kwargs['output_dir']}"
+        )
+    return (
+        "❌ Patch EXR Timecode 失败\n\n"
+        f"  原因：{kwargs['exception_message']}"
+    )
+
+
+def _format_otio_result(success: bool, **kwargs) -> str:
+    if success:
+        return (
+            "✅ Export OTIO Sidecar 成功\n\n"
+            f"  共写入 {kwargs['frame_count']} 帧\n"
+            f"  起始时间码：{kwargs['start_timecode']}\n"
+            "  输出文件：\n"
+            f"    {kwargs['sidecar_path']}"
+        )
+    return (
+        "❌ Export OTIO Sidecar 失败\n\n"
+        f"  原因：{kwargs['exception_message']}"
+    )
+
+
 class PostRenderToolUI:
     """Binds the Designer-authored BP_PostRenderToolWidget to Python logic."""
 
@@ -522,20 +562,17 @@ class PostRenderToolUI:
         """Read render_output_dir text input. Returns None on empty / missing."""
         ctrl = self._get("txt_render_output_dir")
         if ctrl is None:
-            self._set_results(
-                "txt_render_output_dir widget 缺失 — 跑 rebuild_from_spec() "
-                "把 P1 控件加进 BP, 然后重开 widget."
-            )
+            self._set_results(_MISSING_RENDER_OUTPUT_DIR_RESULT)
             return None
         text = str(ctrl.get_text()).strip()
         if not text:
-            self._set_results("请先在 'Render output dir' 输入框填渲染输出目录。")
+            self._set_results(_MISSING_RENDER_OUTPUT_DIR_RESULT)
             return None
         return text
 
     def _on_patch_exr_timecode_clicked(self):
         if self._last_result is None or self._last_result.level_sequence_path is None:
-            self._set_results("还没 Import LevelSequence — 跑 Import 后再 patch EXR.")
+            self._set_results(_MISSING_IMPORT_RESULT)
             return
         output_dir = self._get_render_output_dir()
         if output_dir is None:
@@ -549,22 +586,31 @@ class PostRenderToolUI:
             count = res["patched_count"]
             if count == 0:
                 self._set_results(
-                    f"Patched 0 EXR — pattern {pattern!r} 不匹配 "
-                    f"{output_dir} 里任何文件。检查 MRQ 实际写文件名 + "
-                    "file_name_format / zero_pad_frame_numbers。"
+                    _format_patch_result(
+                        False,
+                        exception_message=(
+                            "没有找到匹配的 EXR 文件。请检查 Render output dir "
+                            "和 MRQ 输出文件名。"
+                        ),
+                    )
                 )
-            else:
-                self._set_results(
-                    f"Patched {count} EXR file(s) with "
-                    f"start_timecode={res['start_timecode']} in:\n"
-                    f"{output_dir}\npattern: {pattern}"
+                return
+            self._set_results(
+                _format_patch_result(
+                    True,
+                    count=count,
+                    start_timecode=res["start_timecode"],
+                    output_dir=output_dir,
                 )
+            )
         except Exception as exc:  # noqa: BLE001
-            self._set_results(f"Patch EXR timecode 失败: {exc}")
+            self._set_results(
+                _format_patch_result(False, exception_message=str(exc))
+            )
 
     def _on_export_otio_clicked(self):
         if self._last_result is None or self._last_result.level_sequence_path is None:
-            self._set_results("还没 Import LevelSequence — 跑 Import 后再 export OTIO.")
+            self._set_results(_MISSING_IMPORT_RESULT)
             return
         output_dir = self._get_render_output_dir()
         if output_dir is None:
@@ -578,13 +624,17 @@ class PostRenderToolUI:
         try:
             res = run_export_otio(ls_path, output_dir, sidecar, pattern)
             self._set_results(
-                f"OTIO sidecar written: {res['sidecar_path']}\n"
-                f"frame_count={res['frame_count']}, "
-                f"start_timecode={res['start_timecode']}\n"
-                f"pattern: {pattern}"
+                _format_otio_result(
+                    True,
+                    frame_count=res["frame_count"],
+                    start_timecode=res["start_timecode"],
+                    sidecar_path=res["sidecar_path"],
+                )
             )
         except Exception as exc:  # noqa: BLE001
-            self._set_results(f"Export OTIO 失败: {exc}")
+            self._set_results(
+                _format_otio_result(False, exception_message=str(exc))
+            )
 
     # ------------------------------------------------------------------
     # Misc
