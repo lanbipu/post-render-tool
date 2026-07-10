@@ -314,6 +314,12 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
 
 ## 多版本支持(UE 5.1–5.8)
 
+> **状态(2026-07-10, commit `ef47498`)**:多版本发布链路已跑通 —— 8 个版本
+> 全部编译打包成功,产物在 lanPC `E:\PluginReleases\PostRenderTool_<ver>_Win64.zip`。
+> 该 commit 同时包含史料清理 + 全部版本宏/打包脚本(message 只写了清理,内容以
+> diff 为准)。**待办**:各版本仅验证到编译通过,尚未做 Editor 内功能验证
+> (装包 → 资产生成 → import CSV → Sequencer scrub),优先 5.1 和 5.5。
+
 目标:一条命令编出 UE 5.1–5.8 全部 Win64 编辑器插件包。范围决策(2026-07-10):
 不支持 5.0(lanPC 未安装,用户量低);Mac/Linux 不在范围。
 
