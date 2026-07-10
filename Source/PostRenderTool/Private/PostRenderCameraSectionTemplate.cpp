@@ -11,6 +11,7 @@
 #include "PostRenderCameraSamples.h"
 #include "PostRenderCameraSection.h"
 #include "PostRenderDistortionControllerComponent.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 namespace
 {
@@ -68,12 +69,26 @@ namespace
                     CineComp->CurrentAperture    = Sample.Aperture;
                     CineComp->FocusSettings.ManualFocusDistance = Sample.FocusDistanceCM;
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
                     FCameraFilmbackSettings Film = CineComp->Filmback;
                     Film.SensorHorizontalOffset = Sample.SensorHorizontalOffsetMM;
                     Film.SensorVerticalOffset   = Sample.SensorVerticalOffsetMM;
                     CineComp->Filmback = Film;
 
                     CineComp->Overscan = Sample.Overscan;
+#else
+                    // UE ≤5.4 无 Filmback.SensorHorizontal/VerticalOffset 与
+                    // CineCamera Overscan API — centerShift 与 overscan 修复不可用,
+                    // 大 centerShift / 大畸变镜头会有几何偏移与边缘黑边(降级)。
+                    static bool bWarnedLegacyCamera = false;
+                    if (!bWarnedLegacyCamera)
+                    {
+                        bWarnedLegacyCamera = true;
+                        UE_LOG(LogTemp, Warning,
+                            TEXT("[PostRenderTool] UE <5.5: SensorOffset/Overscan APIs unavailable; "
+                                 "centerShift & overscan corrections are disabled (degraded output)."));
+                    }
+#endif
                 }
 
                 // ----- Distortion controller -----

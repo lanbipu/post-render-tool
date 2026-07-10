@@ -17,11 +17,22 @@ VP/XR 拍摄后，后期合成师需要在 UE 中对 CG 画面进行离线重渲
 - **Level Sequence 动画** — 逐帧写入 Transform、Focal Length、Aperture、Focus Distance + 7 条 distortion 关键帧轨 (K1/K2/K3/CenterU/CenterV/Aspect/Weight)
 - **验证报告** — FOV 交叉校验 + 异常帧检测
 
+## Supported Engine Versions
+
+通过 `scripts/package_releases.sh` 一键产出 UE 5.1–5.8 全部 Win64 编辑器插件包
+(`PostRenderTool_<ver>_Win64.zip`)。各版本功能差异:
+
+| 版本 | 状态 | 差异 |
+|------|------|------|
+| 5.5–5.8 | 完整功能 | 5.7/5.8 包内含预生成 BP/Material 资产 |
+| 5.1–5.4 | 降级 | 引擎无 SensorOffset/Overscan API:centerShift 修正与 overscan 补边不可用(大 centerShift 镜头有几何偏移、大畸变镜头边缘有黑边);radial distortion (K1/K2/K3) 不受影响 |
+| ≤5.6 | 资产现场生成 | 包内不含 `.uasset`(5.7 保存的资产老引擎打不开),安装后按包内 `INSTALL.md` 跑两条 Python 命令生成 |
+
 ## Quick Start
 
 ### Prerequisites
 
-UE 5.7 项目中启用以下插件：
+UE 项目中启用以下插件：
 - Python Editor Script Plugin
 - Editor Scripting Utilities
 
@@ -114,7 +125,7 @@ py exec(open('Content/Python/post_render_tool/tests/test_integration_ue.py').rea
 ## Limitations (v1)
 
 - 仅支持单相机 CSV
-- 仅支持 UE 5.7
+- UE 5.1–5.4 为降级支持(见 Supported Engine Versions),仅 Win64 编辑器
 - 不支持 Anamorphic 镜头
 - 不自动触发 Movie Render Queue
 - 坐标转换规则需手动验证

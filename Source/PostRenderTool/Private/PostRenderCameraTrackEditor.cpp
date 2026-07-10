@@ -18,10 +18,12 @@ TSharedRef<ISequencerTrackEditor> FPostRenderCameraTrackEditor::CreateTrackEdito
     return MakeShared<FPostRenderCameraTrackEditor>(InSequencer);
 }
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
 FText FPostRenderCameraTrackEditor::GetDisplayName() const
 {
     return LOCTEXT("DisplayName", "Post-Render Camera Track");
 }
+#endif
 
 bool FPostRenderCameraTrackEditor::SupportsType(TSubclassOf<UMovieSceneTrack> Type) const
 {

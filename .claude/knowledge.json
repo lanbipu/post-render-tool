@@ -46,7 +46,7 @@
       "alias": "ue56-docs"
     },
     {
-      "source": "processed/code/_global/ue57-docs",
+      "source": "processed/code/ue57-docs-claude-code",
       "alias": "ue57-docs"
     }
   ],

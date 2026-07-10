@@ -9,7 +9,7 @@
 
 VP Post-Render Tool: Disguise Designer CSV Dense → UE 5.7 CineCameraActor +
 Custom Post-Process Distortion (Path C) + LevelSequence. Path A (LensFile +
-BrownConradyUD M_RAT6) 已下架 (2026-05-08), 代码快照在 `archive/path_a_runtime/`.
+BrownConradyUD M_RAT6) 已下架 (2026-05-08), 代码快照在 git 历史 (原 `archive/path_a_runtime/`, 2026-07-10 史料清理移出工作区).
 
 Packaged as a **self-contained UE 5.7 plugin** (`PostRenderTool.uplugin` at repo root). Drops into any `<UEProject>/Plugins/` directory. C++ module provides a `UEditorUtilityWidget` subclass with a `meta=(BindWidget)` UPROPERTY contract; child Blueprint authored in the UMG Designer satisfies the contract; Python binds callbacks and drives the CSV → UE import pipeline.
 
@@ -248,7 +248,7 @@ ssh lanpc '"D:\Program Files\Epic Games\UE_5.7\Engine\Binaries\ThirdParty\Python
 - `ue54-docs` (321 files) → `.Codex/knowledge/ue54-docs/`
 - `ue55-docs` (324 files) → `.Codex/knowledge/ue55-docs/`
 - `ue56-docs` (389 files) → `.Codex/knowledge/ue56-docs/`
-- `ue57-docs` (411 files) → `.Codex/knowledge/ue57-docs/`
+- `ue57-docs` (2205 indexed docs, compact loader) → `.Codex/knowledge/ue57-docs/`
 
 ### Query Protocol
 1. Read `.Codex/knowledge/_INDEX.md` to route to the relevant source.

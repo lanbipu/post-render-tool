@@ -8,6 +8,7 @@
 #include "Components/ScrollBox.h"
 #include "Components/SpinBox.h"
 #include "Components/TextBlock.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 void UPostRenderToolWidget::NativeConstruct()
 {
@@ -33,7 +34,12 @@ FReply UPostRenderToolWidget::NativeOnMouseWheel(
         if (!FMath::IsNearlyZero(WheelDelta))
         {
             const float CurrentOffset = lbl_root_scroll->GetScrollOffset();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
             const float Step = lbl_root_scroll->GetWheelScrollMultiplier() * 96.0f;
+#else
+            // UE 5.1 无 GetWheelScrollMultiplier getter, 直接读 public 成员
+            const float Step = lbl_root_scroll->WheelScrollMultiplier * 96.0f;
+#endif
             const float NextOffset = FMath::Clamp(
                 CurrentOffset - (WheelDelta * Step),
                 0.0f,

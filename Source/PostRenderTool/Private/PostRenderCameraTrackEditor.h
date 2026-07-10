@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "ISequencerSection.h"
 #include "MovieSceneTrackEditor.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "Templates/SharedPointer.h"
 #include "Templates/SubclassOf.h"
 
@@ -36,7 +37,10 @@ public:
     static TSharedRef<ISequencerTrackEditor> CreateTrackEditor(TSharedRef<ISequencer> InSequencer);
 
     // ----- ISequencerTrackEditor (minimum override set) -----
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+    // GetDisplayName 是 UE 5.6 加入的虚函数, 老版本无此基类方法
     virtual FText GetDisplayName() const override;
+#endif
     virtual bool SupportsType(TSubclassOf<UMovieSceneTrack> Type) const override;
     virtual TSharedRef<ISequencerSection> MakeSectionInterface(
         UMovieSceneSection& SectionObject,

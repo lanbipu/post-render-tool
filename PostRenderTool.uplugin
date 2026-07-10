@@ -3,7 +3,7 @@
     "Version": 1,
     "VersionName": "0.1.0",
     "FriendlyName": "VP Post-Render Tool",
-    "Description": "Disguise Designer CSV Dense → UE CineCameraActor + LensFile + LevelSequence importer.",
+    "Description": "Disguise Designer CSV Dense -> UE CineCameraActor + Custom Post-Process Distortion + LevelSequence importer.",
     "Category": "Virtual Production",
     "CreatedBy": "bip lan",
     "CreatedByURL": "",

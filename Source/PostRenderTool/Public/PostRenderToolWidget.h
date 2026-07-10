@@ -32,108 +32,108 @@ class POSTRENDERTOOL_API UPostRenderToolWidget : public UEditorUtilityWidget
     GENERATED_BODY()
 
 public:
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UScrollBox* lbl_root_scroll;
 
     // ======================================================================
     // Section 1: Prerequisites
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UTextBlock* prereq_label_0;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UTextBlock* prereq_label_1;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UTextBlock* prereq_label_2;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UTextBlock* prereq_label_3;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UTextBlock* prereq_label_4;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UTextBlock* prereq_label_5;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UTextBlock* prereq_summary;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UButton* btn_recheck;
 
     // ======================================================================
     // Section 2: CSV File
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UButton* btn_browse;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UTextBlock* txt_file_path;
 
     // ======================================================================
     // Section 3: CSV Preview
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UTextBlock* txt_frame_count;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UTextBlock* txt_focal_range;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UTextBlock* txt_timecode;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UTextBlock* txt_sensor_width;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     USpinBox* spn_fps;
 
     // ======================================================================
     // Section 4a: Axis Mapping — Position
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UComboBoxString* cmb_pos_x_src;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     USpinBox* spn_pos_x_scale;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UComboBoxString* cmb_pos_y_src;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     USpinBox* spn_pos_y_scale;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UComboBoxString* cmb_pos_z_src;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     USpinBox* spn_pos_z_scale;
 
     // ======================================================================
     // Section 4b: Axis Mapping — Rotation
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UComboBoxString* cmb_rot_pitch_src;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     USpinBox* spn_rot_pitch_scale;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UComboBoxString* cmb_rot_yaw_src;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     USpinBox* spn_rot_yaw_scale;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UComboBoxString* cmb_rot_roll_src;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     USpinBox* spn_rot_roll_scale;
 
     // ======================================================================
@@ -150,35 +150,35 @@ public:
     // add the SpinBoxes.
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     USpinBox* spn_rot_pitch_offset;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     USpinBox* spn_rot_yaw_offset;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     USpinBox* spn_rot_roll_offset;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UButton* btn_apply_mapping;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UButton* btn_save_mapping;
 
     // ======================================================================
     // Section 5: Actions + Results
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UButton* btn_import;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UButton* btn_open_seq;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UButton* btn_open_mrq;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidget))
     UMultiLineEditableText* txt_results;
 
     // ======================================================================
@@ -190,13 +190,13 @@ public:
     // rebuild_from_spec() to add the controls.
     // ======================================================================
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UEditableTextBox* txt_render_output_dir;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UButton* btn_patch_exr_timecode;
 
-    UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+    UPROPERTY(BlueprintReadOnly, Category="PostRenderTool", meta=(BindWidgetOptional))
     UButton* btn_export_otio;
 
 protected:

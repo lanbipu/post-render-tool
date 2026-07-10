@@ -1,19 +1,17 @@
 # CLAUDE.md
 
+> **史料归档说明(2026-07-10)**:开发史料(`validation_results/`、
+> `scripts/distortion_calibration/`、`archive/`、`Assets/`、`reference/`、
+> `docs/archive/`、`docs/superpowers/` 及各类 spike/probe 脚本)已从工作区
+> 移除,repo 清理为标准源码插件形式。**全部内容在 git 历史中完整保留**——
+> 要复盘验证证据、Path A 代码快照或校准 dataset,checkout 清理 commit 的
+> 父提交即可(`git log --diff-filter=D` 可定位)。
+
 > **Distortion 路线状态(2026-05-08)**:Path C(Custom Post-Process Material)
 > 已落地,take_4 production diff 通过(commit `5f2fa2b`),take_5 静态帧 diff
-> 几何完全对齐(`validation_results/take_5_diff/summary.md`)。Path A(LensFile +
-> M_RAT6/M_RAT8 公式拟合)已**完整下架**(2026-05-08),plugin 不再生成 `LF_*`
-> 资产、不再挂 LensComponent 到 camera。Path A 代码快照保留在
-> `archive/path_a_runtime/`(可对照 README.md 回退)。
->
-> - 主 plan: `docs/custom-postprocess-distortion-final-plan.md`
-> - Path C 验证: `validation_results/path_c_validation/path_c_validation_summary.md`
-> - take_5 静态帧 diff: `validation_results/take_5_diff/summary.md`
-> - Path A runtime 代码快照: `archive/path_a_runtime/`
-> - Path A 史料(决策证据 + dataset): `docs/archive/path_a/` +
->   `scripts/distortion_calibration/archive/` +
->   `scripts/distortion_calibration/validation_results/archive/`
+> 几何完全对齐。Path A(LensFile + M_RAT6/M_RAT8 公式拟合)已**完整下架**
+> (2026-05-08),plugin 不再生成 `LF_*` 资产、不再挂 LensComponent 到 camera。
+> Path A 代码快照与验证史料均在 git 历史(见上方归档说明)。
 >
 > **看 diff 时的坑**:场景里的粉色 sphere mesh 是 helper 几何,不是 distortion
 > 校正网格;天空云是 time-based procedural noise,每次渲染都不一样,diff
@@ -75,8 +73,8 @@
 > MovieSceneTracks / LevelSequence (Public), Sequencer / MovieSceneTools
 > (Private) 依赖. 每个 LevelSequence 现在配一份
 > /Game/PostRender/<csv_stem>/LS_<csv_stem>_Samples DataAsset 持 dense
-> 样本 (跟 LevelSequence 同目录). plan + 全部回归 evidence 在
-> docs/superpowers/plans/2026-05-13-custom-moviescene-track.md.
+> 样本 (跟 LevelSequence 同目录). plan + 全部回归 evidence 在 git 历史
+> (原 docs/superpowers/plans/2026-05-13-custom-moviescene-track.md).
 > take_4 完整 import + Sequencer scrub + MRQ 渲染验证全部通过.
 > **改了 C++ + 加了私有模块依赖 → 必须 UBT 重编 plugin + 重启 UE Editor**.
 
@@ -199,19 +197,15 @@ post_render_tool/                                       ← plugin root
 │           ├── widget_properties.py                    # Pure Python: per-widget + slot-layout 反射写入器
 │           ├── widget_variants.py                      # Widget tree variant 处理(deprecated 入口的 stub)
 │           └── widget_programmatic.py.bak              # archival (pre-plugin builder, unused)
-├── archive/
-│   └── path_a_runtime/                                 ← Path A runtime 快照(2026-05-08 下架,见 README.md)
-│       ├── README.md
-│       ├── lens_file_builder.py
-│       ├── distortion_packing.py
-│       ├── distortion_math_path_a.py
-│       └── tests/{test_distortion_rational.py, test_c_distortion_packing.py}
+├── scripts/
+│   ├── git-hooks/                                      ← post-commit p4 推送 hook
+│   ├── build_all_versions.ps1                          ← lanPC 批量打包(UE 5.1–5.8)
+│   └── package_releases.sh                             ← Mac 侧 driver(rsync + ssh 触发 + 拉回产物)
 └── docs/
     ├── plugin-setup.md                                 ← first-time install guide
     ├── bindwidget-contract.md                          ← 33 widget name/type reference
-    ├── custom-postprocess-distortion-final-plan.md     ← Path C 主 plan (active)
     ├── deployment-guide.md
-    └── archive/path_a/                                 ← Path A 史料 (distortion-investigation / K1-implementation / 5 个 plans)
+    └── widget-tree-spec.json / .schema.md              ← WidgetTree 单一真源(build_widget_blueprint 读取)
 ```
 
 UE loads the plugin from `<UEProject>/Plugins/PostRenderTool/`, mounts `Content/` at the virtual path `/PostRenderTool/`, and adds `Content/Python/` to `sys.path`.
@@ -246,8 +240,8 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   生成 `LF_*` 资产、不再挂 LensComponent 到 camera。Distortion 走
   `M_PRT_OfficialSensorInverse` material + `PostRenderDistortionControllerComponent`,
   7 条参数轨由 `sequence_builder.py` 写入 LevelSequence。如果未来 Path C 出现
-  不可调和 regression 需要回退,代码快照在 `archive/path_a_runtime/`,回退步骤见
-  该目录 README.md。**不要**重新引入 LensFile 路径 —— 没经过验证就同时跑两条
+  不可调和 regression 需要回退,Path A 代码快照在 git 历史(原
+  `archive/path_a_runtime/`,内含回退 README)。**不要**重新引入 LensFile 路径 —— 没经过验证就同时跑两条
   路线 = `apply_distortion` 没关时双倍畸变。
 - **per-frame 参数现在走 Custom MovieScene Track (2026-05-13),不再走 19 条 Float Track.**
   Sequencer UI 上 camera binding 下只看到 1 条 PostRenderCameraTrack
@@ -269,13 +263,11 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   对应通道. 几个 keyframe 不会引起任何卡顿 (旧的 68k 帧问题源头是
   *dense* keyframes,不是 keyframes 本身). 不要重新 import CSV 修单帧 —
   那样会重写整个 sample DataAsset,丢失之前的所有手动修正.
-- **Path A 史料归档位置.** Runtime 代码(下架前的最后版本)在
-  `archive/path_a_runtime/`。公式拟合脚本 / UV probe 资产 / k1_sweep dataset 在
-  `scripts/distortion_calibration/archive/` +
-  `scripts/distortion_calibration/validation_results/archive/`(commit `ce3cbcc`
-  归档)。决策文档 / 5 个旧 plan 在 `docs/archive/path_a/`。要复盘 K1 公式或
-  reverse-engineer K2/K3 时去那找,active 目录(`scripts/distortion_calibration/`
-  顶层)只放 Path C / 跨路线工具。
+- **Path A 史料归档位置.** 全部在 git 历史(2026-07-10 清理前):runtime 代码在
+  原 `archive/path_a_runtime/`;公式拟合脚本 / UV probe 资产 / k1_sweep dataset 在
+  原 `scripts/distortion_calibration/{archive,validation_results/archive}/`
+  (commit `ce3cbcc` 归档);决策文档 / 5 个旧 plan 在原 `docs/archive/path_a/`。
+  要复盘 K1 公式或 reverse-engineer K2/K3,checkout 清理 commit 的父提交。
 - **Frame cadence preserved.** sequence_builder uses `frame_number - first_frame_number` as keyframe
   time, NOT consecutive indices. Gaps in CSV frame column create gaps in LevelSequence.
 - **`PluginBlueprintLibrary.is_plugin_loaded()` does NOT work** in some UE builds.
@@ -319,6 +311,45 @@ Pure-Python modules (`csv_parser`, `coordinate_transform`, `validator`, `spec_lo
   UFUNCTIONs inconsistently. After touching `PostRenderToolBuildHelper.h`/`.cpp`, quit the Editor,
   rebuild the plugin via UBT, relaunch, and verify `unreal.PostRenderToolBuildHelper.ensure_widget_under_parent`
   is visible in `help(unreal.PostRenderToolBuildHelper)` before running `build_widget_blueprint.run_build()`.
+
+## 多版本支持(UE 5.1–5.8)
+
+目标:一条命令编出 UE 5.1–5.8 全部 Win64 编辑器插件包。范围决策(2026-07-10):
+不支持 5.0(lanPC 未安装,用户量低);Mac/Linux 不在范围。
+
+**打包流程:**
+- Mac 侧:`scripts/package_releases.sh` — rsync 白名单源码到 lanPC → ssh 触发
+  批量打包 → 拉回汇总与日志。
+- lanPC 侧:`scripts/build_all_versions.ps1` — 对每个版本:复制源码到 temp →
+  改写 `.uplugin` 的 `EngineVersion` → `RunUAT.bat BuildPlugin` → zip 到
+  `E:\PluginReleases\PostRenderTool_<ver>_Win64.zip`。源码里 `.uplugin` 永远
+  保持 `5.7.0`,版本改写只发生在打包 temp 中。
+- **≤5.6 的包剔除 `Content/Blueprints`、`Content/Materials` 下的 `.uasset`**
+  (5.7 保存的资产老引擎打不开),用户装好后在目标引擎里跑
+  `rebuild_from_spec()` + `build_distortion_material.run_build()` 现场生成。
+
+**跨版本问题记录表**(2026-07-10 首轮适配实测,全部 8 版本编译通过):
+
+| 版本 | 问题 | 处理方式 |
+|---|---|---|
+| 全部 | BuildPlugin 按引擎插件严格模式编译,BindWidget UPROPERTY 缺显式 Category 报错(项目内编译不强制) | 源码修复:40 个 UPROPERTY 加 `Category="PostRenderTool"` |
+| ≤5.5 | `ISequencerTrackEditor::GetDisplayName` 是 5.6 新增虚函数,老版本 override 报 C3668 | 版本宏 `>=5.6`(`PostRenderCameraTrackEditor.h/.cpp`) |
+| ≤5.4 | `FCameraFilmbackSettings.SensorHorizontal/VerticalOffset` 与 `UCineCameraComponent.Overscan` 不存在(5.5 起才有,实测) | 版本宏 `>=5.5`;老版本**降级**:centerShift/overscan 修正禁用 + 一次性 log warning(`PostRenderCameraSectionTemplate.cpp`) |
+| 5.1 | `UScrollBox::GetWheelScrollMultiplier` getter 不存在(5.2 加入),5.1 直接读 public 成员 `WheelScrollMultiplier` | 版本宏 `>=5.2`(`PostRenderToolWidget.cpp`) |
+| ≤5.4 | 引擎不兼容新 MSVC 14.44(引擎自身头文件 `__has_feature` 报错) | 环境:lanPC VS2022 Professional 加装 14.33(给 5.1)+ 14.34(给 5.2–5.4),打包脚本按版本写 `BuildConfiguration.xml` pin `CompilerVersion`(须用完整版本号如 `14.34.31933`,只写 `14.34` 匹配不上) |
+| — | macOS tar 的 AppleDouble `._*` 文件会被 UBT 当源码编译 | `package_releases.sh` 用 `COPYFILE_DISABLE=1` + `--exclude '._*'` |
+| — | lanPC 无 rsync;PS 5.1 here-string 结尾符不能缩进;`powershell -File` 下逗号列表是单字符串;`setup.exe` 不认 `--wait`(87) | 均已修进脚本;VS 组件安装用 `modify --channelId VisualStudio.17.Release --productId ...` |
+
+**功能降级表(≤5.4,发布 README 必须写明):**
+- centerShift 修正(SensorOffset)与 overscan 补边不可用 → 大 centerShift 镜头
+  有几何偏移、大畸变镜头边缘有黑边。radial distortion(K1/K2/K3)本身不受影响。
+
+版本宏统一写法:`#include "Runtime/Launch/Resources/Version.h"` +
+`#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= N`。每轮改动后必须
+全量重跑 `scripts/package_releases.sh` 回归全部版本。编译通过 ≠ 功能正确:
+发布前至少在最老支持版本 + 最新版本各跑一次完整 import 验证
+(资产生成 → run_import → Sequencer scrub)。Python 侧 `unreal` API 差异
+编译期查不出,只能靠上述运行时验证。
 
 ## UE Source Code Reference
 
@@ -393,7 +424,7 @@ ssh lanpc '"D:\Program Files\Epic Games\UE_5.7\Engine\Binaries\ThirdParty\Python
 - `ue54-docs` (321 files) → `.claude/knowledge/ue54-docs/`
 - `ue55-docs` (324 files) → `.claude/knowledge/ue55-docs/`
 - `ue56-docs` (389 files) → `.claude/knowledge/ue56-docs/`
-- `ue57-docs` (411 files) → `.claude/knowledge/ue57-docs/`
+- `ue57-docs` (2205 indexed docs, compact loader) → `.claude/knowledge/ue57-docs/`
 
 ### Query Protocol
 1. Read `.claude/knowledge/_INDEX.md` to route to the relevant source.
